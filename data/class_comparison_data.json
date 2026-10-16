@@ -1,0 +1,298 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "class_id": "class-ai-2026",
+    "total_students": 20,
+    "generated_at": "2026-07-08"
+  },
+  "target_student": {
+    "student_id": "demo-student-1",
+    "nickname": "小明",
+    "rankings": {
+      "overall": {
+        "rank": 4,
+        "total": 20,
+        "percentile": 85
+      },
+      "study_time": {
+        "rank": 2,
+        "total": 20,
+        "percentile": 95,
+        "value": 1500,
+        "unit": "分钟"
+      },
+      "mastery": {
+        "rank": 7,
+        "total": 20,
+        "percentile": 70,
+        "value": 0.78,
+        "unit": "平均掌握度"
+      },
+      "correct_rate": {
+        "rank": 6,
+        "total": 20,
+        "percentile": 75,
+        "value": 0.8,
+        "unit": "正确率"
+      },
+      "consistency": {
+        "rank": 3,
+        "total": 20,
+        "percentile": 90,
+        "value": 29,
+        "unit": "学习天数"
+      }
+    },
+    "kp_percentiles": {
+      "transformer": 85,
+      "attention": 78,
+      "cnn": 70,
+      "rag": 45,
+      "multi_agent": 60,
+      "ai_agent": 55,
+      "mcp_protocol": 32,
+      "nlp_basics": 68,
+      "multimodal_llm": 62,
+      "neural_networks": 72,
+      "backpropagation": 50,
+      "reinforcement_learning": 38
+    }
+  },
+  "class_stats": {
+    "avg_study_minutes": 1075.0,
+    "avg_mastery": 0.7,
+    "avg_correct_rate": 0.72,
+    "avg_study_days": 26.1,
+    "distribution": {
+      "excellent": 3,
+      "good": 6,
+      "average": 7,
+      "below_average": 4
+    }
+  },
+  "top_performers": [
+    {
+      "rank": 1,
+      "nickname": "学霸小张",
+      "avatar": "🥇",
+      "mastery": 0.93,
+      "study_time": 1720
+    },
+    {
+      "rank": 2,
+      "nickname": "努力小王",
+      "avatar": "🥈",
+      "mastery": 0.88,
+      "study_time": 1500
+    },
+    {
+      "rank": 3,
+      "nickname": "聪明小李",
+      "avatar": "🥉",
+      "mastery": 0.85,
+      "study_time": 1300
+    }
+  ],
+  "all_students": [
+    {
+      "student_id": "demo-student-1",
+      "nickname": "小明",
+      "study_minutes": 1500,
+      "mastery_avg": 0.78,
+      "correct_rate": 0.8,
+      "study_days": 29,
+      "mastered_kps": 12,
+      "composite_score": 0.8251372549019609
+    },
+    {
+      "student_id": "demo-student-2",
+      "nickname": "学霸小张",
+      "study_minutes": 1720,
+      "mastery_avg": 0.93,
+      "correct_rate": 0.92,
+      "study_days": 30,
+      "mastered_kps": 19,
+      "composite_score": 0.9503529411764706
+    },
+    {
+      "student_id": "demo-student-3",
+      "nickname": "努力小王",
+      "study_minutes": 1500,
+      "mastery_avg": 0.88,
+      "correct_rate": 0.85,
+      "study_days": 30,
+      "mastered_kps": 17,
+      "composite_score": 0.8834705882352941
+    },
+    {
+      "student_id": "demo-student-4",
+      "nickname": "聪明小李",
+      "study_minutes": 1300,
+      "mastery_avg": 0.85,
+      "correct_rate": 0.86,
+      "study_days": 29,
+      "mastered_kps": 16,
+      "composite_score": 0.8476078431372549
+    },
+    {
+      "student_id": "demo-student-5",
+      "nickname": "普通小陈",
+      "study_minutes": 980,
+      "mastery_avg": 0.64,
+      "correct_rate": 0.67,
+      "study_days": 26,
+      "mastered_kps": 9,
+      "composite_score": 0.6589607843137255
+    },
+    {
+      "student_id": "demo-student-6",
+      "nickname": "进步小赵",
+      "study_minutes": 1180,
+      "mastery_avg": 0.72,
+      "correct_rate": 0.75,
+      "study_days": 28,
+      "mastered_kps": 11,
+      "composite_score": 0.7451568627450981
+    },
+    {
+      "student_id": "demo-student-7",
+      "nickname": "挣扎小周",
+      "study_minutes": 480,
+      "mastery_avg": 0.44,
+      "correct_rate": 0.5,
+      "study_days": 22,
+      "mastered_kps": 5,
+      "composite_score": 0.4558039215686275
+    },
+    {
+      "student_id": "demo-student-8",
+      "nickname": "黑马小吴",
+      "study_minutes": 850,
+      "mastery_avg": 0.55,
+      "correct_rate": 0.61,
+      "study_days": 25,
+      "mastered_kps": 7,
+      "composite_score": 0.5863333333333335
+    },
+    {
+      "student_id": "demo-student-9",
+      "nickname": "稳健小郑",
+      "study_minutes": 1020,
+      "mastery_avg": 0.68,
+      "correct_rate": 0.7,
+      "study_days": 27,
+      "mastered_kps": 10,
+      "composite_score": 0.692
+    },
+    {
+      "student_id": "demo-student-10",
+      "nickname": "学渣小钱",
+      "study_minutes": 400,
+      "mastery_avg": 0.4,
+      "correct_rate": 0.46,
+      "study_days": 18,
+      "mastered_kps": 4,
+      "composite_score": 0.4050588235294118
+    },
+    {
+      "student_id": "demo-student-11",
+      "nickname": "勤奋小孙",
+      "study_minutes": 1320,
+      "mastery_avg": 0.79,
+      "correct_rate": 0.78,
+      "study_days": 28,
+      "mastered_kps": 13,
+      "composite_score": 0.7986274509803922
+    },
+    {
+      "student_id": "demo-student-12",
+      "nickname": "内敛小周",
+      "study_minutes": 760,
+      "mastery_avg": 0.62,
+      "correct_rate": 0.66,
+      "study_days": 25,
+      "mastered_kps": 8,
+      "composite_score": 0.6187450980392157
+    },
+    {
+      "student_id": "demo-student-13",
+      "nickname": "高效小吴",
+      "study_minutes": 950,
+      "mastery_avg": 0.81,
+      "correct_rate": 0.84,
+      "study_days": 24,
+      "mastered_kps": 12,
+      "composite_score": 0.7677647058823531
+    },
+    {
+      "student_id": "demo-student-14",
+      "nickname": "踏实小郑",
+      "study_minutes": 1410,
+      "mastery_avg": 0.75,
+      "correct_rate": 0.77,
+      "study_days": 29,
+      "mastered_kps": 12,
+      "composite_score": 0.7935490196078432
+    },
+    {
+      "student_id": "demo-student-15",
+      "nickname": "随意小冯",
+      "study_minutes": 600,
+      "mastery_avg": 0.58,
+      "correct_rate": 0.6,
+      "study_days": 20,
+      "mastered_kps": 6,
+      "composite_score": 0.5492549019607843
+    },
+    {
+      "student_id": "demo-student-16",
+      "nickname": "细品小陈",
+      "study_minutes": 1200,
+      "mastery_avg": 0.77,
+      "correct_rate": 0.79,
+      "study_days": 27,
+      "mastered_kps": 11,
+      "composite_score": 0.7761764705882354
+    },
+    {
+      "student_id": "demo-student-17",
+      "nickname": "新秀小褚",
+      "study_minutes": 1080,
+      "mastery_avg": 0.66,
+      "correct_rate": 0.69,
+      "study_days": 26,
+      "mastered_kps": 9,
+      "composite_score": 0.6847254901960784
+    },
+    {
+      "student_id": "demo-student-18",
+      "nickname": "老练小卫",
+      "study_minutes": 1280,
+      "mastery_avg": 0.82,
+      "correct_rate": 0.83,
+      "study_days": 28,
+      "mastered_kps": 14,
+      "composite_score": 0.820921568627451
+    },
+    {
+      "student_id": "demo-student-19",
+      "nickname": "稳重小蒋",
+      "study_minutes": 1120,
+      "mastery_avg": 0.72,
+      "correct_rate": 0.73,
+      "study_days": 27,
+      "mastered_kps": 10,
+      "composite_score": 0.7287647058823529
+    },
+    {
+      "student_id": "demo-student-20",
+      "nickname": "开窍小沈",
+      "study_minutes": 850,
+      "mastery_avg": 0.6,
+      "correct_rate": 0.63,
+      "study_days": 23,
+      "mastered_kps": 7,
+      "composite_score": 0.6056666666666666
+    }
+  ]
+}

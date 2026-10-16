@@ -1,0 +1,565 @@
+{
+  "students": [
+    {
+      "user_id": "demo-student-1",
+      "nickname": "杜同学（进阶型）",
+      "profile": {
+        "academic_context": {
+          "major": "计算机科学与技术",
+          "enrollment_year": 2023,
+          "grade": "大三",
+          "class_name": "计科2301"
+        },
+        "knowledge_base": {
+          "level": "中级",
+          "score": 0.72,
+          "topics": [
+            "Python基础",
+            "机器学习入门"
+          ]
+        },
+        "cognitive_style": {
+          "score": 0.82,
+          "primary": "视觉型",
+          "secondary": "动手型"
+        },
+        "learning_preference": {
+          "score": 0.88,
+          "mode": "项目驱动",
+          "pace": "较快",
+          "depth": "原理优先"
+        },
+        "weak_points": {
+          "score": 0.32,
+          "topics": [
+            "RNN",
+            "注意力机制"
+          ],
+          "patterns": [
+            "忽略边界条件"
+          ]
+        },
+        "learning_goal": {
+          "score": 0.72,
+          "target": "多模态理解与 Transformer 工程",
+          "timeline": "6个月"
+        },
+        "time_management": {
+          "score": 0.76,
+          "weekly_hours": 20,
+          "best_time": "晚上",
+          "consistency": "高"
+        },
+        "self_efficacy": {
+          "score": 0.8,
+          "confidence": 0.75,
+          "persistence": "高",
+          "help_seeking": "主动"
+        },
+        "interaction_pattern": {
+          "score": 0.84,
+          "style": "提问型",
+          "depth": "深层追问",
+          "feedback": "需要挑战"
+        }
+      },
+      "paths": [
+        {
+          "id": "seed-path-1",
+          "user_id": "demo-student-1",
+          "title": "AI 工程师学习路径（入门→进阶）",
+          "stages": [
+            {
+              "title": "Python 编程基础",
+              "kps": [
+                "python_basics",
+                "data_structures"
+              ]
+            },
+            {
+              "title": "数学基础（线性代数+概率）",
+              "kps": [
+                "linear_algebra",
+                "probability"
+              ]
+            },
+            {
+              "title": "机器学习入门",
+              "kps": [
+                "ml_basics",
+                "supervised_learning"
+              ]
+            },
+            {
+              "title": "深度学习与 CNN",
+              "kps": [
+                "neural_networks",
+                "cnn"
+              ]
+            },
+            {
+              "title": "NLP 与 Transformer",
+              "kps": [
+                "nlp_basics",
+                "transformer"
+              ]
+            },
+            {
+              "title": "综合项目实战",
+              "kps": [
+                "capstone_project"
+              ]
+            }
+          ],
+          "current_stage": 2,
+          "progress": 33.3
+        }
+      ],
+      "assessments": [
+        {
+          "type": "quiz",
+          "score": 85,
+          "topic": "Python 基础",
+          "duration": 1800
+        },
+        {
+          "type": "quiz",
+          "score": 72,
+          "topic": "机器学习概念",
+          "duration": 2400
+        }
+      ]
+    },
+    {
+      "user_id": "demo-student-2",
+      "nickname": "小红（追赶型）",
+      "profile": {
+        "knowledge_base": {
+          "level": "初级",
+          "score": 0.35,
+          "topics": [
+            "Python入门"
+          ]
+        },
+        "cognitive_style": {
+          "primary": "听觉型",
+          "secondary": "读写型"
+        },
+        "learning_preference": {
+          "mode": "视频+讲解",
+          "pace": "较慢",
+          "depth": "理解优先"
+        },
+        "weak_points": {
+          "topics": [
+            "数学基础"
+          ],
+          "patterns": [
+            "概念混淆"
+          ]
+        },
+        "learning_goal": {
+          "target": "考研408",
+          "timeline": "8个月"
+        },
+        "time_management": {
+          "weekly_hours": 15,
+          "best_time": "上午",
+          "consistency": "中"
+        },
+        "self_efficacy": {
+          "confidence": 0.45,
+          "persistence": "中",
+          "help_seeking": "被动"
+        },
+        "interaction_pattern": {
+          "style": "接受型",
+          "depth": "基础确认",
+          "feedback": "需要鼓励"
+        }
+      },
+      "paths": [
+        {
+          "id": "seed-path-2",
+          "user_id": "demo-student-2",
+          "title": "408 考研冲刺路径",
+          "stages": [
+            {
+              "title": "数据结构",
+              "kps": [
+                "ds_basics",
+                "tree_graph"
+              ]
+            },
+            {
+              "title": "计算机组成原理",
+              "kps": [
+                "cpu",
+                "memory"
+              ]
+            },
+            {
+              "title": "操作系统",
+              "kps": [
+                "os_basics",
+                "process"
+              ]
+            },
+            {
+              "title": "计算机网络",
+              "kps": [
+                "tcp_ip",
+                "http"
+              ]
+            }
+          ],
+          "current_stage": 0,
+          "progress": 0.0
+        }
+      ],
+      "assessments": [
+        {
+          "type": "quiz",
+          "score": 55,
+          "topic": "数据结构",
+          "duration": 3000
+        },
+        {
+          "type": "resource_view",
+          "score": null,
+          "topic": "操作系统概述",
+          "duration": 1200
+        }
+      ]
+    },
+    {
+      "user_id": "demo-student-3",
+      "nickname": "小刚（概念探索者）",
+      "profile": {
+        "knowledge_base": {
+          "level": "高级",
+          "score": 0.88,
+          "topics": [
+            "深度学习",
+            "NLP",
+            "强化学习"
+          ]
+        },
+        "cognitive_style": {
+          "primary": "动手型",
+          "secondary": "视觉型"
+        },
+        "learning_preference": {
+          "mode": "论文+代码复现",
+          "pace": "极快",
+          "depth": "前沿追踪"
+        },
+        "weak_points": {
+          "topics": [
+            "工程部署"
+          ],
+          "patterns": [
+            "忽视基础理论"
+          ]
+        },
+        "learning_goal": {
+          "target": "发顶会论文",
+          "timeline": "12个月"
+        },
+        "time_management": {
+          "weekly_hours": 35,
+          "best_time": "深夜",
+          "consistency": "高"
+        },
+        "self_efficacy": {
+          "confidence": 0.9,
+          "persistence": "极高",
+          "help_seeking": "定向请教"
+        },
+        "interaction_pattern": {
+          "style": "合作型",
+          "depth": "辩论式",
+          "feedback": "需要同辈讨论"
+        }
+      },
+      "paths": [
+        {
+          "id": "seed-path-3",
+          "user_id": "demo-student-3",
+          "title": "多智能体系统研究路径",
+          "stages": [
+            {
+              "title": "强化学习基础",
+              "kps": [
+                "rl_basics",
+                "mdp"
+              ]
+            },
+            {
+              "title": "Multi-Agent RL",
+              "kps": [
+                "marl",
+                "game_theory"
+              ]
+            },
+            {
+              "title": "LLM Agent 架构",
+              "kps": [
+                "llm_agent",
+                "tool_use"
+              ]
+            },
+            {
+              "title": "Multi-Agent Debate",
+              "kps": [
+                "agent_debate",
+                "reflexion"
+              ]
+            },
+            {
+              "title": "论文撰写与投稿",
+              "kps": [
+                "paper_writing"
+              ]
+            }
+          ],
+          "current_stage": 1,
+          "progress": 20.0
+        }
+      ],
+      "assessments": [
+        {
+          "type": "quiz",
+          "score": 92,
+          "topic": "强化学习",
+          "duration": 1500
+        },
+        {
+          "type": "question",
+          "score": null,
+          "topic": "Multi-Agent 协调机制",
+          "duration": 3600
+        }
+      ]
+    },
+    {
+      "user_id": "demo-student-4",
+      "nickname": "小李（社交型）",
+      "profile": {
+        "knowledge_base": {
+          "level": "中等",
+          "score": 0.55,
+          "topics": [
+            "Python基础",
+            "Web开发"
+          ]
+        },
+        "cognitive_style": {
+          "primary": "听觉型",
+          "secondary": "读写型"
+        },
+        "learning_preference": {
+          "mode": "小组讨论",
+          "pace": "中等",
+          "depth": "广度优先"
+        },
+        "weak_points": {
+          "topics": [
+            "算法"
+          ],
+          "patterns": [
+            "缺乏深度思考"
+          ]
+        },
+        "learning_goal": {
+          "target": "全栈开发就业",
+          "timeline": "12个月"
+        },
+        "time_management": {
+          "weekly_hours": 12,
+          "best_time": "下午",
+          "consistency": "中"
+        },
+        "self_efficacy": {
+          "confidence": 0.6,
+          "persistence": "中",
+          "help_seeking": "主动（找同学）"
+        },
+        "interaction_pattern": {
+          "style": "合作型",
+          "depth": "讨论式",
+          "feedback": "需要同伴互动"
+        }
+      },
+      "paths": [
+        {
+          "id": "seed-path-4",
+          "user_id": "demo-student-4",
+          "title": "全栈开发学习路径",
+          "stages": [
+            {
+              "title": "前端基础 HTML/CSS/JS",
+              "kps": [
+                "html",
+                "css",
+                "javascript"
+              ]
+            },
+            {
+              "title": "Python Flask 后端",
+              "kps": [
+                "flask",
+                "rest_api"
+              ]
+            },
+            {
+              "title": "数据库设计",
+              "kps": [
+                "sql",
+                "database_design"
+              ]
+            },
+            {
+              "title": "项目实战",
+              "kps": [
+                "capstone"
+              ]
+            }
+          ],
+          "current_stage": 1,
+          "progress": 25.0
+        }
+      ],
+      "assessments": [
+        {
+          "type": "quiz",
+          "score": 68,
+          "topic": "HTML基础",
+          "duration": 1500
+        },
+        {
+          "type": "quiz",
+          "score": 72,
+          "topic": "Python基础",
+          "duration": 2000
+        }
+      ]
+    },
+    {
+      "user_id": "demo-student-5",
+      "nickname": "小王（应试型）",
+      "profile": {
+        "knowledge_base": {
+          "level": "中高级",
+          "score": 0.78,
+          "topics": [
+            "数据结构",
+            "算法",
+            "操作系统"
+          ]
+        },
+        "cognitive_style": {
+          "primary": "读写型",
+          "secondary": "视觉型"
+        },
+        "learning_preference": {
+          "mode": "刷题+归纳",
+          "pace": "极快",
+          "depth": "考点优先"
+        },
+        "weak_points": {
+          "topics": [
+            "系统设计"
+          ],
+          "patterns": [
+            "过度依赖刷题"
+          ]
+        },
+        "learning_goal": {
+          "target": "考研408 + 大厂面试",
+          "timeline": "6个月"
+        },
+        "time_management": {
+          "weekly_hours": 30,
+          "best_time": "清晨",
+          "consistency": "极高"
+        },
+        "self_efficacy": {
+          "confidence": 0.82,
+          "persistence": "极高",
+          "help_seeking": "定向请教"
+        },
+        "interaction_pattern": {
+          "style": "提问型",
+          "depth": "目标导向",
+          "feedback": "需要明确考点"
+        }
+      },
+      "paths": [
+        {
+          "id": "seed-path-5",
+          "user_id": "demo-student-5",
+          "title": "408考研+面试突击路径",
+          "stages": [
+            {
+              "title": "数据结构精炼",
+              "kps": [
+                "ds_advanced",
+                "tree_graph"
+              ]
+            },
+            {
+              "title": "算法高频题",
+              "kps": [
+                "sorting",
+                "dp",
+                "greedy"
+              ]
+            },
+            {
+              "title": "操作系统",
+              "kps": [
+                "os_deep",
+                "concurrency"
+              ]
+            },
+            {
+              "title": "系统设计",
+              "kps": [
+                "system_design"
+              ]
+            },
+            {
+              "title": "模拟面试",
+              "kps": [
+                "mock_interview"
+              ]
+            }
+          ],
+          "current_stage": 2,
+          "progress": 40.0
+        }
+      ],
+      "assessments": [
+        {
+          "type": "quiz",
+          "score": 90,
+          "topic": "数据结构",
+          "duration": 1200
+        },
+        {
+          "type": "quiz",
+          "score": 85,
+          "topic": "算法",
+          "duration": 1800
+        },
+        {
+          "type": "quiz",
+          "score": 78,
+          "topic": "系统设计",
+          "duration": 2400
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# Docker entrypoint scripts are executed by Linux shells even when contributors
+# work on Windows. Keep their shebang and shell syntax in LF form.
+*.sh text eol=lf

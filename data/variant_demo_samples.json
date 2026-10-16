@@ -1,0 +1,64 @@
+{
+  "_meta": {
+    "purpose": "T1.2 evaluator-facing variant demo samples (5 real mistakes)",
+    "owner": "A",
+    "version": "2026-06-23-t1.2"
+  },
+  "samples": [
+    {
+      "mistake_id": "demo_mistake_cnn_pooling",
+      "user_id": "demo-student-2",
+      "kp_id": "cnn",
+      "kp_name": "卷积神经网络",
+      "question": "CNN 的池化层主要作用是什么？",
+      "student_answer": "池化层负责学习卷积核参数。",
+      "correct_answer": "池化层通过下采样降低特征图尺寸，保留显著特征并增强平移鲁棒性，本身不引入可学习参数。",
+      "expected_error_type": "概念混淆",
+      "expected_target_bloom": "understand"
+    },
+    {
+      "mistake_id": "demo_mistake_transformer_attention",
+      "user_id": "demo-student-3",
+      "kp_id": "transformer",
+      "kp_name": "Transformer",
+      "question": "Transformer 中自注意力机制为什么需要除以 sqrt(d_k)？",
+      "student_answer": "为了让结果更小，方便训练。",
+      "correct_answer": "缩放点积可以避免点积值在维度 d_k 较大时进入 softmax 饱和区，从而稳定梯度。",
+      "expected_error_type": "概念边界混淆",
+      "expected_target_bloom": "understand"
+    },
+    {
+      "mistake_id": "demo_mistake_rag_rerank",
+      "user_id": "demo-student-4",
+      "kp_id": "rag",
+      "kp_name": "检索增强生成 (RAG)",
+      "question": "RAG 检索后为什么常常需要重排？",
+      "student_answer": "不需要重排，检索结果按相似度排序就够了。",
+      "correct_answer": "重排器通过交叉编码器或 LLM 重新评估问题与候选文档的相关性，可以显著提升 Top-K 的相关命中率。",
+      "expected_error_type": "知识缺漏",
+      "expected_target_bloom": "remember"
+    },
+    {
+      "mistake_id": "demo_mistake_optimizer_choice",
+      "user_id": "demo-student-5",
+      "kp_id": "ml_basics",
+      "kp_name": "机器学习基础",
+      "question": "在小数据集 + 强正则化场景下，应该首选 SGD 还是 Adam？",
+      "student_answer": "都用 Adam，因为 Adam 几乎总是更好。",
+      "correct_answer": "小数据 + 强正则下，SGD with momentum 往往泛化更好；Adam 收敛快但容易过拟合，需要更强的正则或更小学习率。",
+      "expected_error_type": "方法选择错",
+      "expected_target_bloom": "apply"
+    },
+    {
+      "mistake_id": "demo_mistake_python_mutable_default",
+      "user_id": "demo-student-1",
+      "kp_id": "python_basics",
+      "kp_name": "Python 基础",
+      "question": "在 Python 中 `def f(x, items=[]): items.append(x); return items` 多次调用为什么会累积？",
+      "student_answer": "因为列表会被复制，每次都是同一份。",
+      "correct_answer": "默认参数在函数定义时计算一次并在多次调用间共享；建议用 `items=None` 并在函数体内 `items = items or []` 避免此陷阱。",
+      "expected_error_type": "概念边界混淆",
+      "expected_target_bloom": "understand"
+    }
+  ]
+}

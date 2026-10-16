@@ -1,0 +1,2 @@
+# Optional local stdio adapter; pinned separately from the V2 HTTP service.
+mcp==2.3.0

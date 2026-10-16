@@ -1,0 +1,552 @@
+# ============================================================
+# 课程知识点关系图谱
+# 用途：PathPlannerAgent 学习路径规划的核心数据结构
+# 格式：每节点含 id/name/difficulty/prerequisites/keywords
+# ============================================================
+
+# 课程定义
+course:
+  name: "人工智能导论"
+  code: "AI-101"
+  total_nodes: 28
+  last_updated: "2026-06-17"
+
+course_py:
+  name: "Python 程序设计"
+  code: "PY-101"
+  total_nodes: 24
+  last_updated: "2026-07-12"
+
+# 知识点节点
+nodes:
+  # ===== 第1章：概述 =====
+  AI_001:
+    name: "人工智能概述"
+    difficulty: 1
+    prerequisites: []
+    related: [AI_002, AI_004]
+    keywords: ["AI", "图灵测试", "强AI", "弱AI", "人工智能历史", "应用领域"]
+    learning_objectives: ["理解AI的定义与范畴", "了解AI发展历史", "认识AI的主要应用领域"]
+    estimated_hours: 2
+
+  # ===== 第2章：搜索与问题求解 =====
+  AI_002:
+    name: "搜索算法"
+    difficulty: 2
+    prerequisites: [AI_001]
+    related: [AI_004]
+    keywords: ["BFS", "DFS", "A*", "启发式搜索", "博弈树搜索", "Minimax"]
+    learning_objectives: ["掌握无信息搜索策略", "理解启发式搜索原理", "能实现A*算法"]
+    estimated_hours: 6
+
+  # ===== 第3章：知识表示与推理 =====
+  AI_003:
+    name: "知识表示与推理"
+    difficulty: 3
+    prerequisites: [AI_001, MATH_001]
+    related: [AI_002]
+    keywords: ["谓词逻辑", "知识图谱", "本体论", "推理引擎", "专家系统"]
+    learning_objectives: ["理解知识表示的基本方法", "掌握谓词逻辑推理", "了解知识图谱构建"]
+    estimated_hours: 4
+
+  # ===== 第4章：机器学习基础 =====
+  AI_004:
+    name: "机器学习基础"
+    difficulty: 3
+    prerequisites: [AI_001, MATH_001]
+    related: [AI_005, AI_006, AI_009]
+    keywords: ["监督学习", "无监督学习", "半监督学习", "过拟合", "欠拟合", "交叉验证", "偏差-方差权衡", "特征工程"]
+    learning_objectives: ["理解机器学习的核心概念", "掌握模型评估方法", "理解偏差-方差权衡"]
+    estimated_hours: 8
+
+  # ===== 第5章：监督学习算法 =====
+  AI_005:
+    name: "监督学习算法"
+    difficulty: 4
+    prerequisites: [AI_004]
+    related: [AI_006]
+    keywords: ["线性回归", "逻辑回归", "决策树", "随机森林", "SVM", "KNN", "朴素贝叶斯", "集成学习"]
+    learning_objectives: ["掌握主要监督学习算法原理", "能选择合适的算法解决实际问题", "理解集成学习思想"]
+    estimated_hours: 10
+
+  AI_005_01:
+    name: "线性回归与逻辑回归"
+    difficulty: 3
+    prerequisites: [AI_004]
+    keywords: ["线性回归", "逻辑回归", "梯度下降", "损失函数", "正则化", "L1", "L2"]
+    estimated_hours: 3
+
+  AI_005_02:
+    name: "决策树与集成学习"
+    difficulty: 4
+    prerequisites: [AI_004]
+    keywords: ["决策树", "信息增益", "剪枝", "随机森林", "XGBoost", "Bagging", "Boosting"]
+    estimated_hours: 4
+
+  AI_005_03:
+    name: "支持向量机SVM"
+    difficulty: 4
+    prerequisites: [AI_004, MATH_001]
+    keywords: ["SVM", "核函数", "软间隔", "SMO算法", "对偶问题"]
+    estimated_hours: 3
+
+  # ===== 第6章：神经网络与深度学习 =====
+  AI_006:
+    name: "神经网络与深度学习"
+    difficulty: 5
+    prerequisites: [AI_004, AI_005]
+    related: [mlp, AI_007, AI_008]
+    keywords: ["感知机", "多层感知机", "反向传播", "激活函数", "梯度消失", "梯度爆炸", "Batch Normalization", "Dropout"]
+    learning_objectives: ["理解神经网络基本原理", "掌握反向传播算法", "了解深度学习训练技巧"]
+    estimated_hours: 12
+
+  mlp:
+    name: "多层感知机(MLP)"
+    difficulty: 4
+    prerequisites: [AI_006, MATH_001]
+    related: [AI_006, MATH_003]
+    keywords: ["多层感知机", "前向传播", "反向传播", "激活函数", "梯度下降"]
+    learning_objectives: ["理解 MLP 的前向传播", "掌握 MLP 梯度计算", "能实现简单二分类 MLP"]
+    estimated_hours: 4
+
+  AI_006_01:
+    name: "卷积神经网络(CNN)"
+    difficulty: 5
+    prerequisites: [AI_006]
+    keywords: ["卷积层", "池化层", "LeNet-5", "AlexNet", "VGG", "ResNet", "Inception", "图像分类", "目标检测"]
+    estimated_hours: 5
+
+  AI_006_02:
+    name: "循环神经网络(RNN)"
+    difficulty: 5
+    prerequisites: [AI_006]
+    keywords: ["RNN", "LSTM", "GRU", "Seq2Seq", "Attention", "时间序列预测", "文本生成"]
+    estimated_hours: 4
+
+  AI_006_03:
+    name: "Transformer与注意力机制"
+    difficulty: 5
+    prerequisites: [AI_006_02]
+    keywords: ["Transformer", "Self-Attention", "Multi-Head Attention", "Positional Encoding", "BERT", "GPT", "大语言模型"]
+    estimated_hours: 5
+
+  # ===== 第7章：自然语言处理 =====
+  AI_007:
+    name: "自然语言处理(NLP)"
+    difficulty: 5
+    prerequisites: [AI_006]
+    related: [AI_006_02, AI_006_03]
+    keywords: ["词向量", "Word2Vec", "BERT", "GPT", "文本分类", "命名实体识别", "情感分析", "机器翻译"]
+    estimated_hours: 8
+
+  # ===== 第8章：计算机视觉 =====
+  AI_008:
+    name: "计算机视觉(CV)"
+    difficulty: 5
+    prerequisites: [AI_006]
+    related: [AI_006_01]
+    keywords: ["图像分类", "目标检测", "YOLO", "语义分割", "GAN", "图像生成", "风格迁移"]
+    estimated_hours: 8
+
+  # ===== 第9章：强化学习 =====
+  AI_009:
+    name: "强化学习"
+    difficulty: 6
+    prerequisites: [AI_004, AI_006]
+    related: []
+    keywords: ["马尔可夫决策过程", "Q-learning", "DQN", "策略梯度", "Actor-Critic", "PPO"]
+    estimated_hours: 8
+
+  # ===== 第10章：AI伦理与前沿 =====
+  AI_010:
+    name: "AI伦理与前沿趋势"
+    difficulty: 2
+    prerequisites: [AI_001]
+    related: []
+    keywords: ["算法偏见", "可解释AI", "隐私保护", "对抗攻击", "联邦学习", "AI安全", "AGI"]
+    estimated_hours: 3
+
+  # ===== 第11章：RAG 检索增强 =====
+  AI_011:
+    name: "RAG 检索增强生成"
+    difficulty: 4
+    prerequisites: [AI_006_03, AI_007]
+    related: [AI_013, AI_014]
+    keywords: ["RAG", "向量检索", "Embedding", "重排序", "召回", "上下文注入", "检索增强"]
+    learning_objectives: ["理解 RAG 的检索-生成两阶段范式", "掌握向量库构建与召回评估", "能实现基础 RAG 应用"]
+    estimated_hours: 5
+
+  # ===== 第12章：多智能体系统 =====
+  AI_012:
+    name: "多智能体系统"
+    difficulty: 5
+    prerequisites: [AI_013]
+    related: [AI_014]
+    keywords: ["Multi-Agent", "编排", "协作", "角色分工", "辩论", "反思", "Orchestrator"]
+    learning_objectives: ["理解多智能体协同架构", "能设计 Agent 角色与消息协议", "掌握编排/辩论/反思策略"]
+    estimated_hours: 6
+
+  # ===== 第13章：AI Agent =====
+  AI_013:
+    name: "AI Agent 智能体"
+    difficulty: 4
+    prerequisites: [AI_006_03]
+    related: [AI_011, AI_012, AI_014]
+    keywords: ["Agent", "ReAct", "工具调用", "Function Calling", "Planning", "记忆", "Autonomy"]
+    learning_objectives: ["理解 LLM Agent 的组件与运行机制", "能实现工具调用与 ReAct 循环", "掌握记忆与规划模块"]
+    estimated_hours: 5
+
+  # ===== 第14章：MCP 协议 =====
+  AI_014:
+    name: "MCP 模型上下文协议"
+    difficulty: 3
+    prerequisites: [AI_013]
+    related: [AI_011, AI_012]
+    keywords: ["MCP", "Model Context Protocol", "工具接入", "标准化", "上下文", "Anthropic"]
+    learning_objectives: ["理解 MCP 的定位与生态", "能读写 MCP 服务端/客户端契约", "掌握与 Agent 集成方式"]
+    estimated_hours: 3
+
+  # ===== 第15章：多模态大模型 =====
+  AI_015:
+    name: "多模态大模型"
+    difficulty: 5
+    prerequisites: [AI_006_01, AI_006_03]
+    related: [AI_007, AI_008]
+    keywords: ["多模态", "CLIP", "BLIP", "GPT-4V", "视觉语言模型", "图文对齐"]
+    learning_objectives: ["理解多模态对齐与融合", "了解主流多模态模型架构", "能应用多模态模型解决实际问题"]
+    estimated_hours: 5
+
+  # ===== 第16章：无监督学习 =====
+  AI_016:
+    name: "无监督学习"
+    difficulty: 3
+    prerequisites: [AI_004]
+    related: [AI_005, MATH_001]
+    keywords: ["K-Means", "层次聚类", "DBSCAN", "PCA", "降维", "自编码器", "GMM"]
+    learning_objectives: ["理解聚类与降维核心思想", "能选择合适的无监督算法", "掌握主要评估指标"]
+    estimated_hours: 5
+
+  # ===== 数学基础 =====
+  MATH_001:
+    name: "线性代数基础"
+    difficulty: 2
+    prerequisites: []
+    related: [AI_005_03, AI_006]
+    keywords: ["矩阵运算", "特征值与特征向量", "向量空间", "SVD", "PCA", "矩阵分解"]
+    estimated_hours: 6
+
+  MATH_002:
+    name: "概率论与数理统计"
+    difficulty: 3
+    prerequisites: []
+    related: [AI_004, AI_005]
+    keywords: ["概率分布", "贝叶斯定理", "期望", "方差", "最大似然估计", "假设检验"]
+    estimated_hours: 6
+
+  MATH_003:
+    name: "微积分与最优化"
+    difficulty: 3
+    prerequisites: []
+    related: [AI_004, AI_006]
+    keywords: ["梯度", "偏导数", "链式法则", "凸优化", "梯度下降", "拉格朗日乘子"]
+    estimated_hours: 5
+
+  # ===== 编程基础 =====
+  CODE_001:
+    name: "Python编程基础"
+    difficulty: 2
+    prerequisites: []
+    related: [CODE_002]
+    keywords: ["Python", "NumPy", "Pandas", "Matplotlib", "Jupyter"]
+    estimated_hours: 8
+
+  CODE_002:
+    name: "深度学习框架(PyTorch)"
+    difficulty: 4
+    prerequisites: [CODE_001, AI_006]
+    keywords: ["PyTorch", "Tensor", "Autograd", "DataLoader", "torch.nn", "模型训练"]
+    estimated_hours: 6
+
+  # ============================================================
+  # Python 程序设计课知识点（PY-101）
+  # ============================================================
+  PY_001:
+    name: "Python 语言概述"
+    difficulty: 1
+    prerequisites: []
+    related: [PY_002, PY_003]
+    keywords: ["Python", "解释型语言", "Guido van Rossum", "动态类型", "跨平台", "REPL"]
+    learning_objectives: ["了解 Python 的发展历史与设计哲学", "理解解释型语言与动态类型的特点", "能搭建 Python 开发环境并运行 hello world"]
+    estimated_hours: 2
+
+  PY_002:
+    name: "变量与数据类型"
+    difficulty: 1
+    prerequisites: [PY_001]
+    related: [PY_003, PY_006]
+    keywords: ["int", "float", "str", "bool", "动态类型", "类型转换", "可变与不可变对象", "is vs =="]
+    learning_objectives: ["掌握 Python 基本数据类型及转换", "理解动态类型与可变/不可变对象的区别", "能正确使用类型检查与类型转换"]
+    estimated_hours: 3
+
+  PY_003:
+    name: "运算符与表达式"
+    difficulty: 1
+    prerequisites: [PY_002]
+    related: [PY_004]
+    keywords: ["算术运算符", "比较运算符", "逻辑运算符", "赋值运算符", "位运算", "运算符优先级", "海象运算符"]
+    learning_objectives: ["掌握各类运算符的用法与优先级", "理解短路求值与链式比较", "能编写简洁有效的表达式"]
+    estimated_hours: 2
+
+  PY_004:
+    name: "控制流（条件与循环）"
+    difficulty: 2
+    prerequisites: [PY_003]
+    related: [PY_005]
+    keywords: ["if-elif-else", "for", "while", "break", "continue", "range", "enumerate", "zip", "列表推导式"]
+    learning_objectives: ["掌握条件判断与循环结构的编写", "理解 break/continue/else 子句的用法", "能使用 enumerate/zip 等迭代工具简化代码"]
+    estimated_hours: 4
+
+  PY_005:
+    name: "函数定义与参数"
+    difficulty: 2
+    prerequisites: [PY_004]
+    related: [PY_011, PY_022]
+    keywords: ["def", "return", "默认参数", "*args", "**kwargs", "关键字参数", "lambda", "类型注解", "docstring"]
+    learning_objectives: ["掌握函数定义与多种参数形式", "理解 *args/**kwargs 的用途", "能编写带类型注解和文档字符串的规范函数"]
+    estimated_hours: 4
+
+  PY_006:
+    name: "列表与列表推导式"
+    difficulty: 2
+    prerequisites: [PY_002, PY_004]
+    related: [PY_007, PY_008]
+    keywords: ["list", "append", "insert", "pop", "remove", "切片", "列表推导式", "时间复杂度", "浅拷贝与深拷贝"]
+    learning_objectives: ["掌握列表的增删改查与切片操作", "理解列表操作的时间复杂度", "能使用列表推导式编写简洁高效代码"]
+    estimated_hours: 4
+
+  PY_007:
+    name: "字典与哈希表"
+    difficulty: 2
+    prerequisites: [PY_006]
+    related: [PY_008, PY_010]
+    keywords: ["dict", "键值对", "get", "setdefault", "字典推导式", "哈希表", "开放寻址", "插入顺序", "OrderedDict"]
+    learning_objectives: ["掌握字典的创建与操作方法", "理解哈希表底层原理与时间复杂度", "能选择合适的字典方法处理实际场景"]
+    estimated_hours: 3
+
+  PY_008:
+    name: "元组与集合"
+    difficulty: 2
+    prerequisites: [PY_006]
+    related: [PY_007]
+    keywords: ["tuple", "不可变序列", "set", "frozenset", "并集", "交集", "差集", "集合推导式", "去重"]
+    learning_objectives: ["掌握元组与集合的特性与操作", "理解可变与不可变的本质区别", "能选择合适的数据结构解决去重与映射问题"]
+    estimated_hours: 3
+
+  PY_009:
+    name: "字符串操作"
+    difficulty: 2
+    prerequisites: [PY_002]
+    related: [PY_006]
+    keywords: ["str", "f-string", "format", "split", "join", "strip", "replace", "正则匹配", "字符串不可变性", "编码"]
+    learning_objectives: ["掌握字符串格式化与常用方法", "理解字符串不可变性对性能的影响", "能处理文本数据与编码问题"]
+    estimated_hours: 3
+
+  PY_010:
+    name: "collections 高级容器"
+    difficulty: 3
+    prerequisites: [PY_007, PY_008]
+    related: [PY_022]
+    keywords: ["collections", "defaultdict", "Counter", "deque", "namedtuple", "OrderedDict", "ChainMap"]
+    learning_objectives: ["掌握 collections 模块常用容器", "理解 defaultdict/Counter/deque 的应用场景", "能使用高级容器简化复杂逻辑"]
+    estimated_hours: 3
+
+  PY_011:
+    name: "类与对象"
+    difficulty: 3
+    prerequisites: [PY_005]
+    related: [PY_012, PY_013, PY_014]
+    keywords: ["class", "__init__", "self", "实例属性", "类属性", "实例方法", "类方法", "静态方法", "@property"]
+    learning_objectives: ["掌握类的定义与实例化", "理解实例属性与类属性的区别", "能正确使用 @property/@classmethod/@staticmethod"]
+    estimated_hours: 5
+
+  PY_012:
+    name: "继承与多态"
+    difficulty: 3
+    prerequisites: [PY_011]
+    related: [PY_013, PY_014]
+    keywords: ["继承", "多继承", "super()", "方法重写", "MRO", "C3线性化", "菱形继承", "isinstance", "鸭子类型"]
+    learning_objectives: ["掌握单继承与多继承的实现", "理解 MRO 与 C3 线性化算法", "能利用多态设计灵活的类层次结构"]
+    estimated_hours: 4
+
+  PY_013:
+    name: "封装与 property"
+    difficulty: 3
+    prerequisites: [PY_011]
+    related: [PY_012]
+    keywords: ["封装", "_protected", "__private", "名称改写", "@property", "@setter", "@deleter", "dataclass"]
+    learning_objectives: ["掌握封装的约定与实现方式", "理解名称改写机制", "能使用 property 装饰器实现受控属性访问"]
+    estimated_hours: 3
+
+  PY_014:
+    name: "魔术方法"
+    difficulty: 3
+    prerequisites: [PY_011]
+    related: [PY_012, PY_015]
+    keywords: ["__repr__", "__str__", "__add__", "__eq__", "__hash__", "__len__", "__getitem__", "__iter__", "__call__", "运算符重载"]
+    learning_objectives: ["掌握常用魔术方法的触发时机与实现", "理解运算符重载原理", "能通过魔术方法使自定义类支持内置操作"]
+    estimated_hours: 4
+
+  PY_015:
+    name: "上下文管理器"
+    difficulty: 3
+    prerequisites: [PY_014]
+    related: [PY_016]
+    keywords: ["with", "__enter__", "__exit__", "contextlib", "contextmanager", "资源管理", "异常抑制"]
+    learning_objectives: ["掌握 with 语句与上下文管理协议", "理解 __enter__/__exit__ 的调用机制", "能实现自定义上下文管理器与 contextlib 装饰器"]
+    estimated_hours: 3
+
+  PY_016:
+    name: "文件读写"
+    difficulty: 2
+    prerequisites: [PY_009, PY_015]
+    related: [PY_017, PY_018]
+    keywords: ["open", "read", "write", "readlines", "文件模式", "encoding", "with open", "二进制文件", "缓冲"]
+    learning_objectives: ["掌握文本与二进制文件的读写操作", "理解文件模式与编码处理", "能使用 with 语句安全操作文件"]
+    estimated_hours: 3
+
+  PY_017:
+    name: "pathlib 路径操作"
+    difficulty: 2
+    prerequisites: [PY_016]
+    related: [PY_021]
+    keywords: ["pathlib", "Path", "glob", "rglob", "mkdir", "stat", "suffix", "stem", "parent", "exists"]
+    learning_objectives: ["掌握 Path 对象的常用操作", "理解 pathlib 相对 os.path 的优势", "能使用 glob/rglob 进行文件遍历与匹配"]
+    estimated_hours: 2
+
+  PY_018:
+    name: "CSV 与 JSON 处理"
+    difficulty: 2
+    prerequisites: [PY_016, PY_007]
+    related: [PY_021]
+    keywords: ["csv", "DictReader", "DictWriter", "json", "dumps", "loads", "dump", "load", "序列化", "ensure_ascii"]
+    learning_objectives: ["掌握 CSV 文件的读写与 DictReader 使用", "掌握 JSON 的序列化与反序列化", "能处理结构化数据文件的导入导出"]
+    estimated_hours: 3
+
+  PY_019:
+    name: "异常处理"
+    difficulty: 3
+    prerequisites: [PY_004, PY_016]
+    related: [PY_020]
+    keywords: ["try", "except", "else", "finally", "raise", "异常层级", "具体异常捕获", "裸 except 问题", "异常链"]
+    learning_objectives: ["掌握 try-except-else-finally 完整结构", "理解异常层级与最佳实践", "能编写稳健的异常处理代码"]
+    estimated_hours: 3
+
+  PY_020:
+    name: "自定义异常"
+    difficulty: 3
+    prerequisites: [PY_011, PY_019]
+    related: []
+    keywords: ["自定义异常", "Exception", "BaseException", "异常属性", "raise from", "异常传播", "业务异常设计"]
+    learning_objectives: ["掌握自定义异常类的设计与实现", "理解 Exception 与 BaseException 的区别", "能为业务逻辑设计合理的异常体系"]
+    estimated_hours: 2
+
+  PY_021:
+    name: "常用标准库"
+    difficulty: 2
+    prerequisites: [PY_005, PY_016]
+    related: [PY_022]
+    keywords: ["os", "sys", "datetime", "re", "math", "random", "logging", "argparse", "subprocess"]
+    learning_objectives: ["掌握 os/datetime/re/logging 等常用标准库", "理解各标准库的核心功能与适用场景", "能在项目中合理选用标准库"]
+    estimated_hours: 4
+
+  PY_022:
+    name: "迭代器与生成器"
+    difficulty: 4
+    prerequisites: [PY_005, PY_010]
+    related: [PY_023]
+    keywords: ["迭代器协议", "__iter__", "__next__", "yield", "生成器函数", "生成器表达式", "惰性计算", "send", "throw", "close"]
+    learning_objectives: ["掌握迭代器协议与生成器原理", "理解 yield 的暂停/恢复机制", "能使用生成器处理大数据流与无限序列"]
+    estimated_hours: 4
+
+  PY_023:
+    name: "装饰器"
+    difficulty: 4
+    prerequisites: [PY_011, PY_022]
+    related: []
+    keywords: ["装饰器", "高阶函数", "闭包", "functools.wraps", "带参数装饰器", "类装饰器", "LRU Cache", "装饰器堆叠"]
+    learning_objectives: ["掌握装饰器的原理与实现", "理解闭包与作用域链", "能编写带参数的装饰器与类装饰器"]
+    estimated_hours: 4
+
+  PY_024:
+    name: "Python 项目实战"
+    difficulty: 5
+    prerequisites: [PY_011, PY_018, PY_019, PY_021, PY_023]
+    related: []
+    keywords: ["项目结构", "虚拟环境", "requirements.txt", "pytest", "模块化设计", "日志配置", "命令行工具", "打包发布"]
+    learning_objectives: ["掌握 Python 项目的工程化组织", "理解虚拟环境与依赖管理", "能独立完成一个完整的 Python 命令行或数据处理项目"]
+    estimated_hours: 8
+
+# 推荐学习路径（预设模板，PathPlannerAgent可在此基础上个性化调整）
+recommended_paths:
+  beginner_full:
+    name: "零基础完整学习路径"
+    target_profile: {"knowledge_base": "初级", "learning_goal": "系统学习AI"}
+    stages:
+      - [AI_001, MATH_001, CODE_001]           # 第1阶段：基础入门（1周）
+      - [MATH_002, MATH_003]                     # 第2阶段：数学基础（1周）
+      - [AI_004]                                 # 第3阶段：ML入门（1周）
+      - [AI_005, AI_005_01, AI_005_02]          # 第4阶段：监督学习（1.5周）
+      - [AI_006, AI_006_01]                      # 第5阶段：神经网络（1.5周）
+      - [AI_006_02, AI_006_03]                   # 第6阶段：RNN+Transformer（1周）
+      - [AI_007, AI_008]                         # 第7阶段：NLP+CV（1.5周）
+      - [AI_009, AI_010]                         # 第8阶段：进阶+伦理（1周）
+
+  fast_track:
+    name: "快速实战路径"
+    target_profile: {"knowledge_base": "中级", "learning_goal": "就业/项目实战"}
+    stages:
+      - [AI_004, AI_005, CODE_002]              # 快速ML+PyTorch（1周）
+      - [AI_006, AI_006_01, AI_006_03]          # 核心深度学习（1.5周）
+      - [AI_007, AI_008]                         # NLP+CV应用（1.5周）
+
+  math_weak:
+    name: "数学薄弱友好路径"
+    target_profile: {"weak_points": ["线性代数", "概率论"]}
+    stages:
+      - [AI_001, CODE_001]                       # 概念+编程先行
+      - [AI_004]                                  # 用直觉理解ML概念
+      - [MATH_001, MATH_002]                     # 在ML上下文中补数学
+      - [AI_005, MATH_003]                       # 算法+优化数学
+      - [AI_006, AI_006_01]                      # 进入深度学习
+
+  # ===== Python 程序设计推荐路径 =====
+  py_beginner_full:
+    name: "Python 零基础完整学习路径"
+    target_profile: {"knowledge_base": "初级", "learning_goal": "系统学习 Python"}
+    stages:
+      - [PY_001, PY_002, PY_003]                # 第1阶段：语言基础（1周）
+      - [PY_004, PY_005]                         # 第2阶段：控制流与函数（1周）
+      - [PY_006, PY_007, PY_008, PY_009]        # 第3阶段：数据结构（1.5周）
+      - [PY_010, PY_011, PY_012]                # 第4阶段：OOP 入门（1.5周）
+      - [PY_013, PY_014, PY_015]                # 第5阶段：OOP 进阶（1周）
+      - [PY_016, PY_017, PY_018, PY_019, PY_020] # 第6阶段：文件与异常（1周）
+      - [PY_021, PY_022, PY_023, PY_024]        # 第7阶段：进阶与实战（2周）
+
+  py_fast_track:
+    name: "Python 快速实战路径"
+    target_profile: {"knowledge_base": "中级", "learning_goal": "项目实战"}
+    stages:
+      - [PY_004, PY_005, PY_006, PY_007]        # 快速基础（1周）
+      - [PY_011, PY_014, PY_015]                # OOP 核心（1周）
+      - [PY_016, PY_019, PY_022, PY_023]        # 文件+异常+进阶（1.5周）
+      - [PY_024]                                 # 项目实战（1周）
+
+  py_oop_focus:
+    name: "OOP 专项提升路径"
+    target_profile: {"weak_points": ["面向对象", "封装", "继承"]}
+    stages:
+      - [PY_005, PY_011]                         # 函数到类
+      - [PY_012, PY_013]                         # 继承与封装
+      - [PY_014, PY_015]                         # 魔术方法与上下文管理
+      - [PY_023]                                 # 装饰器综合
+      - [PY_024]                                 # 实战整合

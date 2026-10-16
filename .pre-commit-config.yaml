@@ -1,0 +1,56 @@
+# A3 pre-commit hooks - run a tight quality gate before every commit.
+# Install:
+#   pip install pre-commit && pre-commit install
+# Manual run:
+#   pre-commit run --all-files
+#
+# Scope: A-owned modules only. B's services keep their own conventions and
+# are excluded via the per-hook `exclude` patterns; CI runs the full ruff
+# (F821/F823/E9) gate on every file regardless.
+
+repos:
+  # ── 1. Ruff: fast Python linter (critical errors only on A's files) ──
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        name: ruff-check (F821,F823,E9 cross-repo)
+        args: [
+          --select=F821,F823,E9,
+          --fix,
+          --exit-non-zero-on-fix,
+        ]
+        files: ^(backend/app|scripts|tests)/.*\.py$
+      - id: ruff-format
+        name: ruff-format (A-owned files only)
+        files: ^(backend/app/services/(question_bank|knowledge_index|realdina_service|chapter_index)|backend/app/research/evaluation/(dina_real_adapter|calibrated_adapter)|scripts/(build_question_bank|build_chapter_frontmatter|build_chapter_frontmatter|benchmark_dina_real|precompute_realdina_snapshots)|tests/regression)\.py$
+
+  # ── 2. Mypy strict: lock A's recent service / adapter type contracts ──
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        name: mypy-strict (A's curated set)
+        args: [
+          --strict,
+          --explicit-package-bases,
+          --follow-imports=silent,
+        ]
+        files: ^(backend/app/services/(question_bank|knowledge_index|realdina_service)|backend/app/research/evaluation/(dina_real_adapter|calibrated_adapter))\.py$
+        additional_dependencies:
+          - types-PyYAML==6.0.12.20260518
+          - numpy
+
+  # ── 3. Generic hygiene ──
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^.*\.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: mixed-line-ending
+        args: [--fix=no]  # warn only; CRLF on Chinese Windows is intentional

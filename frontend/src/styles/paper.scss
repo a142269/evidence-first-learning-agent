@@ -1,0 +1,37 @@
+@mixin paper-noise {
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(164, 125, 83, 0.15) 0.7px, transparent 0.7px),
+    radial-gradient(rgba(255, 255, 255, 0.75) 0.8px, transparent 0.8px);
+  background-position: 0 0, 12px 15px;
+  background-size: 24px 24px;
+}
+
+@mixin silk-band($opacity: 1) {
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(110deg, transparent, rgba(222, 170, 109, 0.16), transparent);
+  opacity: $opacity;
+  transform: rotate(-22deg);
+}
+
+.paper-noise {
+  @include paper-noise;
+}
+
+.silk-a {
+  @include silk-band(1);
+}
+
+.silk-b {
+  @include silk-band(0.7);
+}
+
+.paper-surface {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 251, 245, 0.95)),
+    rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-card);
+}

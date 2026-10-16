@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated_at": "2026-07-08",
+    "purpose": "错题本种子数据 — 覆盖8大错因分类，支撑错题本闭环演示",
+    "total": 50
+  },
+  "mistakes": [
+    {"user_id": "demo-student-1", "kp_id": "transformer/attention", "question": "Transformer 中自注意力机制为什么需要除以 sqrt(d_k)？", "student_answer": "为了让结果更小，方便训练。", "correct_answer": "缩放点积可以避免点积值在维度 d_k 较大时进入 softmax 饱和区，从而稳定梯度。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "ml_fundamentals/gradient_descent", "question": "梯度下降中学习率过大会有什么问题？", "student_answer": "学习率过大会让模型训练更慢。", "correct_answer": "学习率过大会导致损失函数震荡甚至发散，无法收敛到最优解。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "cnn/pooling", "question": "CNN 的池化层主要作用是什么？", "student_answer": "池化层负责学习卷积核参数。", "correct_answer": "池化层通过下采样降低特征图尺寸，保留显著特征并增强平移鲁棒性，本身不引入可学习参数。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "rag/retrieval", "question": "RAG 检索后为什么常常需要重排？", "student_answer": "不需要重排，检索结果按相似度排序就够了。", "correct_answer": "重排器通过交叉编码器或 LLM 重新评估问题与候选文档的相关性，可以显著提升 Top-K 的相关命中率。", "error_type": "知识缺漏"},
+    {"user_id": "demo-student-1", "kp_id": "python_basics/mutable_default", "question": "Python 中 def f(x, items=[]): items.append(x) 多次调用为什么会累积？", "student_answer": "因为列表会被复制，每次都是同一份。", "correct_answer": "默认参数在函数定义时计算一次并在多次调用间共享；建议用 items=None 并在函数体内 items = items or [] 避免此陷阱。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "linear_algebra/eigenvalue", "question": "矩阵 A 的特征值 λ 满足什么条件？", "student_answer": "λ 是矩阵的行列式。", "correct_answer": "存在非零向量 v 使得 Av = λv，即 (A - λI)v = 0，det(A - λI) = 0。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "ml_fundamentals/overfitting", "question": "什么是过拟合？如何判断模型是否过拟合？", "student_answer": "过拟合就是模型太复杂了。", "correct_answer": "过拟合指模型在训练集上表现很好但在验证/测试集上表现差。判断标准：训练损失持续下降但验证损失开始上升。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "optimization/sgd_vs_adam", "question": "在小数据集+强正则化场景下，应该首选 SGD 还是 Adam？", "student_answer": "都用 Adam，因为 Adam 几乎总是更好。", "correct_answer": "小数据+强正则下，SGD with momentum 往往泛化更好；Adam 收敛快但容易过拟合。", "error_type": "方法选择错"},
+    {"user_id": "demo-student-1", "kp_id": "neural_networks/backprop", "question": "反向传播算法的核心原理是什么？", "student_answer": "反向传播就是从后往前算。", "correct_answer": "反向传播利用链式法则从输出层向输入层逐层计算损失函数对每个参数的梯度，用于梯度下降更新权重。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "rag/chunking", "question": "RAG 中文本分块（chunking）策略对检索效果有什么影响？", "student_answer": "分块大小不影响检索效果。", "correct_answer": "分块大小直接影响检索精度：过大会引入噪声降低相关性，过小会丢失上下文导致语义不完整。", "error_type": "知识缺漏"},
+
+    {"user_id": "demo-student-1", "kp_id": "transformer/positional_encoding", "question": "Transformer 为什么需要位置编码？", "student_answer": "为了让模型知道词的顺序，用 sin/cos 函数。", "correct_answer": "自注意力机制本身是排列不变的，位置编码为模型注入序列顺序信息，使模型能区分不同位置的 token。", "error_type": "审题不清"},
+    {"user_id": "demo-student-1", "kp_id": "ml_fundamentals/bias_variance", "question": "偏差-方差权衡（Bias-Variance Tradeoff）的含义是什么？", "student_answer": "偏差和方差都要小才好。", "correct_answer": "模型复杂度增加时偏差减小但方差增大，需在两者间找到最优平衡点以最小化总误差。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "linear_algebra/svd", "question": "SVD 分解 A = UΣV^T 中 U 和 V 的列向量是什么？", "student_answer": "U 是特征值，V 是特征向量。", "correct_answer": "U 的列是 AAT 的特征向量（左奇异向量），V 的列是 AT A 的特征向量（右奇异向量），Σ 是对角奇异值矩阵。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "cnn/convolution", "question": "卷积层中 3×3 卷积核的感受野在两层叠加后是多少？", "student_answer": "是 6×6。", "correct_answer": "两层 3×3 卷积叠加的感受野是 5×5（第一层 3×3，第二层在每个位置再覆盖 3×3，扩展 2 像素）。", "error_type": "计算失误"},
+    {"user_id": "demo-student-1", "kp_id": "python_basics/decorator", "question": "Python 装饰器 @property 的作用是什么？", "student_answer": "用来定义类的属性。", "correct_answer": "@property 将方法转换为只读属性访问，允许通过 obj.attr 语法调用方法，常用于getter。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "ml_fundamentals/cross_validation", "question": "K 折交叉验证中 K=5 意味着什么？", "student_answer": "把数据分成 5 份，用 1 份训练。", "correct_answer": "将数据集均分 5 份，每次用 4 份训练、1 份验证，循环 5 次取平均作为模型评估指标。", "error_type": "审题不清"},
+    {"user_id": "demo-student-1", "kp_id": "neural_networks/activation", "question": "ReLU 激活函数在 x<0 时的输出是什么？有什么问题？", "student_answer": "输出 0，没有问题。", "correct_answer": "ReLU 在 x<0 时输出 0，可能导致神经元死亡（Dead ReLU）问题，梯度永远为 0 无法更新。", "error_type": "知识缺漏"},
+    {"user_id": "demo-student-1", "kp_id": "rag/embedding", "question": "为什么 RAG 中常用向量数据库而不是直接用关键词搜索？", "student_answer": "因为向量数据库更快。", "correct_answer": "向量数据库基于语义嵌入进行相似性检索，能理解语义相似性而非仅匹配关键词，召回率更高。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "optimization/learning_rate", "question": "学习率衰减策略中 cosine annealing 的公式是什么？", "student_answer": "lr = lr0 * 0.5 每轮减半。", "correct_answer": "cosine annealing: lr = lr_min + 0.5*(lr_max - lr_min)*(1 + cos(π*t/T))，T 为总周期。", "error_type": "计算失误"},
+    {"user_id": "demo-student-1", "kp_id": "transformer/multi_head", "question": "多头注意力中每个头的维度如何计算？如果有 8 个头，d_model=512，每个头维度是多少？", "student_answer": "每个头维度是 512。", "correct_answer": "每个头维度 = d_model / num_heads = 512 / 8 = 64。多头将向量投影到不同子空间并行计算注意力。", "error_type": "计算粗心"},
+
+    {"user_id": "demo-student-1", "kp_id": "linear_algebra/matrix_multiply", "question": "矩阵乘法 AB 中 A 是 3×4，B 是 4×5，结果矩阵的维度是多少？", "student_answer": "结果是 4×4。", "correct_answer": "结果矩阵维度为 3×5。矩阵乘法要求 A 的列数等于 B 的行数，结果为 A 的行数 × B 的列数。", "error_type": "计算粗心"},
+    {"user_id": "demo-student-1", "kp_id": "cnn/batch_norm", "question": "Batch Normalization 在训练和推理时的行为有什么不同？", "student_answer": "训练和推理完全一样。", "correct_answer": "训练时使用当前 batch 的均值和方差；推理时使用训练阶段累积的移动平均统计量，保证推理一致性。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "ml_fundamentals/regularization", "question": "L1 正则化和 L2 正则化在特征选择上有什么区别？", "student_answer": "都一样，都是惩罚大权重。", "correct_answer": "L1 正则化产生稀疏权重，可做特征选择；L2 正则化使权重平滑趋近零但不等于零，不适合特征选择。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "rag/hybrid_search", "question": "混合检索（Hybrid Search）中 BM25 和向量检索的结果如何融合？", "student_answer": "直接拼接两个结果列表就行。", "correct_answer": "常用 Reciprocal Rank Fusion (RRF) 或加权分数融合：score = α*bm25_score + (1-α)*vector_score，平衡关键词匹配与语义相似。", "error_type": "方法选择错"},
+    {"user_id": "demo-student-1", "kp_id": "neural_networks/dropout", "question": "Dropout 在训练和推理时的行为有什么区别？", "student_answer": "训练时随机丢弃神经元，推理时也丢弃。", "correct_answer": "训练时以概率 p 随机丢弃神经元并缩放剩余权重；推理时不丢弃，使用全部神经元（权重已自动缩放）。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "python_basics/generator", "question": "Python 生成器 yield 和 return 的区别是什么？", "student_answer": "yield 和 return 一样都是返回值。", "correct_answer": "yield 返回一个值但保留函数执行状态，下次调用从 yield 处继续；return 终止函数执行。生成器用 yield 实现惰性计算。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-1", "kp_id": "transformer/layer_norm", "question": "Layer Normalization 和 Batch Normalization 的主要区别是什么？", "student_answer": "Layer Norm 是对层做归一化，Batch Norm 是对 batch 做归一化。", "correct_answer": "Batch Norm 沿 batch 维度归一化，依赖 batch 统计量；Layer Norm 沿特征维度归一化，每个样本独立计算，适合变长序列。", "error_type": "阅读理解"},
+    {"user_id": "demo-student-1", "kp_id": "ml_fundamentals/gradient_descent", "question": "批量梯度下降（BGD）和随机梯度下降（SGD）的收敛特点分别是什么？", "student_answer": "BGD 更快收敛，SGD 更慢。", "correct_answer": "BGD 每次用全部数据计算梯度，收敛平稳但慢；SGD 每次用单个样本，收敛快但震荡大，容易跳出局部最优。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-1", "kp_id": "rag/eval", "question": "评估 RAG 系统时 Faithfulness 指标的含义是什么？", "student_answer": "表示检索速度快慢。", "correct_answer": "Faithfulness 衡量生成回答是否忠于检索到的上下文，即回答中的论断是否能从参考文档中找到支持，检测幻觉。", "error_type": "审题不清"},
+    {"user_id": "demo-student-1", "kp_id": "cnn/receptive_field", "question": "三层 3×3 卷积（stride=1, padding=1）叠加后的感受野是多少？", "student_answer": "是 9×9。", "correct_answer": "三层 3×3 卷积叠加感受野为 7×7（每层扩展 2，3×3→5×5→7×7）。", "error_type": "计算失误"},
+
+    {"user_id": "demo-student-21", "kp_id": "rag/embedding", "question": "文本嵌入向量中的每一维是否分别对应一个可直接命名的语义？", "student_answer": "是，每一维都对应一个固定关键词。", "correct_answer": "通常不能把单个维度直接解释成固定关键词；语义由高维向量整体及维度间关系共同表示。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-21", "kp_id": "rag/chunking", "question": "为什么分块越小不一定让 RAG 检索越准确？", "student_answer": "块越小噪声越少，所以一定更准。", "correct_answer": "分块过小会丢失必要上下文并造成语义残缺；需要结合文档结构、查询粒度与召回窗口权衡。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-21", "kp_id": "rag/retrieval", "question": "召回阶段和重排阶段的目标分别是什么？", "student_answer": "两者都是用同一个模型把结果按分数排序。", "correct_answer": "召回强调从大规模语料中快速获得高覆盖候选；重排用更精细模型提升候选前列的相关性与顺序。", "error_type": "概念混淆"},
+    {"user_id": "demo-student-21", "kp_id": "rag/hybrid_search", "question": "BM25 与向量检索在混合检索中各自弥补什么短板？", "student_answer": "BM25 更快，向量检索只是更慢。", "correct_answer": "BM25 擅长精确词项匹配，向量检索擅长语义相似；融合可兼顾专有名词命中与同义表达召回。", "error_type": "知识缺漏"},
+    {"user_id": "demo-student-21", "kp_id": "transformer/attention", "question": "若 Q 的形状为 (batch, heads, query_len, d_k)，K 转置后用于点积的最后两维是什么？", "student_answer": "还是 (query_len, d_k)。", "correct_answer": "K 转置最后两维后为 (d_k, key_len)，因此 QKᵀ 得到 (query_len, key_len) 的注意力分数矩阵。", "error_type": "计算失误"},
+    {"user_id": "demo-student-21", "kp_id": "linear_algebra/matrix_multiply", "question": "形状为 (4, 8) 与 (8, 16) 的矩阵相乘，输出形状是多少？", "student_answer": "输出是 (8, 8)。", "correct_answer": "内维 8 相等，输出取外维，因此结果形状为 (4, 16)。", "error_type": "计算粗心"},
+    {"user_id": "demo-student-21", "kp_id": "rag/eval", "question": "RAG 的 Context Precision 与 Faithfulness 分别关注什么？", "student_answer": "都只看最终答案是否正确。", "correct_answer": "Context Precision 关注检索上下文中相关片段的比例；Faithfulness 关注回答中的论断是否得到上下文支持。", "error_type": "审题不清"},
+    {"user_id": "demo-student-21", "kp_id": "python_basics/async", "question": "在 FastAPI 接口中直接调用耗时同步检索会有什么影响？", "student_answer": "没有影响，async 会自动并行。", "correct_answer": "耗时同步调用会阻塞事件循环，应使用异步客户端或线程池卸载，并设置超时与取消策略。", "error_type": "知识缺漏"},
+    {"user_id": "demo-student-21", "kp_id": "rag/namespace", "question": "为什么不同课程的向量数据需要使用独立 namespace？", "student_answer": "只是为了让文件名更整齐。", "correct_answer": "独立 namespace 能把检索候选物理或逻辑隔离，防止跨课程召回造成知识串扰与回答幻觉。", "error_type": "概念边界混淆"},
+    {"user_id": "demo-student-21", "kp_id": "rag/prompt", "question": "知识库没有足够证据时，生成模型应该如何回答？", "student_answer": "根据常识补全一个看起来合理的答案。", "correct_answer": "应明确说明证据不足，指出缺失信息并请求补充；不能编造定理、数据或库接口。", "error_type": "方法选择错"}
+  ]
+}

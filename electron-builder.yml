@@ -1,0 +1,42 @@
+# electron-builder 配置 — Windows NSIS 安装器
+# 文档: https://www.electron.build/configuration
+
+appId: com.a3learning.desktop
+productName: 智学领航
+copyright: Copyright © 2026 A3 Team
+
+directories:
+  output: dist_electron
+  buildResources: electron/assets
+
+# 入口文件（tsc 编译后的 main.js）
+files:
+  - dist-electron/**/*
+  - electron/assets/**/*
+  - package.json
+
+# 额外资源：PyInstaller 打包的后端
+extraResources:
+  - from: dist/a3-backend/
+    to: a3-backend/
+    filter: ["**/*"]
+
+# Windows 特定配置
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: electron/assets/icon.ico
+  artifactName: "智学领航-Setup-${version}.exe"
+
+# NSIS 安装器配置
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 智学领航
+  installerIcon: electron/assets/icon.ico
+  uninstallerIcon: electron/assets/icon.ico
+  installerHeaderIcon: electron/assets/icon.ico

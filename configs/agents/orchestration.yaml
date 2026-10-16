@@ -1,0 +1,132 @@
+# ============================================================
+# 多智能体路由与协同规则配置
+# 迁移自: 旧项目 configs/rules/pattern_rules.yaml 的规则驱动设计
+# 适配: 行为模式规则 → Agent 路由规则
+# ============================================================
+
+# ---- Agent 定义 ----
+agents:
+  profile:
+    name: "学习画像 Agent"
+    description: "通过对话自动抽取学生特征，构建并维护6维动态画像"
+    model: "spark-v4.0"
+    prompt_template: "templates/profile_extraction.jinja2"
+    update_strategy: "incremental"   # 增量更新策略（复用旧项目滑动窗口思想）
+    min_update_interval_turns: 3     # 每3轮对话至少更新一次
+
+  doc_gen:
+    name: "课程文档生成 Agent"
+    description: "根据画像+知识点生成个性化讲解文档"
+    model: "spark-v4.0"
+    prompt_template: "templates/doc_generation.jinja2"
+    output_formats: ["markdown", "pdf"]
+    knowledge_sources: ["course_notes", "textbook", "slides"]
+
+  mindmap:
+    name: "思维导图生成 Agent"
+    description: "生成知识点思维导图/知识图谱"
+    model: "spark-v4.0"
+    prompt_template: "templates/mindmap_generation.jinja2"
+    output_formats: ["mermaid", "png"]
+
+  exercise:
+    name: "练习题生成 Agent"
+    description: "根据学生画像生成针对性练习题（选择/填空/简答/编程）"
+    model: "spark-v4.0"
+    prompt_template: "templates/exercise_generation.jinja2"
+    output_formats: ["markdown", "json"]
+    difficulty_levels: ["easy", "medium", "hard"]
+    question_types: ["choice", "fill", "essay", "code"]
+
+  reading:
+    name: "拓展阅读 Agent"
+    description: "推荐拓展阅读材料"
+    model: "spark-v4.0"
+    prompt_template: "templates/reading_generation.jinja2"
+    output_formats: ["markdown"]
+    sources: ["papers", "articles", "books", "videos"]
+
+  video:
+    name: "视频/动画生成 Agent"
+    description: "生成教学短视频或动画（利用多模态生成能力）"
+    model: "spark-v4.0"
+    prompt_template: "templates/video_generation.jinja2"
+    output_formats: ["mp4", "gif"]
+    max_duration_seconds: 120
+
+  path_planner:
+    name: "学习路径规划 Agent"
+    description: "根据画像+知识图谱规划个性化学习路径"
+    model: "spark-v4.0"
+    prompt_template: "templates/path_planning.jinja2"
+    planning_horizon: "7days"   # 规划未来7天
+
+  tutor:
+    name: "智能辅导 Agent"
+    description: "即时多模态答疑解惑"
+    model: "spark-v4.0"
+    prompt_template: "templates/tutoring.jinja2"
+    response_types: ["text", "diagram", "video_short"]
+
+  evaluator:
+    name: "学习效果评估 Agent"
+    description: "多维度评估学习效果，动态调整策略"
+    model: "spark-v4.0"
+    prompt_template: "templates/evaluation.jinja2"
+    evaluation_dimensions: ["knowledge_retention", "application_ability", "progress_rate"]
+
+# ---- Agent 协同规则 ----
+orchestration_rules:
+  # 规则1：画像必须优先更新
+  - rule: "profile_first"
+    description: "任何资源生成/路径规划前，必须先确保画像已更新"
+    condition: "task.action != 'profile_update'"
+    action: "insert_profile_update_before"
+
+  # 规则2：资源生成可并行
+  - rule: "parallel_resource_generation"
+    description: "多类型资源生成互不依赖，可同时进行"
+    condition: "multiple_resource_tasks"
+    action: "parallel_execute"
+
+  # 规则3：路径规划依赖画像+知识图谱
+  - rule: "path_depends_on_profile"
+    description: "路径规划需要最新的画像+知识图谱"
+    depends_on: ["profile_update"]
+
+  # 规则4：效果评估后可调整路径
+  - rule: "evaluation_triggers_replan"
+    description: "评估结果显著偏离预期时，自动触发路径重规划"
+    condition: "evaluation_score < target * 0.7"
+    action: "trigger_replan"
+
+# ---- 防幻觉与内容安全规则 ----
+# 复用旧项目 configs/data/quality_rules.yaml 的规则设计模式
+safety_rules:
+  factuality:
+    - rule: "source_required"
+      description: "所有事实性陈述必须可追溯到知识库"
+      check: "verify_against_knowledge_base"
+    - rule: "confidence_threshold"
+      description: "模型置信度低于0.8时标注'待核实'"
+      threshold: 0.8
+
+  content_filter:
+    - rule: "no_sensitive_info"
+      description: "过滤敏感/违规内容"
+    - rule: "academic_integrity"
+      description: "不直接提供考试答案，引导解题思路"
+    - rule: "age_appropriate"
+      description: "内容适合高校学生"
+
+# ---- 流式输出配置 ----
+# 复用旧项目数据处理中的流式经验
+streaming:
+  enable_progress_tracking: true    # 显示"正在生成..."
+  enable_streaming_output: true     # 逐字流式输出
+  max_wait_seconds: 30              # 最大等待时间
+  progress_steps:                   # 进度步骤提示
+    - "正在分析您的需求..."
+    - "正在检索相关知识..."
+    - "正在生成个性化内容..."
+    - "正在格式化输出..."

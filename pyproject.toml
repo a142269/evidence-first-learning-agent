@@ -1,0 +1,158 @@
+[tool.poetry]
+name = "a3-learning-agent-system"
+version = "0.1.0"
+description = "Multi-Agent System for Personalized Learning Resource Generation"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.104.0"
+uvicorn = "^0.23.2"
+pydantic = "^2.4.2"
+pydantic-settings = "^2.0.3"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-multipart = "^0.0.6"
+requests = "^2.31.0"
+alembic = "^1.18.4"
+python-pptx = "^0.6.0"
+sqlalchemy = "^2.0.0"
+pyyaml = "^6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-benchmark = "^5.2"
+pytest-cov = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# ================================================================
+# Ruff — Lint + Format（Phase 0 质量门禁 #1）
+# ================================================================
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = [
+    "frontend/",
+    ".venv/",
+    "venv/",
+    "__pycache__/",
+    ".mypy_cache/",
+    ".ruff_cache/",
+    "data/",
+    "*.ipynb",
+]
+
+[tool.ruff.lint]
+select = [
+    # Pyflakes (F) — 未定义变量、未使用 import 等
+    "F",
+    # pycodestyle Error (E) — 语法/缩进错误
+    "E",
+    # pycodestyle Warning (W) — 风格警告
+    "W",
+    # isort (I) — import 排序
+    "I",
+    # pyupgrade (UP) — 现代 Python 语法
+    "UP",
+    # flake8-bugbear (B) — 常见 bug 检测
+    "B",
+    # flake8-comprehensions (C4) — 推导式优化
+    "C4",
+    # flake8-simplify (SIM) — 简化代码建议
+    "SIM",
+    # flake8-return (RET) — 返回语句检查
+    "RET",
+    # flake8-errmsg (EM) — 异常消息格式
+    "EM",
+    # flake8-raise (RSE) — raise 语句检查
+    "RSE",
+    # Ruff-specific (RUF) — Ruff 专用规则
+    "RUF",
+]
+ignore = [
+    # 允许 docstring 在类/模块级别缺失（逐步添加）
+    "D100", "D104", "D107",
+    # 允许 lambda 赋值（某些配置场景）
+    "E731",
+    # 允许 broad except（有 logging 兜底时）
+    "B904",
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend"]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ================================================================
+# MyPy — 静态类型检查（Phase 0 质量门禁 #2）
+# ================================================================
+[tool.mypy]
+python_version = "3.10"
+strict = false                           # 暂不 strict（逐步收敛）
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false             # 有正当 ignore 理由时不报
+disallow_untyped_defs = true            # 所有新函数必须有类型
+disallow_incomplete_defs = true          # 不允许部分类型
+check_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true            # 第三方库未 stub 时跳过
+exclude = [
+    "frontend/",
+    "tests/",
+    "scripts/",
+    "data/",
+    ".venv/",
+    "venv/",
+]
+# 以下模块因未安装 stub 或动态特性暂时排除
+[[tool.mypy.overrides]]
+module = [
+    "websocket",
+    "websockets",
+    "aiohttp",
+    "sklearn.*",
+    "jieba",
+    "numpy",
+    "pandas",
+    "chromadb",
+    "python_pptx",
+    "loguru",
+    "dotenv",
+    "pydantic_settings",
+]
+ignore_missing_imports = true
+
+# ================================================================
+# Pytest（Phase 0 测试基础设施）
+# ================================================================
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--cov=backend/app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=0",          # Phase 0 不设覆盖率底线（先建测试）
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "bench: marks tests as benchmarks",
+    "integration: marks tests as integration tests",
+]

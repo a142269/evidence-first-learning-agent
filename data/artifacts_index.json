@@ -1,0 +1,46 @@
+{
+  "version": "round4-0705",
+  "generated_by": "scripts/attach_artifacts_to_chapters.py",
+  "key_artifacts": [
+    {
+      "filename": "pptx_e8db0ea64c.pptx",
+      "course": "artificial_intelligence",
+      "chapter_slug": "05_transformer_and_llm",
+      "type": "pptx",
+      "title": "Self-Attention 多头注意力可视化 (C1)",
+      "rel_path": "data/artifacts/pptx/pptx_e8db0ea64c.pptx"
+    },
+    {
+      "filename": "tts_4db511b9ec.mp3",
+      "course": "artificial_intelligence",
+      "chapter_slug": "17_backpropagation",
+      "type": "mp3",
+      "title": "反向传播算法语音讲解 (C2)",
+      "rel_path": "data/artifacts/mp3/tts_4db511b9ec.mp3"
+    },
+    {
+      "filename": "f0af78e51dcd.png",
+      "course": "artificial_intelligence",
+      "chapter_slug": "04_cnn_and_vision",
+      "type": "mermaid_png",
+      "title": "CNN 架构 Mermaid 思维导图 (C3)",
+      "rel_path": "data/artifacts/mermaid_png/f0af78e51dcd.png"
+    },
+    {
+      "filename": "convolutional_neural_network_placeholder.svg",
+      "course": "artificial_intelligence",
+      "chapter_slug": "04_cnn_and_vision",
+      "type": "manim_svg",
+      "title": "卷积神经网络 Manim 动画占位 (C4 — 兜底)",
+      "rel_path": "data/artifacts/manim/convolutional_neural_network_placeholder.svg"
+    }
+  ],
+  "discovered_total": 51,
+  "discovered_by_type": {
+    "pptx": 7,
+    "mp3": 9,
+    "mermaid_png": 34,
+    "manim_svg": 1
+  },
+  "kb_attached": 4
+}

@@ -1,0 +1,323 @@
+course:
+  slug: artificial_intelligence
+  updated_at: '2026-07-17T23:47:54'
+nodes:
+  AI_001:
+    name: '00: 人工智能导论 · 从图灵测试到通用人工智能'
+    difficulty: 1
+    prerequisites: []
+    keywords:
+    - '00: 人工智能导论 · 从图灵测试到通用人工智能'
+    estimated_hours: 2
+  AI_002:
+    name: 学习目标
+    difficulty: 1
+    prerequisites:
+    - AI_001
+    keywords:
+    - 学习目标
+    estimated_hours: 2
+  AI_003:
+    name: 1 什么是人工智能
+    difficulty: 1
+    prerequisites:
+    - AI_002
+    keywords:
+    - 1 什么是人工智能
+    estimated_hours: 2
+  AI_004:
+    name: 2 AI 发展简史与三次浪潮
+    difficulty: 1
+    prerequisites:
+    - AI_003
+    keywords:
+    - 2 AI 发展简史与三次浪潮
+    estimated_hours: 2
+  AI_005:
+    name: 3 AI 核心分支与包含关系
+    difficulty: 1
+    prerequisites:
+    - AI_004
+    keywords:
+    - 3 AI 核心分支与包含关系
+    estimated_hours: 2
+  AI_006:
+    name: 4 教育智能体场景案例 (A3 系统)
+    difficulty: 1
+    prerequisites:
+    - AI_005
+    keywords:
+    - 4 教育智能体场景案例 (A3 系统)
+    estimated_hours: 2
+  AI_007:
+    name: 5 常见误区
+    difficulty: 1
+    prerequisites:
+    - AI_006
+    keywords:
+    - 5 常见误区
+    estimated_hours: 2
+  AI_008:
+    name: 6 可运行示例：几行代码调用大语言模型 API
+    difficulty: 2
+    prerequisites:
+    - AI_007
+    keywords:
+    - 6 可运行示例：几行代码调用大语言模型 API
+    estimated_hours: 2
+  AI_009:
+    name: 7 本章小结
+    difficulty: 2
+    prerequisites:
+    - AI_008
+    keywords:
+    - 7 本章小结
+    estimated_hours: 2
+  AI_010:
+    name: 8 练习思考
+    difficulty: 2
+    prerequisites:
+    - AI_009
+    keywords:
+    - 8 练习思考
+    estimated_hours: 2
+  AI_011:
+    name: 9 拓展阅读
+    difficulty: 2
+    prerequisites:
+    - AI_010
+    keywords:
+    - 9 拓展阅读
+    estimated_hours: 2
+  AI_012:
+    name: '01: 机器学习基础 · 从数据中挖掘智能'
+    difficulty: 2
+    prerequisites:
+    - AI_011
+    keywords:
+    - '01: 机器学习基础 · 从数据中挖掘智能'
+    estimated_hours: 2
+  AI_013:
+    name: 1 机器学习的四种范式
+    difficulty: 2
+    prerequisites:
+    - AI_012
+    keywords:
+    - 1 机器学习的四种范式
+    estimated_hours: 2
+  AI_014:
+    name: 2 线性回归与梯度下降：机器学习的 Hello World
+    difficulty: 2
+    prerequisites:
+    - AI_013
+    keywords:
+    - 2 线性回归与梯度下降：机器学习的 Hello World
+    estimated_hours: 2
+  AI_015:
+    name: 3 逻辑回归与分类
+    difficulty: 2
+    prerequisites:
+    - AI_014
+    keywords:
+    - 3 逻辑回归与分类
+    estimated_hours: 2
+  AI_016:
+    name: 4 模型的梦魇：过拟合与欠拟合
+    difficulty: 3
+    prerequisites:
+    - AI_015
+    keywords:
+    - 4 模型的梦魇：过拟合与欠拟合
+    estimated_hours: 2
+  AI_017:
+    name: 5 评估指标：不仅仅是看准确率
+    difficulty: 3
+    prerequisites:
+    - AI_016
+    keywords:
+    - 5 评估指标：不仅仅是看准确率
+    estimated_hours: 2
+  AI_018:
+    name: 6 教育智能体场景案例 (A3 系统)
+    difficulty: 3
+    prerequisites:
+    - AI_017
+    keywords:
+    - 6 教育智能体场景案例 (A3 系统)
+    estimated_hours: 2
+  AI_019:
+    name: 7 常见误区
+    difficulty: 3
+    prerequisites:
+    - AI_018
+    keywords:
+    - 7 常见误区
+    estimated_hours: 2
+  AI_020:
+    name: 8 可运行示例：纯 NumPy 实现线性回归与梯度下降
+    difficulty: 3
+    prerequisites:
+    - AI_019
+    keywords:
+    - 8 可运行示例：纯 NumPy 实现线性回归与梯度下降
+    estimated_hours: 2
+  AI_021:
+    name: 9 本章小结
+    difficulty: 3
+    prerequisites:
+    - AI_020
+    keywords:
+    - 9 本章小结
+    estimated_hours: 2
+  AI_022:
+    name: 10 练习思考
+    difficulty: 3
+    prerequisites:
+    - AI_021
+    keywords:
+    - 10 练习思考
+    estimated_hours: 2
+  AI_023:
+    name: 11 拓展阅读
+    difficulty: 3
+    prerequisites:
+    - AI_022
+    keywords:
+    - 11 拓展阅读
+    estimated_hours: 2
+  AI_024:
+    name: '02: 数学基础 · 深度学习的底层引擎'
+    difficulty: 4
+    prerequisites:
+    - AI_023
+    keywords:
+    - '02: 数学基础 · 深度学习的底层引擎'
+    estimated_hours: 2
+  AI_025:
+    name: 1 线性代数：AI 的通用语言
+    difficulty: 4
+    prerequisites:
+    - AI_024
+    keywords:
+    - 1 线性代数：AI 的通用语言
+    estimated_hours: 2
+  AI_026:
+    name: 2 协方差矩阵与 PCA 降维
+    difficulty: 4
+    prerequisites:
+    - AI_025
+    keywords:
+    - 2 协方差矩阵与 PCA 降维
+    estimated_hours: 2
+  AI_027:
+    name: 3 概率论：处理不确定性的语言
+    difficulty: 4
+    prerequisites:
+    - AI_026
+    keywords:
+    - 3 概率论：处理不确定性的语言
+    estimated_hours: 2
+  AI_028:
+    name: 4 微积分：优化的数学基础
+    difficulty: 4
+    prerequisites:
+    - AI_027
+    keywords:
+    - 4 微积分：优化的数学基础
+    estimated_hours: 2
+  AI_029:
+    name: 5 A3 教育智能体场景案例
+    difficulty: 4
+    prerequisites:
+    - AI_028
+    keywords:
+    - 5 A3 教育智能体场景案例
+    estimated_hours: 2
+  AI_030:
+    name: 6 常见误区
+    difficulty: 4
+    prerequisites:
+    - AI_029
+    keywords:
+    - 6 常见误区
+    estimated_hours: 2
+  AI_031:
+    name: 7 可运行示例：纯 NumPy 实现数值稳定的 Softmax
+    difficulty: 4
+    prerequisites:
+    - AI_030
+    keywords:
+    - 7 可运行示例：纯 NumPy 实现数值稳定的 Softmax
+    estimated_hours: 2
+  AI_032:
+    name: 8 本章小结
+    difficulty: 5
+    prerequisites:
+    - AI_031
+    keywords:
+    - 8 本章小结
+    estimated_hours: 2
+  AI_033:
+    name: 11 可运行代码示例
+    difficulty: 5
+    prerequisites:
+    - AI_032
+    keywords:
+    - 11 可运行代码示例
+    estimated_hours: 2
+  AI_034:
+    name: === 矩阵乘法：前馈神经网络最基础的张量运算 ===
+    difficulty: 5
+    prerequisites:
+    - AI_033
+    keywords:
+    - === 矩阵乘法：前馈神经网络最基础的张量运算 ===
+    estimated_hours: 2
+  AI_035:
+    name: === 特征值分解：PCA 的数学引擎 ===
+    difficulty: 5
+    prerequisites:
+    - AI_034
+    keywords:
+    - === 特征值分解：PCA 的数学引擎 ===
+    estimated_hours: 2
+  AI_036:
+    name: === SVD 分解：低秩近似的核心 ===
+    difficulty: 5
+    prerequisites:
+    - AI_035
+    keywords:
+    - === SVD 分解：低秩近似的核心 ===
+    estimated_hours: 2
+  AI_037:
+    name: === 贝叶斯定理：垃圾邮件分类的朴素贝叶斯推导 ===
+    difficulty: 5
+    prerequisites:
+    - AI_036
+    keywords:
+    - === 贝叶斯定理：垃圾邮件分类的朴素贝叶斯推导 ===
+    estimated_hours: 2
+  AI_038:
+    name: 直观：仅一个"免费"词就把垃圾邮件概率从 20% 提升到 66%
+    difficulty: 5
+    prerequisites:
+    - AI_037
+    keywords:
+    - 直观：仅一个"免费"词就把垃圾邮件概率从 20% 提升到 66%
+    estimated_hours: 2
+  AI_039:
+    name: 10 拓展阅读
+    difficulty: 5
+    prerequisites:
+    - AI_038
+    keywords:
+    - 10 拓展阅读
+    estimated_hours: 2
+  AI_040:
+    name: '03: 神经网络基础 · 深度学习的基石'
+    difficulty: 5
+    prerequisites:
+    - AI_039
+    keywords:
+    - '03: 神经网络基础 · 深度学习的基石'
+    estimated_hours: 2

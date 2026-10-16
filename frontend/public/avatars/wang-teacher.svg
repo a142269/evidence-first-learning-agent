@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">王老师头像</title>
+  <desc id="desc">紫罗兰色背景的女性教师插画头像</desc>
+  <defs>
+    <linearGradient id="bg" x1="24" y1="20" x2="232" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6C5CAB"/>
+      <stop offset="1" stop-color="#3A2E6E"/>
+    </linearGradient>
+    <linearGradient id="blazer" x1="74" y1="166" x2="186" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D96D8B"/>
+      <stop offset="1" stop-color="#A94465"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <circle cx="42" cy="48" r="18" fill="#B8A9E8" opacity=".32"/>
+  <circle cx="215" cy="56" r="29" fill="#EDE6FF" opacity=".14"/>
+  <!-- 披肩长发（后层） -->
+  <path d="M128 30c-46 0-73 30-73 79 0 43 9 82 22 104l26 5V120h50v98l26-5c13-22 22-61 22-104 0-49-27-79-73-79z" fill="#38292F"/>
+  <!-- 肩部西装 -->
+  <path d="M47 238c7-48 37-75 81-75s75 27 81 75" fill="url(#blazer)"/>
+  <!-- 颈部 -->
+  <path d="M101 158h54v30c-8 10-18 15-27 15s-19-5-27-15z" fill="#E8A87E"/>
+  <!-- 脸部 -->
+  <ellipse cx="128" cy="113" rx="52" ry="59" fill="#F5C29A"/>
+  <!-- 刘海与侧发（前层） -->
+  <path d="M128 36c-38 0-60 25-60 65 0 8 1 16 3 23l9-3c-2-14 1-25 8-33 12 5 27 7 40 7s28-2 40-7c7 8 10 19 8 33l9 3c2-7 3-15 3-23 0-40-22-65-60-65z" fill="#43323A"/>
+  <path d="M76 118c-4 26-2 58 5 86l-16-8c-8-24-11-54-4-82z" fill="#38292F"/>
+  <path d="M180 118c4 26 2 58-5 86l16-8c8-24 11-54 4-82z" fill="#38292F"/>
+  <!-- 眉毛 -->
+  <path d="M90 100c9-6 18-7 26-3M140 97c8-4 17-3 26 3" fill="none" stroke="#5A3B32" stroke-width="5" stroke-linecap="round"/>
+  <!-- 眼睛 -->
+  <ellipse cx="107" cy="115" rx="5" ry="7" fill="#29313D"/>
+  <ellipse cx="151" cy="115" rx="5" ry="7" fill="#29313D"/>
+  <!-- 细框眼镜 -->
+  <circle cx="107" cy="115" r="16" fill="none" stroke="#2F2A3D" stroke-width="3.5" opacity=".85"/>
+  <circle cx="151" cy="115" r="16" fill="none" stroke="#2F2A3D" stroke-width="3.5" opacity=".85"/>
+  <path d="M123 113h12M91 111l-13-5M167 111l13-5" fill="none" stroke="#2F2A3D" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+  <!-- 微笑 -->
+  <path d="M113 143c10 8 20 8 30 0" fill="none" stroke="#B85F55" stroke-width="5" stroke-linecap="round"/>
+  <!-- 耳环 -->
+  <circle cx="77" cy="132" r="4" fill="#F2C94C"/>
+  <circle cx="179" cy="132" r="4" fill="#F2C94C"/>
+  <!-- 白衬衫领口 -->
+  <path d="M100 172l28 26 28-26 14 13-9 53H95l-9-53z" fill="#F8F5EF" opacity=".96"/>
+  <path d="M128 198v40" stroke="#D9D2E9" stroke-width="4"/>
+  <!-- 教师徽章：翻开的书 -->
+  <circle cx="204" cy="204" r="24" fill="#EDE6FF"/>
+  <path d="M192 197c4-3 8-3 12 0v16c-4-3-8-3-12 0zM216 197c-4-3-8-3-12 0v16c4-3 8-3 12 0z" fill="none" stroke="#5B4A9E" stroke-width="4" stroke-linejoin="round"/>
+</svg>

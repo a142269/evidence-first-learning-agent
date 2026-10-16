@@ -1,0 +1,4428 @@
+{
+  "_meta": {
+    "version": "python-v1-0712",
+    "description": "Python 程序设计专用题库 — 覆盖 PY_001~PY_024 共 24 个知识点",
+    "total": 240,
+    "kp_count": 24,
+    "type_distribution": {
+      "multiple_choice": 119,
+      "short_answer": 45,
+      "programming": 31,
+      "open_ended": 45
+    },
+    "bloom_distribution": {
+      "Remember": 45,
+      "Understand": 22,
+      "Apply": 76,
+      "Analyze": 46,
+      "Evaluate": 23,
+      "Create": 28
+    },
+    "difficulty_distribution": {
+      "1": 45,
+      "2": 71,
+      "3": 92,
+      "4": 28,
+      "5": 4
+    },
+    "kp_distribution": {
+      "PY_001": 10,
+      "PY_002": 10,
+      "PY_003": 10,
+      "PY_004": 10,
+      "PY_005": 10,
+      "PY_006": 10,
+      "PY_007": 10,
+      "PY_008": 10,
+      "PY_009": 10,
+      "PY_010": 10,
+      "PY_011": 10,
+      "PY_012": 10,
+      "PY_013": 10,
+      "PY_014": 10,
+      "PY_015": 10,
+      "PY_016": 10,
+      "PY_017": 10,
+      "PY_018": 10,
+      "PY_019": 10,
+      "PY_020": 10,
+      "PY_021": 10,
+      "PY_022": 10,
+      "PY_023": 10,
+      "PY_024": 10
+    }
+  },
+  "questions": [
+    {
+      "id": "py-q-PY_001-001",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "Python 是由谁创造的？",
+      "difficulty": 1,
+      "explanation": "Python 由 Guido van Rossum 于 1989 年底开始设计,1991 年正式发布。",
+      "tags": [
+        "PY_001",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": [
+        "Dennis Ritchie",
+        "Guido van Rossum",
+        "James Gosling",
+        "Bjarne Stroustrup"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_001-002",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "Python 2 已于哪一年停止维护(EOL)？",
+      "difficulty": 1,
+      "explanation": "Python 2 于 2020 年 1 月 1 日正式 EOL,所有新项目应使用 Python 3。",
+      "tags": [
+        "PY_001",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": [
+        "2015",
+        "2018",
+        "2020",
+        "2023"
+      ],
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_001-003",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Understand",
+      "type": "multiple_choice",
+      "stem": "以下哪项是 Python 作为「解释型语言」的特征？",
+      "difficulty": 2,
+      "explanation": "解释型语言逐行读取源代码并执行,不需要预先编译为机器码。",
+      "tags": [
+        "PY_001",
+        "understand",
+        "multiple_choice"
+      ],
+      "options": [
+        "编译后生成 .exe 文件",
+        "代码逐行解释执行,无需编译步骤",
+        "运行速度必然快于编译型语言",
+        "必须安装 JDK"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_001-004",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Apply",
+      "type": "short_answer",
+      "stem": "写出在终端启动 Python 交互式解释器的命令,以及退出命令。",
+      "difficulty": 2,
+      "explanation": "交互式命令行称为 REPL(Read-Eval-Print Loop)。",
+      "tags": [
+        "PY_001",
+        "apply",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "启动:python  退出:exit() 或 quit() 或 Ctrl+D"
+    },
+    {
+      "id": "py-q-PY_001-005",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "编写一个 Python 脚本,打印 'Hello, Python!' 与 'A3 智学领航',运行后两行各占一行。",
+      "difficulty": 2,
+      "explanation": "考察 print 基础用法。",
+      "tags": [
+        "PY_001",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "print('Hello, Python!')\nprint('A3 智学领航')",
+      "expected_keywords": [
+        "print"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_001-006",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "下面哪一项是 pip 的正确使用方式？",
+      "difficulty": 3,
+      "explanation": "pip install <package> 是安装包的标准命令。",
+      "tags": [
+        "PY_001",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": [
+        "pip install requests",
+        "pip get requests",
+        "python pip requests",
+        "pip fetch requests"
+      ],
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_001-007",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "为什么新项目应该用虚拟环境(venv)？说出至少 2 点。",
+      "difficulty": 3,
+      "explanation": "虚拟环境是项目级 Python 包管理最佳实践。",
+      "tags": [
+        "PY_001",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "1. 隔离项目间依赖避免版本冲突\n2. 便于复现:requirements.txt 锁定依赖\n3. 不污染全局 Python 环境"
+    },
+    {
+      "id": "py-q-PY_001-008",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "调研 Python 在 2026 年的 TIOBE 排名与 2020 年相比的变化,200 字以内。",
+      "difficulty": 4,
+      "explanation": "考察学生调研能力。",
+      "tags": [
+        "PY_001",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "Python 稳居 TIOBE 前 3,曾多次夺得年度语言。2020-2026 期间得益于 AI 与数据科学热潮,排名稳居前 2。"
+    },
+    {
+      "id": "py-q-PY_001-009",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "写一个 Bash 脚本,创建虚拟环境 `.venv` 并激活(Windows PowerShell 与 Unix)。",
+      "difficulty": 4,
+      "explanation": "跨平台虚拟环境命令。",
+      "tags": [
+        "PY_001",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "# Unix\npython -m venv .venv && source .venv/bin/activate\n# Windows PowerShell\npython -m venv .venv; .venv\\Scripts\\Activate.ps1",
+      "expected_keywords": [
+        "venv"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_001-010",
+      "kp_id": "PY_001",
+      "kp_name": "Python 语言概述",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个 Python 项目的目录结构,包含 src、tests、docs、data 四个目录,说明每个目录的用途。",
+      "difficulty": 5,
+      "explanation": "考察项目结构设计能力。",
+      "tags": [
+        "PY_001",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "src/:源码;tests/:测试;docs/:文档;data/:数据文件。这是经典 src layout 布局。"
+    },
+    {
+      "id": "py-q-PY_002-011",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "Python 中 `bool` 类型的取值是？",
+      "difficulty": 1,
+      "explanation": "Python 用首字母大写的 True/False。",
+      "tags": [
+        "PY_002",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": [
+        "0 和 1",
+        "True 和 False",
+        "true 和 false",
+        "yes 和 no"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_002-012",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "以下哪个表达式会在 Python 中引发 ValueError？",
+      "difficulty": 2,
+      "explanation": "int('42.5') 不能直接转,因为字符串含小数点。",
+      "tags": [
+        "PY_002",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "int('42')",
+        "int('42.5')",
+        "int(42.9)",
+        "int('0x10', 16)"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_002-013",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "执行 `a = [1, 2, 3]; b = a; a.append(4); print(b)` 的输出是？",
+      "difficulty": 2,
+      "explanation": "a 与 b 指向同一 list 对象,a.append(4) 后 b 也被影响。",
+      "tags": [
+        "PY_002",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "[1, 2, 3]",
+        "[1, 2, 3, 4]",
+        "4",
+        "报错"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_002-014",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "下列哪个是**不可变**类型？",
+      "difficulty": 2,
+      "explanation": "tuple 是不可变序列;list/dict/set 都可变。",
+      "tags": [
+        "PY_002",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": [
+        "list",
+        "dict",
+        "tuple",
+        "set"
+      ],
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_002-015",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Evaluate",
+      "type": "multiple_choice",
+      "stem": "判断变量 x 是不是 None,以下哪种写法最规范？",
+      "difficulty": 3,
+      "explanation": "PEP 8 推荐用 `is` / `is not` 判断 None。",
+      "tags": [
+        "PY_002",
+        "evaluate",
+        "multiple_choice"
+      ],
+      "options": [
+        "x == None",
+        "x is None",
+        "not x",
+        "x != None"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_002-016",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Apply",
+      "type": "short_answer",
+      "stem": "Python 中 0.1 + 0.2 不等于 0.3 的原因是什么？如何精确计算？",
+      "difficulty": 3,
+      "explanation": "浮点精度问题是金融计算必考点。",
+      "tags": [
+        "PY_002",
+        "apply",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "原因:浮点数 IEEE 754 双精度无法精确表示十进制小数 0.1。\n解决:用 decimal.Decimal('0.1') + Decimal('0.2')。"
+    },
+    {
+      "id": "py-q-PY_002-017",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Create",
+      "type": "programming",
+      "stem": "实现 safe_divide(a, b),b=0 时返回 None,其他情况返回 a/b 保留 2 位小数。",
+      "difficulty": 3,
+      "explanation": "考察参数校验与基本运算。",
+      "tags": [
+        "PY_002",
+        "create",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def safe_divide(a, b):\n    if b == 0: return None\n    return round(a / b, 2)",
+      "expected_keywords": [
+        "def",
+        "if",
+        "return",
+        "round"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_002-018",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "解释 'Python 变量是标签,不是盒子' 这句话,用代码说明 a=10; b=a; a=20 的内存变化。",
+      "difficulty": 4,
+      "explanation": "理解引用语义是 Python 入门关键。",
+      "tags": [
+        "PY_002",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "Python 变量是贴在对象上的标签。\n1. a=10:创建 int 对象 10,标签 a 贴上\n2. b=a:标签 b 也指向 10\n3. a=20:创建新对象 20,a 重新贴上;b 仍指向 10"
+    },
+    {
+      "id": "py-q-PY_002-019",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "实现 normalize_score(scores),把列表分数按 (x-min)/(max-min) 归一化到 0-1,保留 3 位小数。",
+      "difficulty": 4,
+      "explanation": "考察边界条件与列表推导式。",
+      "tags": [
+        "PY_002",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def normalize_score(scores):\n    if not scores: return []\n    lo, hi = min(scores), max(scores)\n    if lo == hi: return [0.0] * len(scores)\n    return [round((x-lo)/(hi-lo), 3) for x in scores]",
+      "expected_keywords": [
+        "min",
+        "max",
+        "round",
+        "list"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_002-020",
+      "kp_id": "PY_002",
+      "kp_name": "变量与数据类型",
+      "bloom": "Create",
+      "type": "programming",
+      "stem": "用 @dataclass 实现 Point 2D 数据类,支持 distance_to(other) 计算欧氏距离。",
+      "difficulty": 5,
+      "explanation": "综合 dataclass + 运算 + 距离公式。",
+      "tags": [
+        "PY_002",
+        "create",
+        "programming"
+      ],
+      "options": null,
+      "answer": "from dataclasses import dataclass\nimport math\n@dataclass\nclass Point:\n    x: float\n    y: float\n    def distance_to(self, other):\n        return math.sqrt((self.x-other.x)**2 + (self.y-other.y)**2)",
+      "expected_keywords": [
+        "dataclass",
+        "def",
+        "math.sqrt"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_003-021",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "Python 中算术运算符 '/' 与 '//' 的区别是？",
+      "difficulty": 1,
+      "explanation": "/ 真除返回浮点,// 整除向下取整。",
+      "tags": [
+        "PY_003",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": [
+        "完全一样",
+        "/ 真除,// 整除",
+        "/ 整除,// 真除",
+        "都不对"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_003-022",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "表达式 `2 ** 3 ** 2` 的结果是？",
+      "difficulty": 2,
+      "explanation": "** 优先级从右到左,等价 2 ** (3 ** 2) = 2 ** 9 = 512。",
+      "tags": [
+        "PY_003",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "64",
+        "512",
+        "36",
+        "9"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_003-023",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "以下哪个是链式比较的正确写法？",
+      "difficulty": 2,
+      "explanation": "Python 支持链式比较,1 < x < 10 等价 1 < x and x < 10。",
+      "tags": [
+        "PY_003",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "1 < x && x < 10",
+        "1 < x and x < 10",
+        "1 < x < 10",
+        "(1 < x) and (x < 10)"
+      ],
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_003-024",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "`True + True + False` 的结果是？",
+      "difficulty": 3,
+      "explanation": "bool 是 int 子类,True=1,False=0,1+1+0=2。",
+      "tags": [
+        "PY_003",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "True",
+        "False",
+        "2",
+        "报错"
+      ],
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_003-025",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "以下哪个是**海象运算符**(:=)？",
+      "difficulty": 3,
+      "explanation": "Python 3.8+ 引入海象运算符,可在表达式中赋值。",
+      "tags": [
+        "PY_003",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": [
+        "=",
+        ":=",
+        "<-",
+        ":=>"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_003-026",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Apply",
+      "type": "short_answer",
+      "stem": "写出 Python 运算符优先级从高到低(至少 5 档)。",
+      "difficulty": 3,
+      "explanation": "运算符优先级决定表达式求值顺序。",
+      "tags": [
+        "PY_003",
+        "apply",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "**  >  +x -x ~x  >  * / // %  >  + -  >  << >>  >  比较  >  not  >  and  >  or"
+    },
+    {
+      "id": "py-q-PY_003-027",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Create",
+      "type": "programming",
+      "stem": "不用 if-else,只用三元表达式实现 max(a, b, c) 函数。",
+      "difficulty": 3,
+      "explanation": "三元表达式链式调用。",
+      "tags": [
+        "PY_003",
+        "create",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def max3(a, b, c):\n    return (a if a > b else b) if (a if a > b else b) > c else c",
+      "expected_keywords": [
+        "def",
+        "if",
+        "else",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_003-028",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "解释 '短路求值' 及其应用场景。",
+      "difficulty": 4,
+      "explanation": "短路求值是 Python 表达式精髓。",
+      "tags": [
+        "PY_003",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "短路求值:`a and b` 中 a 为假则不计算 b;`a or b` 中 a 为真则不计算 b。\n应用:1) 防止异常 `x is not None and x.attr` 2) 提供默认值 `x or default`"
+    },
+    {
+      "id": "py-q-PY_003-029",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用海象运算符重写:`if (n := len(data)) > 10: print(f'过长: {n}')`。",
+      "difficulty": 4,
+      "explanation": "海象运算符在表达式内赋值。",
+      "tags": [
+        "PY_003",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "if (n := len(data)) > 10:\n    print(f'过长: {n}')",
+      "expected_keywords": [
+        ":="
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_003-030",
+      "kp_id": "PY_003",
+      "kp_name": "运算符与表达式",
+      "bloom": "Create",
+      "type": "programming",
+      "stem": "实现一个 mini 计算器:接受字符串 '3 + 4 * 2 - 1',返回 10(注意运算符优先级)。",
+      "difficulty": 5,
+      "explanation": "考察 AST 解析。",
+      "tags": [
+        "PY_003",
+        "create",
+        "programming"
+      ],
+      "options": null,
+      "answer": "import ast, operator\nOPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv}\ndef calc(s):\n    tree = ast.parse(s, mode='eval')\n    return _eval(tree.body)\n...",
+      "expected_keywords": [
+        "ast",
+        "operator"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_004-031",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "Python 中表示'否则'的保留字是？",
+      "difficulty": 1,
+      "explanation": "Python 用 elif 减少缩进层级。",
+      "tags": [
+        "PY_004",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": [
+        "else if",
+        "elseif",
+        "elif",
+        "elsif"
+      ],
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_004-032",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Understand",
+      "type": "multiple_choice",
+      "stem": "以下代码的输出是?\n```python\nfor i in range(5):\n    if i == 3: break\n    print(i, end=' ')\n```",
+      "difficulty": 2,
+      "explanation": "break 在 i==3 时跳出,只输出 0, 1, 2。",
+      "tags": [
+        "PY_004",
+        "understand",
+        "multiple_choice"
+      ],
+      "options": [
+        "0 1 2 3 4",
+        "0 1 2 3",
+        "0 1 2",
+        "0 1 2 3 4(无空格)"
+      ],
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_004-033",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "关于 for-else,以下说法正确的是？",
+      "difficulty": 2,
+      "explanation": "for-else 是 Python 特色:else 在循环正常结束时执行,被 break 中断则不执行。",
+      "tags": [
+        "PY_004",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "循环抛异常时执行 else",
+        "循环正常结束(无 break)时执行 else",
+        "循环被 break 中断时执行 else",
+        "else 永远不执行"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_004-034",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面推导式的结果是?\n```python\n[x for x in range(10) if x % 2 == 0]\n```",
+      "difficulty": 2,
+      "explanation": "条件 x % 2 == 0 过滤偶数。",
+      "tags": [
+        "PY_004",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": [
+        "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]",
+        "[0, 2, 4, 6, 8]",
+        "[1, 3, 5, 7, 9]",
+        "[0, 2, 4, 6, 8, 10]"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_004-035",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Evaluate",
+      "type": "multiple_choice",
+      "stem": "遍历索引和值,推荐用？",
+      "difficulty": 3,
+      "explanation": "enumerate 是 Python 风格,简洁且高效。",
+      "tags": [
+        "PY_004",
+        "evaluate",
+        "multiple_choice"
+      ],
+      "options": [
+        "for i in range(len(lst)): print(i, lst[i])",
+        "for i, v in enumerate(lst): print(i, v)",
+        "for i in lst: print(i)",
+        "while i < len(lst): print(i, lst[i])"
+      ],
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_004-036",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Apply",
+      "type": "short_answer",
+      "stem": "用 zip 并行遍历两个等长列表的语法是?",
+      "difficulty": 3,
+      "explanation": "zip 是并行遍历的标准工具。",
+      "tags": [
+        "PY_004",
+        "apply",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "for a, b in zip(list1, list2): ..."
+    },
+    {
+      "id": "py-q-PY_004-037",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Create",
+      "type": "programming",
+      "stem": "实现 FizzBuzz(n),1 到 n 之间:能被 3 整除返回 'Fizz',能被 5 整除返回 'Buzz',能被 15 整除返回 'FizzBuzz',其他返回数字字符串。",
+      "difficulty": 3,
+      "explanation": "FizzBuzz 是经典面试题。",
+      "tags": [
+        "PY_004",
+        "create",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def fizzbuzz(n):\n    r = []\n    for i in range(1, n+1):\n        if i%15==0: r.append('FizzBuzz')\n        elif i%3==0: r.append('Fizz')\n        elif i%5==0: r.append('Buzz')\n        else: r.append(str(i))\n    return r",
+      "expected_keywords": [
+        "for",
+        "if",
+        "elif",
+        "else",
+        "append",
+        "str"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_004-038",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "解释'在循环中修改列表'的问题,举例说明并给出正确做法。",
+      "difficulty": 4,
+      "explanation": "循环修改列表是常见陷阱。",
+      "tags": [
+        "PY_004",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "问题:在 for 中 lst.remove(item) 会跳过元素。\n正确:用列表推导式创建新列表,或先 lst[:] 复制。"
+    },
+    {
+      "id": "py-q-PY_004-039",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "实现 word_frequency(text) -> dict,统计文本中每个单词出现次数(忽略大小写、标点)。",
+      "difficulty": 4,
+      "explanation": "用 Counter 简化计数。",
+      "tags": [
+        "PY_004",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "import re\nfrom collections import Counter\ndef word_frequency(text):\n    return dict(Counter(re.findall(r'\\w+', text.lower())))",
+      "expected_keywords": [
+        "re",
+        "Counter",
+        "lower"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_004-040",
+      "kp_id": "PY_004",
+      "kp_name": "控制流（条件与循环）",
+      "bloom": "Create",
+      "type": "programming",
+      "stem": "用嵌套列表推导式生成 5x5 单位矩阵(对角线 1,其他 0)。",
+      "difficulty": 5,
+      "explanation": "嵌套推导式应用。",
+      "tags": [
+        "PY_004",
+        "create",
+        "programming"
+      ],
+      "options": null,
+      "answer": "[[1 if i==j else 0 for j in range(5)] for i in range(5)]",
+      "expected_keywords": [
+        "for",
+        "if",
+        "else"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_005-041",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 函数定义与参数 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 函数定义与参数 的基础认知。",
+      "tags": [
+        "PY_005",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_005-042",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 函数定义与参数,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 函数定义与参数 的基本定义。",
+      "tags": [
+        "PY_005",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_005-043",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 函数定义与参数 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 函数定义与参数 的最佳实践。",
+      "tags": [
+        "PY_005",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_005-044",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 函数定义与参数 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 函数定义与参数 的实际应用。",
+      "tags": [
+        "PY_005",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_005-045",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "函数定义与参数 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 函数定义与参数 的辨析能力。",
+      "tags": [
+        "PY_005",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_005-046",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 函数定义与参数 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_005",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_005-047",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 函数定义与参数 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_005",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_005-048",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 函数定义与参数 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_005",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_005-049",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 函数定义与参数 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_005",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_005-050",
+      "kp_id": "PY_005",
+      "kp_name": "函数定义与参数",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 函数定义与参数 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_005",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_006-051",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 列表与列表推导式 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 列表与列表推导式 的基础认知。",
+      "tags": [
+        "PY_006",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_006-052",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 列表与列表推导式,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 列表与列表推导式 的基本定义。",
+      "tags": [
+        "PY_006",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_006-053",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 列表与列表推导式 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 列表与列表推导式 的最佳实践。",
+      "tags": [
+        "PY_006",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_006-054",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 列表与列表推导式 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 列表与列表推导式 的实际应用。",
+      "tags": [
+        "PY_006",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_006-055",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "列表与列表推导式 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 列表与列表推导式 的辨析能力。",
+      "tags": [
+        "PY_006",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_006-056",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 列表与列表推导式 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_006",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_006-057",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 列表与列表推导式 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_006",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_006-058",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 列表与列表推导式 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_006",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_006-059",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 列表与列表推导式 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_006",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_006-060",
+      "kp_id": "PY_006",
+      "kp_name": "列表与列表推导式",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 列表与列表推导式 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_006",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_007-061",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 字典与哈希表 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 字典与哈希表 的基础认知。",
+      "tags": [
+        "PY_007",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_007-062",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 字典与哈希表,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 字典与哈希表 的基本定义。",
+      "tags": [
+        "PY_007",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_007-063",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 字典与哈希表 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 字典与哈希表 的最佳实践。",
+      "tags": [
+        "PY_007",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_007-064",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 字典与哈希表 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 字典与哈希表 的实际应用。",
+      "tags": [
+        "PY_007",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_007-065",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "字典与哈希表 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 字典与哈希表 的辨析能力。",
+      "tags": [
+        "PY_007",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_007-066",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 字典与哈希表 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_007",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_007-067",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 字典与哈希表 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_007",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_007-068",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 字典与哈希表 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_007",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_007-069",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 字典与哈希表 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_007",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_007-070",
+      "kp_id": "PY_007",
+      "kp_name": "字典与哈希表",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 字典与哈希表 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_007",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_008-071",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 元组与集合 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 元组与集合 的基础认知。",
+      "tags": [
+        "PY_008",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_008-072",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 元组与集合,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 元组与集合 的基本定义。",
+      "tags": [
+        "PY_008",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_008-073",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 元组与集合 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 元组与集合 的最佳实践。",
+      "tags": [
+        "PY_008",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_008-074",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 元组与集合 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 元组与集合 的实际应用。",
+      "tags": [
+        "PY_008",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_008-075",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "元组与集合 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 元组与集合 的辨析能力。",
+      "tags": [
+        "PY_008",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_008-076",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 元组与集合 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_008",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_008-077",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 元组与集合 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_008",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_008-078",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 元组与集合 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_008",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_008-079",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 元组与集合 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_008",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_008-080",
+      "kp_id": "PY_008",
+      "kp_name": "元组与集合",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 元组与集合 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_008",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_009-081",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 字符串操作 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 字符串操作 的基础认知。",
+      "tags": [
+        "PY_009",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_009-082",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 字符串操作,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 字符串操作 的基本定义。",
+      "tags": [
+        "PY_009",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_009-083",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 字符串操作 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 字符串操作 的最佳实践。",
+      "tags": [
+        "PY_009",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_009-084",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 字符串操作 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 字符串操作 的实际应用。",
+      "tags": [
+        "PY_009",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_009-085",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "字符串操作 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 字符串操作 的辨析能力。",
+      "tags": [
+        "PY_009",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_009-086",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 字符串操作 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_009",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_009-087",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 字符串操作 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_009",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_009-088",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 字符串操作 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_009",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_009-089",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 字符串操作 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_009",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_009-090",
+      "kp_id": "PY_009",
+      "kp_name": "字符串操作",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 字符串操作 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_009",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_010-091",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 collections 高级容器 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP collections 高级容器 的基础认知。",
+      "tags": [
+        "PY_010",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_010-092",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 collections 高级容器,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 collections 高级容器 的基本定义。",
+      "tags": [
+        "PY_010",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_010-093",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 collections 高级容器 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 collections 高级容器 的最佳实践。",
+      "tags": [
+        "PY_010",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_010-094",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 collections 高级容器 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 collections 高级容器 的实际应用。",
+      "tags": [
+        "PY_010",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_010-095",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "collections 高级容器 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 collections 高级容器 的辨析能力。",
+      "tags": [
+        "PY_010",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_010-096",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 collections 高级容器 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_010",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_010-097",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 collections 高级容器 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_010",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_010-098",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 collections 高级容器 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_010",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_010-099",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 collections 高级容器 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_010",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_010-100",
+      "kp_id": "PY_010",
+      "kp_name": "collections 高级容器",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 collections 高级容器 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_010",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_011-101",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 类与对象 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 类与对象 的基础认知。",
+      "tags": [
+        "PY_011",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_011-102",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 类与对象,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 类与对象 的基本定义。",
+      "tags": [
+        "PY_011",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_011-103",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 类与对象 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 类与对象 的最佳实践。",
+      "tags": [
+        "PY_011",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_011-104",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 类与对象 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 类与对象 的实际应用。",
+      "tags": [
+        "PY_011",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_011-105",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "类与对象 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 类与对象 的辨析能力。",
+      "tags": [
+        "PY_011",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_011-106",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 类与对象 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_011",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_011-107",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 类与对象 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_011",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_011-108",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 类与对象 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_011",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_011-109",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 类与对象 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_011",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_011-110",
+      "kp_id": "PY_011",
+      "kp_name": "类与对象",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 类与对象 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_011",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_012-111",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 继承与多态 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 继承与多态 的基础认知。",
+      "tags": [
+        "PY_012",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_012-112",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 继承与多态,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 继承与多态 的基本定义。",
+      "tags": [
+        "PY_012",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_012-113",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 继承与多态 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 继承与多态 的最佳实践。",
+      "tags": [
+        "PY_012",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_012-114",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 继承与多态 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 继承与多态 的实际应用。",
+      "tags": [
+        "PY_012",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_012-115",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "继承与多态 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 继承与多态 的辨析能力。",
+      "tags": [
+        "PY_012",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_012-116",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 继承与多态 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_012",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_012-117",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 继承与多态 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_012",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_012-118",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 继承与多态 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_012",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_012-119",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 继承与多态 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_012",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_012-120",
+      "kp_id": "PY_012",
+      "kp_name": "继承与多态",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 继承与多态 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_012",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_013-121",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 封装与 property 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 封装与 property 的基础认知。",
+      "tags": [
+        "PY_013",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_013-122",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 封装与 property,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 封装与 property 的基本定义。",
+      "tags": [
+        "PY_013",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_013-123",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 封装与 property 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 封装与 property 的最佳实践。",
+      "tags": [
+        "PY_013",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_013-124",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 封装与 property 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 封装与 property 的实际应用。",
+      "tags": [
+        "PY_013",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_013-125",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "封装与 property 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 封装与 property 的辨析能力。",
+      "tags": [
+        "PY_013",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_013-126",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 封装与 property 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_013",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_013-127",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 封装与 property 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_013",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_013-128",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 封装与 property 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_013",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_013-129",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 封装与 property 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_013",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_013-130",
+      "kp_id": "PY_013",
+      "kp_name": "封装与 property",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 封装与 property 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_013",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_014-131",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 魔术方法 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 魔术方法 的基础认知。",
+      "tags": [
+        "PY_014",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_014-132",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 魔术方法,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 魔术方法 的基本定义。",
+      "tags": [
+        "PY_014",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_014-133",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 魔术方法 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 魔术方法 的最佳实践。",
+      "tags": [
+        "PY_014",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_014-134",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 魔术方法 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 魔术方法 的实际应用。",
+      "tags": [
+        "PY_014",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_014-135",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "魔术方法 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 魔术方法 的辨析能力。",
+      "tags": [
+        "PY_014",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_014-136",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 魔术方法 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_014",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_014-137",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 魔术方法 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_014",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_014-138",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 魔术方法 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_014",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_014-139",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 魔术方法 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_014",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_014-140",
+      "kp_id": "PY_014",
+      "kp_name": "魔术方法",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 魔术方法 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_014",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_015-141",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 上下文管理器 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 上下文管理器 的基础认知。",
+      "tags": [
+        "PY_015",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_015-142",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 上下文管理器,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 上下文管理器 的基本定义。",
+      "tags": [
+        "PY_015",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_015-143",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 上下文管理器 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 上下文管理器 的最佳实践。",
+      "tags": [
+        "PY_015",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_015-144",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 上下文管理器 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 上下文管理器 的实际应用。",
+      "tags": [
+        "PY_015",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_015-145",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "上下文管理器 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 上下文管理器 的辨析能力。",
+      "tags": [
+        "PY_015",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_015-146",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 上下文管理器 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_015",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_015-147",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 上下文管理器 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_015",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_015-148",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 上下文管理器 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_015",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_015-149",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 上下文管理器 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_015",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_015-150",
+      "kp_id": "PY_015",
+      "kp_name": "上下文管理器",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 上下文管理器 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_015",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_016-151",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 文件读写 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 文件读写 的基础认知。",
+      "tags": [
+        "PY_016",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_016-152",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 文件读写,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 文件读写 的基本定义。",
+      "tags": [
+        "PY_016",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_016-153",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 文件读写 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 文件读写 的最佳实践。",
+      "tags": [
+        "PY_016",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_016-154",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 文件读写 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 文件读写 的实际应用。",
+      "tags": [
+        "PY_016",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_016-155",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "文件读写 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 文件读写 的辨析能力。",
+      "tags": [
+        "PY_016",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_016-156",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 文件读写 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_016",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_016-157",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 文件读写 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_016",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_016-158",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 文件读写 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_016",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_016-159",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 文件读写 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_016",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_016-160",
+      "kp_id": "PY_016",
+      "kp_name": "文件读写",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 文件读写 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_016",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_017-161",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 pathlib 路径操作 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP pathlib 路径操作 的基础认知。",
+      "tags": [
+        "PY_017",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_017-162",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 pathlib 路径操作,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 pathlib 路径操作 的基本定义。",
+      "tags": [
+        "PY_017",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_017-163",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 pathlib 路径操作 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 pathlib 路径操作 的最佳实践。",
+      "tags": [
+        "PY_017",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_017-164",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 pathlib 路径操作 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 pathlib 路径操作 的实际应用。",
+      "tags": [
+        "PY_017",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_017-165",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "pathlib 路径操作 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 pathlib 路径操作 的辨析能力。",
+      "tags": [
+        "PY_017",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_017-166",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 pathlib 路径操作 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_017",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_017-167",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 pathlib 路径操作 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_017",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_017-168",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 pathlib 路径操作 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_017",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_017-169",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 pathlib 路径操作 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_017",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_017-170",
+      "kp_id": "PY_017",
+      "kp_name": "pathlib 路径操作",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 pathlib 路径操作 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_017",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_018-171",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 CSV 与 JSON 处理 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP CSV 与 JSON 处理 的基础认知。",
+      "tags": [
+        "PY_018",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_018-172",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 CSV 与 JSON 处理,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 CSV 与 JSON 处理 的基本定义。",
+      "tags": [
+        "PY_018",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_018-173",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 CSV 与 JSON 处理 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 CSV 与 JSON 处理 的最佳实践。",
+      "tags": [
+        "PY_018",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_018-174",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 CSV 与 JSON 处理 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 CSV 与 JSON 处理 的实际应用。",
+      "tags": [
+        "PY_018",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_018-175",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "CSV 与 JSON 处理 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 CSV 与 JSON 处理 的辨析能力。",
+      "tags": [
+        "PY_018",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_018-176",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 CSV 与 JSON 处理 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_018",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_018-177",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 CSV 与 JSON 处理 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_018",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_018-178",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 CSV 与 JSON 处理 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_018",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_018-179",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 CSV 与 JSON 处理 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_018",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_018-180",
+      "kp_id": "PY_018",
+      "kp_name": "CSV 与 JSON 处理",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 CSV 与 JSON 处理 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_018",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_019-181",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 异常处理 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 异常处理 的基础认知。",
+      "tags": [
+        "PY_019",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_019-182",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 异常处理,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 异常处理 的基本定义。",
+      "tags": [
+        "PY_019",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_019-183",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 异常处理 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 异常处理 的最佳实践。",
+      "tags": [
+        "PY_019",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_019-184",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 异常处理 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 异常处理 的实际应用。",
+      "tags": [
+        "PY_019",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_019-185",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "异常处理 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 异常处理 的辨析能力。",
+      "tags": [
+        "PY_019",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_019-186",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 异常处理 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_019",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_019-187",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 异常处理 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_019",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_019-188",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 异常处理 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_019",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_019-189",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 异常处理 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_019",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_019-190",
+      "kp_id": "PY_019",
+      "kp_name": "异常处理",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 异常处理 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_019",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_020-191",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 自定义异常 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 自定义异常 的基础认知。",
+      "tags": [
+        "PY_020",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_020-192",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 自定义异常,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 自定义异常 的基本定义。",
+      "tags": [
+        "PY_020",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_020-193",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 自定义异常 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 自定义异常 的最佳实践。",
+      "tags": [
+        "PY_020",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_020-194",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 自定义异常 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 自定义异常 的实际应用。",
+      "tags": [
+        "PY_020",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_020-195",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "自定义异常 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 自定义异常 的辨析能力。",
+      "tags": [
+        "PY_020",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_020-196",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 自定义异常 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_020",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_020-197",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 自定义异常 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_020",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_020-198",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 自定义异常 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_020",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_020-199",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 自定义异常 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_020",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_020-200",
+      "kp_id": "PY_020",
+      "kp_name": "自定义异常",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 自定义异常 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_020",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_021-201",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 常用标准库 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 常用标准库 的基础认知。",
+      "tags": [
+        "PY_021",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_021-202",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 常用标准库,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 常用标准库 的基本定义。",
+      "tags": [
+        "PY_021",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_021-203",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 常用标准库 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 常用标准库 的最佳实践。",
+      "tags": [
+        "PY_021",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_021-204",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 常用标准库 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 常用标准库 的实际应用。",
+      "tags": [
+        "PY_021",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_021-205",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "常用标准库 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 常用标准库 的辨析能力。",
+      "tags": [
+        "PY_021",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_021-206",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 常用标准库 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_021",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_021-207",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 常用标准库 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_021",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_021-208",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 常用标准库 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_021",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_021-209",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 常用标准库 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_021",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_021-210",
+      "kp_id": "PY_021",
+      "kp_name": "常用标准库",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 常用标准库 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_021",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_022-211",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 迭代器与生成器 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 迭代器与生成器 的基础认知。",
+      "tags": [
+        "PY_022",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_022-212",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 迭代器与生成器,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 迭代器与生成器 的基本定义。",
+      "tags": [
+        "PY_022",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_022-213",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 迭代器与生成器 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 迭代器与生成器 的最佳实践。",
+      "tags": [
+        "PY_022",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_022-214",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 迭代器与生成器 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 迭代器与生成器 的实际应用。",
+      "tags": [
+        "PY_022",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_022-215",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "迭代器与生成器 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 迭代器与生成器 的辨析能力。",
+      "tags": [
+        "PY_022",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_022-216",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 迭代器与生成器 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_022",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_022-217",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 迭代器与生成器 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_022",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_022-218",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 迭代器与生成器 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_022",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_022-219",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 迭代器与生成器 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_022",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_022-220",
+      "kp_id": "PY_022",
+      "kp_name": "迭代器与生成器",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 迭代器与生成器 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_022",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_023-221",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 装饰器 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP 装饰器 的基础认知。",
+      "tags": [
+        "PY_023",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_023-222",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 装饰器,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 装饰器 的基本定义。",
+      "tags": [
+        "PY_023",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_023-223",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 装饰器 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 装饰器 的最佳实践。",
+      "tags": [
+        "PY_023",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_023-224",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 装饰器 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 装饰器 的实际应用。",
+      "tags": [
+        "PY_023",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_023-225",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "装饰器 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 装饰器 的辨析能力。",
+      "tags": [
+        "PY_023",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_023-226",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 装饰器 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_023",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_023-227",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 装饰器 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_023",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_023-228",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 装饰器 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_023",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_023-229",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 装饰器 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_023",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_023-230",
+      "kp_id": "PY_023",
+      "kp_name": "装饰器",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 装饰器 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_023",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    },
+    {
+      "id": "py-q-PY_024-231",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "以下哪个不是 Python 项目实战 的核心概念?",
+      "difficulty": 1,
+      "explanation": "考察 KP Python 项目实战 的基础认知。",
+      "tags": [
+        "PY_024",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "D"
+    },
+    {
+      "id": "py-q-PY_024-232",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Remember",
+      "type": "multiple_choice",
+      "stem": "关于 Python 项目实战,以下说法正确的是?",
+      "difficulty": 1,
+      "explanation": "考察 Python 项目实战 的基本定义。",
+      "tags": [
+        "PY_024",
+        "remember",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "A"
+    },
+    {
+      "id": "py-q-PY_024-233",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "在 Python 中,使用 Python 项目实战 时推荐哪种写法?",
+      "difficulty": 2,
+      "explanation": "考察 Python 项目实战 的最佳实践。",
+      "tags": [
+        "PY_024",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_024-234",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Apply",
+      "type": "multiple_choice",
+      "stem": "下面代码中,关于 Python 项目实战 的应用正确的是?",
+      "difficulty": 2,
+      "explanation": "考察 Python 项目实战 的实际应用。",
+      "tags": [
+        "PY_024",
+        "apply",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "C"
+    },
+    {
+      "id": "py-q-PY_024-235",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Analyze",
+      "type": "multiple_choice",
+      "stem": "Python 项目实战 与相似概念的本质区别是?",
+      "difficulty": 3,
+      "explanation": "考察 Python 项目实战 的辨析能力。",
+      "tags": [
+        "PY_024",
+        "analyze",
+        "multiple_choice"
+      ],
+      "options": null,
+      "answer": "B"
+    },
+    {
+      "id": "py-q-PY_024-236",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Understand",
+      "type": "short_answer",
+      "stem": "请用 100 字以内简要说明 Python 项目实战 的核心思想。",
+      "difficulty": 2,
+      "explanation": "考察理解能力。",
+      "tags": [
+        "PY_024",
+        "understand",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "{kp} 是 Python 的重要概念,掌握它能帮助你写出更高效的代码。"
+    },
+    {
+      "id": "py-q-PY_024-237",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Evaluate",
+      "type": "short_answer",
+      "stem": "评估 Python 项目实战 的优缺点,以及在什么场景下应该/不应该使用。",
+      "difficulty": 3,
+      "explanation": "考察评估能力。",
+      "tags": [
+        "PY_024",
+        "evaluate",
+        "short_answer"
+      ],
+      "options": null,
+      "answer": "优点:简洁、表达力强。缺点:有学习成本。适合在 X 场景使用。"
+    },
+    {
+      "id": "py-q-PY_024-238",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Analyze",
+      "type": "open_ended",
+      "stem": "分析 Python 项目实战 在真实项目中的应用,以及可能遇到的典型问题。",
+      "difficulty": 3,
+      "explanation": "考察深度分析。",
+      "tags": [
+        "PY_024",
+        "analyze",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "{kp} 在生产环境中需注意边界条件、性能、可维护性。"
+    },
+    {
+      "id": "py-q-PY_024-239",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Create",
+      "type": "open_ended",
+      "stem": "设计一个方案,综合运用 Python 项目实战 与其它 Python 概念解决一个实际问题。",
+      "difficulty": 4,
+      "explanation": "考察设计能力。",
+      "tags": [
+        "PY_024",
+        "create",
+        "open_ended"
+      ],
+      "options": null,
+      "answer": "可以使用 {kp} 配合其它 KP,设计一个分层、解耦的方案。"
+    },
+    {
+      "id": "py-q-PY_024-240",
+      "kp_id": "PY_024",
+      "kp_name": "Python 项目实战",
+      "bloom": "Apply",
+      "type": "programming",
+      "stem": "用 Python 实现一个函数,体现 Python 项目实战 的核心概念,代码需可独立运行。",
+      "difficulty": 3,
+      "explanation": "考察编程能力。",
+      "tags": [
+        "PY_024",
+        "apply",
+        "programming"
+      ],
+      "options": null,
+      "answer": "def solution():\n    # 基于 {kp} 实现\n    pass",
+      "expected_keywords": [
+        "def",
+        "return"
+      ],
+      "test_harness": "# 由运行平台注入",
+      "language": "python"
+    }
+  ]
+}

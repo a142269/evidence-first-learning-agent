@@ -1,0 +1,30 @@
+{
+  "name": "a3-learning-desktop",
+  "version": "1.0.0",
+  "description": "智学领航 · A3 个性化学习多智能体系统（桌面版）",
+  "author": "A3 Team",
+  "license": "MIT",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "electron:dev": "npm run electron:tsc && electron .",
+    "electron:tsc": "cd electron && tsc",
+    "electron:build": "npm run electron:tsc && electron-builder --win",
+    "build:all": "npm run build:frontend && npm run build:backend && npm run electron:build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "D:\\Anaconda3\\envs\\dxtorch\\python.exe -m PyInstaller backend.spec --noconfirm"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0",
+    "typescript": "^5.8.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "extends": "./electron-builder.yml"
+  },
+  "dependencies": {
+    "docx": "^9.7.1"
+  }
+}

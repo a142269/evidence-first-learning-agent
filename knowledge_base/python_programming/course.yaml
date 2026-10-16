@@ -1,0 +1,8 @@
+# 课程清单（course.yaml）—— 知识库平台化改造（2026-07-16）
+display_name: Python 程序设计
+description: 覆盖基础语法、数据结构、面向对象、文件与异常、迭代器与装饰器等 18 章的 Python 课程知识库。
+status: published
+owner: teacher
+builtin: true
+created_at: "2026-07-12T00:00:00"
+updated_at: "2026-07-16T00:00:00"

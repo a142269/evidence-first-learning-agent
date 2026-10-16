@@ -1,0 +1,922 @@
+[
+  {
+    "id": "q-learning_science-00",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "艾宾浩斯（H.Ebbinghaus）通过无意义音节实验提出的遗忘曲线，最核心的发现是？",
+    "difficulty": 1,
+    "explanation": "艾宾浩斯遗忘曲线描述了记忆随时间衰减的非线性规律：学习 20 分钟后约遗忘 42%，1 天后约遗忘 66%，但衰退速率逐渐变缓。这一发现是个性化复习推送算法（如间隔重复）的核心依据。",
+    "tags": ["learning_science", "forgetting_curve", "remember"],
+    "options": [
+      "A. 人类的记忆一旦形成就不会遗忘",
+      "B. 遗忘在学习后立即开始，且初期衰减最快，随后逐渐变缓",
+      "C. 遗忘速率与学习材料长度成正比",
+      "D. 不同的学习者遗忘曲线完全一致"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "factual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-01",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "在 A3 个性化学习系统的复习计划中，为什么要按照“间隔重复（Spaced Repetition）”而非“集中复习（Massed Practice）”安排推送？",
+    "difficulty": 2,
+    "explanation": "间隔重复通过在记忆开始衰退但尚未完全消失的时间点安排复习，可以延长保留时间并强化提取强度；集中复习虽然短期效果好，但容易因“熟练度错觉”导致长期保留率显著下降。系统应基于每个知识点的掌握度动态调整间隔。",
+    "tags": ["learning_science", "spaced_repetition", "understand"],
+    "options": [
+      "A. 间隔重复能在更短时间内完成所有复习，因此节省学习者总学习时间",
+      "B. 间隔重复通过在遗忘临界点之前复习，提升长期记忆保留率",
+      "C. 间隔重复可以让学习者完全避免遗忘，因此不需要任何复习",
+      "D. 间隔重复与集中复习的长期记忆效果完全相同，只是体验不同"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-02",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "元认知（Metacognition）在学习过程中的核心作用是？",
+    "difficulty": 2,
+    "explanation": "元认知指“对自己认知过程的认知”，包括元认知知识（关于学习策略的知识）、元认知体验（学习时的感受）和元认知调节（计划、监控、调整）。它让学习者从“被动接收”转为“主动管理学习”，是深度学习的关键能力。",
+    "tags": ["learning_science", "metacognition", "understand"],
+    "options": [
+      "A. 元认知是指对他人学习行为的观察与评价",
+      "B. 元认知指对自己的学习过程进行计划、监控和调整的能力",
+      "C. 元认知只与记忆有关，与理解无关",
+      "D. 元认知是学习者的先天能力，无法通过训练提升"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-03",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "A3 系统检测到某学生在“Transformer 注意力机制”知识点上已答对 3 题后已 5 天未复习。系统该如何基于遗忘曲线推送下一步动作？",
+    "difficulty": 3,
+    "explanation": "典型间隔重复策略会根据掌握度把“巩固”阶段的间隔从 1 天逐步扩到 3、7、14、30 天。已掌握但 5 天未复习接近再次进入衰退区，应推送“间隔重复题 + 1 道轻量变式题”，既不打扰也避免遗忘。直接推送全新章节会破坏间隔节奏。",
+    "tags": ["learning_science", "spaced_repetition", "apply"],
+    "options": [
+      "A. 立即推送一道全新未学过的章节题目以拓宽知识面",
+      "B. 推送一道之前答对题的同难度变式题，并标记为复习任务",
+      "C. 由于已答对，系统应停止推送任何相关题目",
+      "D. 推送 10 道高难度综合题进行突击训练"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-04",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "已知学生小明在视觉型资源下掌握度提升 0.2，听觉型下提升 0.05。A3 资源推荐模块应如何调整下一次推送策略？",
+    "difficulty": 3,
+    "explanation": "这是典型的 VARK（视觉/听觉/读写/动觉）学习风格应用。学生对视觉资源的掌握度提升更显著，说明视觉偏好明显，系统应优先推送思维导图、动画、可视化图解；听觉资源应作为补充或备选而非主力。",
+    "tags": ["learning_science", "learning_style", "apply"],
+    "options": [
+      "A. 完全停止听觉型资源，全部推送视觉型",
+      "B. 保持资源类型比例不变，避免学生依赖单一通道",
+      "C. 优先推送视觉型资源，同时保留少量听觉型资源以平衡学习体验",
+      "D. 由学生自己随机选择，系统不参与资源类型决策"
+    ],
+    "answer": "C",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-05",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "某学生一周内每天学习 3 小时但月考成绩仍不理想。从“学习科学”角度看，下列哪种诊断最能解释这种“时长多但效果差”的现象？",
+    "difficulty": 4,
+    "explanation": "时长不是效果的唯一决定因素。常见原因包括：浅层加工（被动阅读 vs 主动检索）、缺少间隔重复、单一模态偏好、过度学习已掌握内容、缺少元认知监控。A3 系统应通过错题类型、复习间隔、主动检索次数等指标辅助诊断。",
+    "tags": ["learning_science", "diagnose", "analyze"],
+    "options": [
+      "A. 学生一定是智商不够，无法再提升",
+      "B. 学生大概率在做“浅层加工”，缺少主动检索和间隔重复",
+      "C. 学生不认真学习，应该强制增加时长",
+      "D. 学习时长决定一切，本题无解"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-06",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Analyze",
+    "type": "short_answer",
+    "stem": "对比“行为主义”“认知主义”“建构主义”三种学习理论在 A3 系统设计中的体现，并各举一个落地功能。",
+    "difficulty": 4,
+    "explanation": "三种理论分别侧重外部刺激-反应、信息加工与意义建构。设计系统时不是二选一，而是融合：行为主义适合反馈强化，认知主义适合工作记忆与信息呈现，建构主义适合探究式学习路径。落地时，三者并存才能完整支撑学习闭环。",
+    "tags": ["learning_science", "theory", "analyze"],
+    "expected_keywords": ["行为主义", "认知主义", "建构主义", "强化反馈", "工作记忆", "探究式"],
+    "answer": "(1) 行为主义：体现在答题后立即给正误反馈和强化信号（如徽章、连胜天数）；(2) 认知主义：体现在按“工作记忆容量”切分学习内容（小步子 + 分块）+ 间隔重复安排；(3) 建构主义：体现在项目式学习路径（如让学生自己设计一个 RAG 流程并由系统评估）。三种理论协同支撑完整学习闭环。",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-07",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Evaluate",
+    "type": "short_answer",
+    "stem": "请评估 A3 系统“连胜天数（Study Streak）”激励机制：它对学习动机有什么正向作用？又可能带来哪些负面效应？请用 2-3 条关键词总结并给出 1 条改进建议。",
+    "difficulty": 4,
+    "explanation": "连胜天数属于游戏化（Gamification）激励。短期看可以提升粘性、降低中途放弃率；但若设计不当，会带来“虚假勤奋”（为连天数刷时长）、焦虑（断了受挫）、回避难题（怕错影响连胜）等负面效应。改进方向是奖励“质量指标”（掌握度提升、错题归因闭环）而非纯“连续天数”。",
+    "tags": ["learning_science", "gamification", "evaluate"],
+    "expected_keywords": ["游戏化", "连胜", "虚假勤奋", "质量指标"],
+    "answer": "正向：提升粘性、即时正向反馈、同伴动力；负向：虚假勤奋、为连天数回避难题、断签后挫败感强。改进建议：把核心奖励从“连续天数”改为“掌握度提升幅度 + 错题闭环完成数”，并对“断签恢复”给予温和补救奖励。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-08",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Evaluate",
+    "type": "open_ended",
+    "stem": "A3 当前对“学习风格（VARK 视觉/听觉/读写/动觉）”做了画像与资源匹配。请评价这个做法的有效性、争议与替代方案。",
+    "difficulty": 4,
+    "explanation": "学习风格匹配在商业产品中很流行，但学术研究证据并不充分（如 Pashler et al. 2008 的元分析认为“匹配假设”缺乏强证据）。它更像是“动机增强器”而非“效果增强器”。替代方案是基于掌握度/错题类型自适应，而非基于风格画像一刀切。",
+    "tags": ["learning_science", "learning_style", "evaluate"],
+    "expected_keywords": ["匹配假设", "争议", "Pashler", "证据不足", "掌握度优先"],
+    "answer": "有效性：能一定程度提升学习动机和体验，让学生觉得“被理解”；争议：脑科学与教育心理学的多项研究表明“匹配假设”证据不足，学生在不同主题上偏好并不稳定；改进：(1) 把风格作为辅助偏好而非硬匹配；(2) 以掌握度、错题类型为优先依据决定推送内容；(3) 风格用于解释“为什么这样推”，而不是判定“推什么”。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_science-09",
+    "kp_id": "learning_science",
+    "kp_name": "学习科学基础",
+    "bloom": "Create",
+    "type": "open_ended",
+    "stem": "请为 A3 系统设计一种新的“学习闭环反馈机制”，要求融合“间隔重复 + 元认知提示 + 错题归因”三者，并简述数据流。",
+    "difficulty": 5,
+    "explanation": "Create 层级需要把多个概念组织成一个新的设计。优秀的回答通常包含：触发条件 → 反馈内容 → 元认知引导 → 错题归因 → 间隔调整，并说明每一步用到哪些数据字段。这是一种典型的“系统设计 + 学习科学”综合题。",
+    "tags": ["learning_science", "feedback_loop", "create"],
+    "expected_keywords": ["触发", "间隔", "元认知", "归因", "反馈", "数据流"],
+    "answer": "机制名称：自适应闭环反馈（Adaptive Feedback Loop）。流程：(1) 触发：系统根据掌握度 + 上次复习间隔判断该题进入“巩固”或“遗忘预警”状态；(2) 出题：优先从错题本和弱知识点选题；(3) 反馈：答错时除正确答案外，给出错误类型归因（概念误解/计算错误/审题不清）；(4) 元认知提示：让用户自评“是否真的理解”，并要求用一句话解释解题思路；(5) 间隔调整：根据用户自评 + 答题表现动态延长或缩短下次复习间隔。数据流：profile（风格、节奏）→ mastery_by_kp → mistake_history → 触发器 → 题库检索 → 反馈/归因 → 间隔更新 → mastery 更新。",
+    "bloom_6x3": {
+      "level": "create",
+      "sub_level": "generating",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-00",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "贝叶斯知识追踪（BKT）模型用到的四个核心隐变量分别是？",
+    "difficulty": 1,
+    "explanation": "BKT 四个核心参数：P(L0) 初始掌握概率、P(T) 学习（转移）概率、P(G) 失误概率（已掌握但答错）、P(S) 猜测概率（未掌握但答对）。A3 系统的掌握度变化即基于类似贝叶斯更新逻辑。",
+    "tags": ["cognitive_diagnosis", "bkt", "remember"],
+    "options": [
+      "A. 初始掌握 P(L0)、学习 P(T)、猜测 P(S)、失误 P(G)",
+      "B. 难度、区分度、猜测度、上限",
+      "C. 注意力、记忆、理解、迁移",
+      "D. 题目、知识点、能力、表现"
+    ],
+    "answer": "A",
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "factual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-01",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "项目反应理论（IRT）中的“项目难度（b）”和“项目区分度（a）”分别表示什么含义？",
+    "difficulty": 2,
+    "explanation": "a（区分度）反映项目对不同能力学习者的区分能力，a 越大曲线越陡；b（难度）反映项目答对所需的最低能力水平。在 A3 题库中可以基于历史作答数据估计每个项目的 a/b，用于自适应选题。",
+    "tags": ["cognitive_diagnosis", "irt", "understand"],
+    "options": [
+      "A. a 表示难度，b 表示区分度",
+      "B. a 表示区分度（题目对不同能力者的区分能力），b 表示难度（答对所需能力水平）",
+      "C. a 和 b 都表示难度，只是单位不同",
+      "D. a 表示猜测概率，b 表示失误概率"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-02",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "深度知识追踪（DKT）和 BKT 相比，核心改进点在于？",
+    "difficulty": 2,
+    "explanation": "BKT 把每个知识点建模为独立的二态隐变量（掌握/未掌握），参数人工设定；DKT 用 RNN/LSTM 在大量作答序列上自动学习，能捕捉知识点之间的相关性和时序模式，更精细但需要大量数据且可解释性弱。",
+    "tags": ["cognitive_diagnosis", "dkt", "understand"],
+    "options": [
+      "A. DKT 不需要任何数据即可诊断掌握度",
+      "B. DKT 使用深度神经网络在作答序列上自动学习，捕捉知识点间的相关性",
+      "C. DKT 完全无法处理多个知识点",
+      "D. DKT 比 BKT 更难解释，但精度更低"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-03",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "某学生在“Transformer 架构”知识点上连续答对 3 题、答错 1 题、再答对 2 题。基于 BKT 思想，下列对其掌握度 P(L) 变化轨迹的描述最准确的是？",
+    "difficulty": 3,
+    "explanation": "BKT 通过贝叶斯规则在每次作答后更新 P(L) 后验。每次答对通过 P(C|L) 提升掌握度后验；每次答错通过 P(C|¬L) 降低后验。连续答对会让 P(L) 上升并接近 1，答错会让其下降但幅度较小（因 P(C|L) 通常显著大于 P(C|¬L)）。",
+    "tags": ["cognitive_diagnosis", "bkt", "apply"],
+    "options": [
+      "A. 先升 → 大幅下降 → 继续下降",
+      "B. 先升 → 微降（幅度小于上升幅度）→ 继续上升",
+      "C. 始终保持不变",
+      "D. 答错 1 次就归零"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-04",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "A3 系统为某学生推送题目时，已知其能力估计 θ=0.6、候选题 a=1.5/b=0.5 和 a=0.8/b=0.7。从 IRT 2PL “信息量最大”原则看，哪道题更适合作为下一题？",
+    "difficulty": 3,
+    "explanation": "IRT 2PL：答对概率 P(θ)=1/(1+exp(-a(θ-b)))。题1：P≈0.557；题2：P≈0.480。两者答对概率都接近 0.5，是自适应选题的合理候选。但 a=1.5 的题信息量大，对 θ 估计的边际贡献更高，因此更合适。",
+    "tags": ["cognitive_diagnosis", "irt", "apply"],
+    "options": [
+      "A. 选 a=1.5, b=0.5 的题，因其区分度更大、信息量更高",
+      "B. 选 a=0.8, b=0.7 的题，因难度更高",
+      "C. 随机选题",
+      "D. 选最容易的题 a=0.8, b=0.3（让用户答对）"
+    ],
+    "answer": "A",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-05",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "当某个学生“答题正确率 80%，但同知识点变式题正确率仅 30%”时，最可能反映的诊断结论是？",
+    "difficulty": 4,
+    "explanation": "高正确率 + 低变式正确率 = 学生可能死记硬背了原题答案，但没有真正理解底层概念。这正是 BKT/IRT 在题组层面捕捉不到、需要 DKT 或认知诊断模型（CDM）来识别的“伪掌握”现象。A3 系统应触发错题归因与变式练习。",
+    "tags": ["cognitive_diagnosis", "surface_learning", "analyze"],
+    "options": [
+      "A. 学生已经真正掌握该知识点，可以跳过复习",
+      "B. 学生对原题形成机械记忆，但缺乏对概念的深层理解",
+      "C. 系统随机推送了过难的题目",
+      "D. 学生不存在任何学习问题"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-06",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Analyze",
+    "type": "short_answer",
+    "stem": "BKT、IRT、DKT 三类认知诊断模型各自适合 A3 系统的哪些阶段？请用 3 条关键词分别说明。",
+    "difficulty": 4,
+    "explanation": "三类模型各有优劣：BKT 可解释、参数少，适合冷启动和小数据；IRT 用于自适应选题和 a/b 估计；DKT 适合大规模历史作答下的精细预测。混合方案是工程现实：A3 在数据稀疏时用 BKT/IRT，累积足够数据后引入 DKT 做辅助。",
+    "tags": ["cognitive_diagnosis", "model_selection", "analyze"],
+    "expected_keywords": ["BKT", "IRT", "DKT", "冷启动", "自适应", "精细预测"],
+    "answer": "BKT：冷启动 + 知识点级掌握度（可解释）；IRT：自适应选题 + a/b 估计；DKT：长序列精细预测（数据充足后引入）。",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-07",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Evaluate",
+    "type": "open_ended",
+    "stem": "请评估 A3 系统当前仅用“题目正确率”作为掌握度唯一指标的局限性，并提出至少 3 个更精细的诊断维度。",
+    "difficulty": 4,
+    "explanation": "正确率只是“表层表现”，不能区分死记、理解、迁移。需引入：(1) 速度（反应时间）；(2) 一致性（多次作答是否稳定）；(3) 变式表现；(4) 错题归因分布；(5) 知识点关联结构（前置未掌握则后续很难稳定）。这些维度组合起来才能逼近真实掌握度。",
+    "tags": ["cognitive_diagnosis", "mastery", "evaluate"],
+    "expected_keywords": ["正确率局限", "速度", "一致性", "变式", "归因", "多维度"],
+    "answer": "局限性：单一正确率无法区分“伪掌握（背答案）”“不稳定掌握”“深层理解”等状态，且对猜测和失误没有鲁棒性。更精细的诊断维度至少应包括：(1) 速度-正确率联合（快而对 vs 慢而对 vs 快而错）；(2) 一致性（同知识点多次作答的稳定性）；(3) 变式表现（题目情境变化后的正确率）；(4) 错题类型归因分布（概念/计算/粗心/审题）；(5) 前置知识点依赖（前驱未掌握导致下游不稳）。综合这些维度才能刻画真正的掌握状态。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-08",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Evaluate",
+    "type": "short_answer",
+    "stem": "对比 BKT 与 IRT 在 A3 个性化推荐中的优劣。哪种更适合 A3？请用 3-4 条关键词总结。",
+    "difficulty": 4,
+    "explanation": "BKT 优点：细粒度到知识点、可解释、可直接驱动复习推送；缺点：忽略题目难度差异。IRT 优点：自适应选题、参数估计稳健；缺点：不给每个知识点单独打分。混合策略（IRT 选题 → BKT 记录知识点掌握度）最适合 A3 这种“知识点导向”的教学场景。",
+    "tags": ["cognitive_diagnosis", "bkt_vs_irt", "evaluate"],
+    "expected_keywords": ["BKT", "IRT", "知识点", "自适应", "混合策略"],
+    "answer": "BKT 适合知识点驱动、可解释；IRT 适合自适应选题；A3 推荐 BKT 主诊断 + IRT 辅选题的混合方案。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cognitive_diagnosis-09",
+    "kp_id": "cognitive_diagnosis",
+    "kp_name": "认知诊断模型",
+    "bloom": "Create",
+    "type": "open_ended",
+    "stem": "请为 A3 设计一种“多源信号融合”的掌握度评分函数，要求融合：答题正确率、变式表现、错题归因、复习间隔、用户自评。",
+    "difficulty": 5,
+    "explanation": "Create 题期望的是一个具体的公式或加权框架，而不只是定性描述。可以采用加权评分：Mastery = w1*正确率 + w2*变式正确率 + w3*(1-错误类型严重度) + w4*间隔衰减 + w5*自评置信度，并说明权重如何随学习阶段动态调整。",
+    "tags": ["cognitive_diagnosis", "mastery_fusion", "create"],
+    "expected_keywords": ["加权", "融合", "衰减", "置信度", "动态权重"],
+    "answer": "Mastery = w1·correct_rate + w2·variant_rate + w3·(1-error_severity) + w4·retention_factor + w5·self_confidence。其中 w1-w5 是动态权重（合计为 1），并满足：(1) 新知识点阶段 w2 较大，鼓励变式练习；(2) 巩固阶段 w4 较大，强调间隔后的保持；(3) 错题严重度由错误类型（概念误解 > 计算 > 粗心）映射成 0~1 数值，作为惩罚项；(4) 用户自评置信度作为软约束，自评为“不确定”触发额外讲解资源；(5) 所有分量限定在 0~1，输出仍是 0~1 的综合掌握度。该函数可直接驱动间隔重复调度与下一步资源推荐。",
+    "bloom_6x3": {
+      "level": "create",
+      "sub_level": "generating",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-00",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "以下哪种图表最适合展示某学生 30 天内每日学习时长的变化趋势？",
+    "difficulty": 1,
+    "explanation": "折线图（line chart）天然适合表达连续时间序列上的趋势变化。A3 学习画像页面的“每日学习时长”曲线是典型应用。柱状图也可但更适合离散对比，散点图看不出顺序，饼图完全不适用。",
+    "tags": ["data_visualization", "line_chart", "remember"],
+    "options": [
+      "A. 饼图",
+      "B. 折线图",
+      "C. 散点图",
+      "D. 雷达图"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "factual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-01",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "在 A3 学习画像中展示“学生 vs 班级”的多项指标对比，下列图表最合适的是？",
+    "difficulty": 2,
+    "explanation": "雷达图（Radar Chart）能在一张图上同时对比多个维度（学习时长、掌握度、正确率、连续天数、资源多样性等），非常适合多维能力画像。但维度不宜过多（>8 会拥挤），这是它的局限。",
+    "tags": ["data_visualization", "radar_chart", "understand"],
+    "options": [
+      "A. 雷达图（多维能力画像）",
+      "B. 饼图",
+      "C. 漏斗图",
+      "D. 桑基图"
+    ],
+    "answer": "A",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimensions": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-02",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "Tufte 提出的“数据-墨水比（Data-Ink Ratio）”原则对学习数据可视化的指导意义是？",
+    "difficulty": 2,
+    "explanation": "Tufte 的核心思想是让每一滴“墨水”都服务于数据本身的表达，去掉无意义的装饰（3D 阴影、冗余网格、过度填充等）。A3 仪表盘设计应避免花哨 3D 饼图和不必要装饰，让学习者一眼看到关键趋势。",
+    "tags": ["data_visualization", "tufte", "understand"],
+    "options": [
+      "A. 装饰元素越多越好，能让图表更吸引人",
+      "B. 尽量减少非数据墨水，让图表聚焦在数据本身",
+      "C. 图表必须使用 3D 效果才能提高数据墨水比",
+      "D. 数据墨水比只适用于印刷品，不适用于网页"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-03",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "要在 A3 中展示“学生在 20 个知识点上的掌握度热力分布（横轴知识点、纵轴周次）”，最适合的图表是？",
+    "difficulty": 3,
+    "explanation": "热力图（Heatmap）以颜色深浅编码矩阵值，最适合表达“二维网格 + 强弱信号”，常见于知识点×时间/学生的掌握度可视化。A3 的“知识点热力图”是典型用例。",
+    "tags": ["data_visualization", "heatmap", "apply"],
+    "options": [
+      "A. 柱状图",
+      "B. 热力图",
+      "C. 饼图",
+      "D. 漏斗图"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-04",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "要在 A3 中展示“从『注册 → 首次学习 → 连续学习 7 天 → 完成路径』的用户转化漏斗”，应该用哪种图表？",
+    "difficulty": 3,
+    "explanation": "漏斗图（Funnel Chart）专门用于表现多阶段、逐级衰减的流程转化率，每个阶段的宽度代表该阶段的体量。完全契合 A3 学习漏斗的可视化需求。",
+    "tags": ["data_visualization", "funnel_chart", "apply"],
+    "options": [
+      "A. 漏斗图",
+      "B. 饼图",
+      "C. 散点图",
+      "D. 雷达图"
+    ],
+    "answer": "A",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-05",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "A3 的“班级排行榜”如果用饼图来展示“前 10 名学生各自的正确率分布”，最大的问题是什么？",
+    "difficulty": 4,
+    "explanation": "饼图表达“占整体比例”，但前 10 名各自“正确率”是相互独立的连续指标，不是部分与整体关系。饼图会让用户误以为他们“占”整体的比例，且无法直接比较。柱状图（按排名从高到低）才是正确选择。",
+    "tags": ["data_visualization", "chart_misuse", "analyze"],
+    "options": [
+      "A. 前 10 名各自正确率是独立指标，加总超过 100%，饼图会误导",
+      "B. 饼图颜色太多影响视觉",
+      "C. 饼图无法显示排名信息，但前 10 名仍可比较",
+      "D. 饼图是动态图，前 10 名静态数据不能用"
+    ],
+    "answer": "A",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-06",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Analyze",
+    "type": "short_answer",
+    "stem": "若 A3 想同时呈现“某学生 30 天内学习时长变化趋势”和“当日错题数”这两个变量的关系，最适合的可视化方式是什么？请说明理由。",
+    "difficulty": 4,
+    "explanation": "双轴折线图（双 Y 轴）能在一张图里展示两个不同尺度的时序变量，便于观察相关性。若担心双轴易误读，可用小型多图（small multiples）拆成两张并排子图。散点图适合看“相关性”但不直接表达时序。",
+    "tags": ["data_visualization", "dual_axis", "analyze"],
+    "expected_keywords": ["双轴", "时序", "相关性", "误读风险", "小型多图"],
+    "answer": "推荐双轴折线图：X 轴为日期，左 Y 轴为学习时长（分钟），右 Y 轴为当日错题数，两条折线不同颜色并在图例中清楚标注。理由：(1) 双轴能在一张图里同时呈现两个不同尺度的时序变量；(2) 便于观察“学习越多是否错题越少”或“某天学习激增后错题是否下降”等规律；(3) 折线保留时间顺序性。需要注意的是双轴折线易被误读（如“看起来错题多所以学习多”），因此必须标注清晰坐标单位，必要时用小型多图（small multiples）拆为两张并排子图作辅证。",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-07",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Evaluate",
+    "type": "short_answer",
+    "stem": "请用 2-3 条关键词评价 A3 当前用“3D 饼图”展示“知识点掌握度构成”的最大问题，并给出 1 条改进建议。",
+    "difficulty": 4,
+    "explanation": "3D 饼图是经典反模式：(1) 透视变形让面积感知失真；(2) 颜色区分差；(3) 切片顺序误导；(4) 不能展示精确比例。改进：用条形图按掌握度排序，或用径向条形图（每根条形代表一个知识点）替代。",
+    "tags": ["data_visualization", "pie_3d", "evaluate"],
+    "expected_keywords": ["3D饼图", "透视变形", "水平条形图"],
+    "answer": "最大问题：透视变形导致面积感知失真，且强调装饰牺牲数据墨水比。改进：改用水平条形图（按掌握度降序排列）+ 班级平均参考线。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-08",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Evaluate",
+    "type": "open_ended",
+    "stem": "A3 仪表盘如果把所有指标（学习时长、掌握度、错题、连胜、活跃度、对比）都堆在一屏，会出现什么问题？应该如何做信息分层？",
+    "difficulty": 4,
+    "explanation": "信息过载会导致认知负荷升高、关键信号被淹没。应按“概览-详情-诊断-对比”做分层（参考 dashboard design patterns），并用视觉权重（颜色/大小/位置）突出 KPI。",
+    "tags": ["data_visualization", "dashboard", "evaluate"],
+    "expected_keywords": ["信息过载", "认知负荷", "分层", "KPI", "视觉层级"],
+    "answer": "问题：(1) 信息过载导致认知负荷升高，关键信号被淹没；(2) 视觉权重平均，使用户不知先看哪个；(3) 屏幕滚动/折叠导致上下文丢失；(4) 难以移动端适配。改进：采用“概览 → 详情 → 诊断 → 对比”四层结构：第一层仅放 3~5 个核心 KPI（学习时长、掌握度、连胜、错题率、活跃度），用大字 + 颜色编码；第二层是趋势图（每日时长、掌握度变化）；第三层是诊断（错题类型分布、知识点热力图）；第四层是对比（雷达图 vs 班级）。配合视觉层级：主指标用大字号+品牌色，次要指标用浅灰，关键告警用红色。同时保证单屏不超过 7±2 个信息块。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-data_visualization-09",
+    "kp_id": "data_visualization",
+    "kp_name": "数据可视化基础",
+    "bloom": "Create",
+    "type": "open_ended",
+    "stem": "请为 A3 设计一张“学习者成长档案（Learner Growth Profile）”可视化作品，列出至少 4 个模块、每个模块的图表类型、所用数据字段，并说明设计原则。",
+    "difficulty": 5,
+    "explanation": "Create 期望完整的设计方案，含图表类型 + 数据字段 + 设计原则。常见模块：核心 KPI 卡 / 趋势折线 / 知识点热力 / 错题归因 / 班级雷达 / 学习路径时间轴。每模块需要说明用哪些数据字段和图表。",
+    "tags": ["data_visualization", "design", "create"],
+    "expected_keywords": ["模块化", "图表选型", "字段映射", "设计原则", "认知负荷"],
+    "answer": "设计 4 个模块：(1) 顶部「KPI 速览卡」：用 4 张指标卡（总学习时长/掌握知识点数/总做题数/正确率），数字 + 同比箭头，数据字段 daily_records.duration_minutes、mastery_by_kp、summary_stats.total_questions、summary_stats.overall_correct_rate；(2) 「掌握度趋势」双轴折线图：横轴日期，左 Y 掌握度均值，右 Y 单日错题数，字段 mastery_by_kp.<*>.current + mistake_history 聚合；(3) 「知识点热力图」：横轴知识点、纵轴周次、颜色为当周掌握度变化，字段 mastery_by_kp + daily_records；(4) 「错题归因环形图」：按 error_type（概念/计算/粗心/审题）分组，字段 mistake_history[*].error_type；(5) 「班级对比雷达图」：5 维度对比班级均值，字段 class_comparison_data.rankings。设计原则：单一焦点（每屏一个核心问题）、Tufte 数据墨水比、配色服务于信息层级、移动端友好、避免 3D 装饰、关键数据有 tooltip 下钻。",
+    "bloom_6x3": {
+      "level": "create",
+      "sub_level": "generating",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-00",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "GDPR 中“被遗忘权（Right to be Forgotten）”对 A3 这类学习分析系统的直接影响是？",
+    "difficulty": 1,
+    "explanation": "GDPR 第 17 条赋予数据主体要求删除其个人数据的权利。对学习系统意味着：用户注销账号或主动请求后，系统应在合理期限内删除其个人画像、错题历史、学习记录（除非有法定保留义务），并提供“一键导出 / 一键删除”能力。",
+    "tags": ["learning_analytics_ethics", "gdpr", "remember"],
+    "options": [
+      "A. 系统可以永久保留所有学习数据用于算法优化",
+      "B. 用户可要求删除其个人数据，系统应在合理期限内完成删除",
+      "C. GDPR 仅适用于欧盟企业，对中国系统无影响",
+      "D. 被遗忘权只针对金融数据，不针对学习数据"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "factual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-01",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "“知情同意（Informed Consent）”在学习分析场景中的核心要求是？",
+    "difficulty": 2,
+    "explanation": "真正的知情同意必须是“自愿 + 充分告知 + 可撤回”的：用户需明确知道收集哪些数据、用途是什么、保存多久、第三方是否共享；不能用“一揽子勾选默认同意”或把同意作为使用产品的前提。未成年人还需监护人同意。",
+    "tags": ["learning_analytics_ethics", "consent", "understand"],
+    "options": [
+      "A. 在用户协议最末尾写一行小字就视为已同意",
+      "B. 用默认勾选框让用户“被动同意”",
+      "C. 以清晰、可撤回的方式告知用户收集什么数据、用途、保存时长、是否共享",
+      "D. 学习类 App 无需任何同意即可收集所有学习行为"
+    ],
+    "answer": "C",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-02",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "A3 系统如果把学生错题数据用于“训练通用教育大模型”，可能违反的伦理原则是？",
+    "difficulty": 2,
+    "explanation": "把学生个体错题用于训练通用模型，本质是“二次利用”且未告知。需要明确：(1) 原始协议是否涵盖此类用途；(2) 是否经过脱敏（去标识化）；(3) 是否提供 opt-out；(4) 是否符合“最小必要 + 目的限定”原则。否则违反目的限定与最小化原则。",
+    "tags": ["learning_analytics_ethics", "data_use", "understand"],
+    "options": [
+      "A. 只要数据加密就没问题",
+      "B. 这属于“目的限定 + 最小必要”原则的违反，除非事先告知并获得同意",
+      "C. 学习数据不属于个人数据，可以任意使用",
+      "D. 学校收集的数据可以无条件用于商业模型训练"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-03",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "A3 在向“任课老师”展示学生错题画像时，下列做法中最符合伦理的是？",
+    "difficulty": 3,
+    "explanation": "老师是合理的数据接收方（教学目的），但仍受最小必要原则约束：(1) 仅展示与教学相关的字段；(2) 学生应被告知老师能看到哪些数据；(3) 不能用于歧视性评价（如只看错题率给成绩排名）。",
+    "tags": ["learning_analytics_ethics", "teacher_access", "apply"],
+    "options": [
+      "A. 把学生的所有原始数据（聊天记录、个人情绪标注）全部给老师",
+      "B. 只展示与教学目标相关的字段（知识点掌握度、错题分布），且学生应事先被告知",
+      "C. 把数据卖给第三方教育机构",
+      "D. 完全不向老师开放任何学习数据"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-04",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "A3 在错题归因中给某学生打上“粗心”这一标签。下列哪种做法可能引发算法偏见或误伤？",
+    "difficulty": 3,
+    "explanation": "用固定标签给学生贴“粗心”可能在累积判定后形成“自我实现预言”：学生看到标签后降低自信，反而增加错误。系统应避免：(1) 标签固化（每次错都说粗心）；(2) 把弱势学生群体（特定学校/性别/年龄）误判为粗心；(3) 不可撤回。",
+    "tags": ["learning_analytics_ethics", "bias", "apply"],
+    "options": [
+      "A. 标签仅用于辅助归因提示，不对学生外显，且保留人工修正入口",
+      "B. 长期反复用同一标签并直接展示给所有老师和学生",
+      "C. 用性别、学校、年龄等敏感属性训练粗心分类器",
+      "D. 把标签直接作为最终成绩的一部分"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-05",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "把“学生未点击的推荐资源”作为负反馈训练推荐模型，最可能引发的伦理问题是？",
+    "difficulty": 4,
+    "explanation": "把“没点击”当作负样本是常见的反馈推断错误：未点击可能因为用户根本没看见、不感兴趣、太忙、内容难度不合适等多种原因；当成负反馈会强化推荐偏见，对少数群体/小众偏好形成过滤气泡（filter bubble）。需要：(1) 多源反馈（点击、收藏、完成率、自评）；(2) 显式 opt-out；(3) 公平性评估。",
+    "tags": ["learning_analytics_ethics", "feedback_bias", "analyze"],
+    "options": [
+      "A. 没有任何问题，未点击就是不喜欢",
+      "B. 负反馈偏差 + 过滤气泡 + 公平性受损（弱势群体可能被系统性排除）",
+      "C. 仅会让系统变慢",
+      "D. 仅影响用户界面美观"
+    ],
+    "answer": "B",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-06",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Analyze",
+    "type": "short_answer",
+    "stem": "若 A3 需要把学生画像数据用于科研论文（如“AI 课程学习行为分析”），应如何做数据脱敏和伦理审查？",
+    "difficulty": 4,
+    "explanation": "科研使用通常不在原始同意范围内，需补做伦理审查（IRB/伦理委员会）、二次同意或脱敏 + 不可重标识化。常用脱敏：直接标识符删除、假名化、K-匿名化、聚合化；并公开数据使用说明。",
+    "tags": ["learning_analytics_ethics", "anonymization", "analyze"],
+    "expected_keywords": ["脱敏", "假名化", "K-匿名", "伦理审查", "二次同意"],
+    "answer": "步骤：(1) 通过伦理审查（IRB 或机构伦理委员会），说明研究目的、数据范围、风险与受益；(2) 在协议中增补“科研使用”条款或获取二次同意；(3) 数据脱敏：删除直接标识符（姓名、手机号、学号），做假名化（pseudo ID 替换），K-匿名化（任意记录至少有 K-1 个邻居），关键字段泛化（如精确年龄→年龄段、学校→省份）；(4) 聚合化：原始答题序列可只保留汇总指标而非逐题记录；(5) 数据保留期满后自动销毁；(6) 论文公开时附数据可用性声明（Data Availability Statement）与伦理审查编号。",
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-07",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Evaluate",
+    "type": "short_answer",
+    "stem": "请用 2-3 条关键词评价 A3 用“知识点掌握度 + 性格标签（如内向/外向）”推荐合作学习伙伴的伦理问题，并给出 1 条改进建议。",
+    "difficulty": 4,
+    "explanation": "用敏感属性（性格、性别、家庭背景）做匹配存在显著伦理风险：可能强化刻板印象、引发歧视、扩大数字鸿沟。即使技术上提升了匹配效率，也不应作为主决策依据。",
+    "tags": ["learning_analytics_ethics", "stereotype", "evaluate"],
+    "expected_keywords": ["刻板印象", "敏感属性", "目标互补"],
+    "answer": "问题：强化刻板印象、敏感属性未经同意、可能形成性格同温层。改进：性格仅作参考，优先用学习目标互补作为匹配依据。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-08",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Evaluate",
+    "type": "open_ended",
+    "stem": "若 A3 与某第三方广告平台共享学生“大致兴趣方向”以投放课程广告，请评估其伦理问题并给出可接受方案。",
+    "difficulty": 4,
+    "explanation": "学习数据与广告平台共享是高风险行为：违反目的限定、可能造成未成年人保护缺失、形成“数据变现学习者”乱象。可接受方案：明示 + opt-in + 最低必要 + 不与个人身份绑定。",
+    "tags": ["learning_analytics_ethics", "third_party", "evaluate"],
+    "expected_keywords": ["第三方共享", "opt-in", "最小必要", "未成年人保护", "目的限定"],
+    "answer": "伦理问题：(1) 违反目的限定——用户注册 A3 是为了学习，未必同意被用于商业广告；(2) 学生数据被卖给第三方形成“变现学习者”的乱象；(3) 对未成年人影响尤为严重（青少年保护相关法规更严）；(4) 一旦泄露，影响范围扩大。可接受方案：(a) 必须 opt-in（默认关闭），单独弹窗明确告知；(b) 仅共享聚合或粗粒度标签（如“对数学感兴趣”）而非个体可重标识数据；(c) 第三方必须签订数据保护协议（DPA），限定使用与销毁周期；(d) 学生可随时撤回授权并要求删除已共享记录；(e) 内部审计与公开透明度报告。",
+    "bloom_6x3": {
+      "level": "evaluate",
+      "sub_level": "critiquing",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-learning_analytics_ethics-09",
+    "kp_id": "learning_analytics_ethics",
+    "kp_name": "学习分析伦理",
+    "bloom": "Create",
+    "type": "open_ended",
+    "stem": "请为 A3 设计一份“学习数据伦理治理框架”，要求覆盖：采集同意、最小必要、用途限定、安全存储、可解释性、用户权利、公平性、审计。",
+    "difficulty": 5,
+    "explanation": "Create 期望一个完整、可落地的治理框架（不只是原则），含具体流程、责任角色、工具机制。这是典型的系统设计 + 伦理综合题，优秀答案应包含可操作 checklist。",
+    "tags": ["learning_analytics_ethics", "governance", "create"],
+    "expected_keywords": ["治理框架", "同意", "最小必要", "可解释", "公平性", "审计"],
+    "answer": "A3 学习数据伦理治理框架（8 大支柱）：(1) 采集同意：注册时清晰告知 + 可撤回，单独勾选敏感字段，未成年人监护人模式；(2) 最小必要：每个字段上线前过“必要性评审”，无必要不采集；(3) 用途限定：白名单机制，任何新用途必须走 Ethics Review；(4) 安全存储：传输 TLS、存储加密、字段级脱敏、最小权限；(5) 可解释性：算法决策（推荐/诊断）提供 why-this 解释，用户可申诉；(6) 用户权利：自助导出（Data Portability）、一键删除（被遗忘权）、关闭画像；(7) 公平性：定期按学校/性别/年龄段分组做公平性评估，避免弱势群体系统性不利；(8) 审计：内部 Ethics Board + 第三方年审，公开透明度报告，违规可追溯。每个支柱配套：流程图、责任角色（DPO、产品、工程、运营）、检查清单、应急响应预案。",
+    "bloom_6x3": {
+      "level": "create",
+      "sub_level": "generating",
+      "knowledge_dimension": "metacognitive",
+      "method": "manual",
+      "score": 1
+    }
+  }
+]

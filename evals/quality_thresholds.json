@@ -1,0 +1,7 @@
+{
+  "hit_at_5": 0.85,
+  "citation_presence": 1.0,
+  "citation_validity": 1.0,
+  "security_and_review_pass_rate": 1.0,
+  "max_relative_regression": 0.03
+}

@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>学生个性化辅导参考报告</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #1d4ed8;
+      --brand-deep: #1e3a8a;
+      --accent: #0ea5e9;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --risk-high: #dc2626;
+      --risk-medium: #f97316;
+      --risk-low: #16a34a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    .page { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
+      color: #fff;
+      border-radius: 18px;
+      padding: 28px 32px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+    }
+    .hero__eyebrow {
+      letter-spacing: 4px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.72);
+      margin-bottom: 8px;
+    }
+    .hero__title { font-size: 28px; font-weight: 700; margin: 0 0 6px; }
+    .hero__sub { font-size: 14px; color: rgba(255,255,255,0.82); margin: 0; }
+    .hero__meta {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      font-size: 13px;
+    }
+    .hero__meta div { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; }
+    .hero__meta span { display: block; color: rgba(255,255,255,0.6); font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; }
+    .archetype {
+      margin-top: 20px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .archetype__info { flex: 1; min-width: 0; }
+    .archetype__label { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 2px; }
+    .archetype__name { font-size: 20px; font-weight: 700; margin: 4px 0; }
+    .archetype__nick { color: #fbbf24; font-weight: 600; }
+    .archetype__desc { font-size: 13px; color: rgba(255,255,255,0.86); margin: 6px 0 8px; }
+    .archetype__traits { margin: 0; padding-left: 20px; font-size: 13px; color: rgba(255,255,255,0.9); }
+    .archetype-svg { flex-shrink: 0; width: 140px; height: 140px; }
+    .archetype-svg svg { width: 100%; height: 100%; border-radius: 12px; }
+
+    .validity-bar {
+      display: flex; align-items: center; gap: 10px;
+      margin: 14px 0 22px;
+      padding: 12px 18px;
+      background: #fff;
+      border-left: 4px solid var(--accent);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+    .validity-bar strong { color: var(--brand-deep); }
+
+    .act { margin-top: 28px; }
+    .act__head {
+      display: flex; align-items: baseline; gap: 12px;
+      padding-bottom: 10px; margin-bottom: 14px;
+      border-bottom: 2px solid var(--brand);
+    }
+    .act__index {
+      background: var(--brand); color: #fff;
+      padding: 4px 12px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; letter-spacing: 2px;
+    }
+    .act__title { font-size: 22px; margin: 0; color: var(--brand-deep); }
+    .act__hint { color: var(--muted); font-size: 13px; }
+
+    .risk-band {
+      padding: 16px 20px; border-radius: 14px; color: #fff;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      margin-bottom: 14px;
+    }
+    .risk-band__level { font-size: 12px; letter-spacing: 3px; opacity: 0.85; }
+    .risk-band__text { font-size: 15px; margin-top: 4px; }
+    .risk-band--medium { background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); }
+    .risk-band--low { background: linear-gradient(135deg, #34d399 0%, #16a34a 100%); }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+      margin-bottom: 14px;
+    }
+    .card h3 { margin: 0 0 10px; font-size: 16px; color: var(--brand-deep); }
+    .card p { margin: 6px 0; }
+
+    .evidence-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+    }
+    .ev-card { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 6px 18px rgba(15,23,42,0.05); border-top: 3px solid var(--accent); }
+    .ev-card h4 { margin: 0 0 8px; font-size: 15px; color: var(--brand-deep); }
+    .ev-card ul { margin: 6px 0 10px; padding-left: 20px; font-size: 13px; color: var(--ink); }
+    .ev-card .ev-empty { color: var(--muted); list-style: none; margin-left: -18px; font-style: italic; }
+    .ev-src { color: var(--brand); font-weight: 600; font-size: 12px; }
+    .ev-conclusion { font-size: 13px; color: var(--ink); background: #f8fafc; padding: 8px 10px; border-radius: 8px; margin-top: 8px; }
+    .ev-action { font-size: 13px; color: var(--brand-deep); background: #eff6ff; padding: 8px 10px; border-radius: 8px; margin-top: 6px; font-weight: 600; }
+
+    .toolkit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .toolkit-card { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 6px 18px rgba(15,23,42,0.05); }
+    .toolkit-card h4 { margin: 0 0 8px; font-size: 14px; color: var(--brand-deep); }
+    .toolkit-card .script { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: #78350f; }
+    .toolkit-card ul { padding-left: 20px; font-size: 13px; margin: 8px 0 0; }
+
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+    thead th { background: #f8fafc; color: var(--brand-deep); }
+
+    details { background: #fff; border-radius: 14px; padding: 12px 18px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(15,23,42,0.04); }
+    details summary { cursor: pointer; font-weight: 600; color: var(--brand-deep); font-size: 14px; list-style: none; }
+    details summary::before { content: "▸ "; color: var(--brand); }
+    details[open] summary::before { content: "▾ "; }
+    details .tech-body { margin-top: 12px; color: var(--muted); font-size: 13px; }
+    details .tech-body table { margin: 8px 0 16px; }
+
+    .chip-list { margin: 6px 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip-list li { background: #e0e7ff; color: var(--brand-deep); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+    .progress-bar { background: var(--brand); height: 10px; border-radius: 8px; }
+
+    @media (max-width: 720px) {
+      .hero__meta { grid-template-columns: repeat(2, 1fr); }
+      .evidence-grid, .toolkit-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <section class="hero">
+    <div class="hero__eyebrow">PERSONALIZED COUNSELING REPORT</div>
+    <h1 class="hero__title">学生个性化辅导参考报告</h1>
+    <p class="hero__sub">{{behavior_proxy_statement}}</p>
+    <div class="hero__meta">
+      <div><span>学号</span>{{student_id}}</div>
+      <div><span>年级 / 专业</span>{{grade}} · {{major}}</div>
+      <div><span>学院 / 班级</span>{{academy}} · {{class_name}}</div>
+      <div><span>当前风险等级</span>{{risk_level}}</div>
+    </div>
+    <div class="archetype">
+      <div class="archetype__info">
+        <div class="archetype__label">BEHAVIOR ARCHETYPE · 行为原型</div>
+        <div class="archetype__name">{{archetype_name}} <span class="archetype__nick">「{{archetype_nickname}}」</span></div>
+        <p class="archetype__desc">{{archetype_description}}</p>
+        <ul class="archetype__traits">{{archetype_traits}}</ul>
+      </div>
+      {{archetype_svg}}
+    </div>
+  </section>
+
+  <div class="validity-bar">
+    <strong>数据时效</strong>
+    <span>{{data_validity_mode}} · {{data_validity_statement}}</span>
+  </div>
+
+  <section class="act">
+    <div class="act__head">
+      <span class="act__index">第一幕</span>
+      <h2 class="act__title">结论先行</h2>
+      <span class="act__hint">最该关心的一件事</span>
+    </div>
+    <div class="risk-band">
+      <div class="risk-band__level">{{risk_level}}</div>
+      <div class="risk-band__text">{{risk_overview}}</div>
+    </div>
+    <div class="card">
+      <h3>核心洞察</h3>
+      <ul>{{key_insight_items}}</ul>
+    </div>
+    <div class="card">
+      <h3>辅导员视角叙事（LLM 生成）</h3>
+      <div>{{llm_narrative_content}}</div>
+    </div>
+    <div class="card">
+      <h3>核心风险因素 & 处置口径</h3>
+      <p>挂科预警等级 = {{business_course_fail_level}}；融合概率 = {{business_course_fail_prob}}；处置优先级 = {{business_warning_priority}}；主风险 = {{business_primary_risk_name}}</p>
+      <ul>{{core_factor_items}}</ul>
+      <ul>{{priority_reason_items}}</ul>
+    </div>
+    <div class="card">
+      <h3>标签体系</h3>
+      <div style="font-size:12px;color:var(--muted);">主标签</div>
+      <ul class="chip-list">{{tag_items}}</ul>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">特征短语</div>
+      <ul class="chip-list">{{phrase_items}}</ul>
+    </div>
+  </section>
+
+  <section class="act">
+    <div class="act__head">
+      <span class="act__index">第二幕</span>
+      <h2 class="act__title">证据链</h2>
+      <span class="act__hint">来自 ODS 原始数据的具体事实</span>
+    </div>
+    <div class="evidence-grid">
+      <div class="ev-card">
+        <h4>{{attr_lb_dim}}</h4>
+        <ul>{{attr_lb_evidence}}</ul>
+        {{attr_lb_tail}}
+      </div>
+      <div class="ev-card">
+        <h4>{{attr_lo_dim}}</h4>
+        <ul>{{attr_lo_evidence}}</ul>
+        {{attr_lo_tail}}
+      </div>
+      <div class="ev-card">
+        <h4>{{attr_rh_dim}}</h4>
+        <ul>{{attr_rh_evidence}}</ul>
+        {{attr_rh_tail}}
+      </div>
+      <div class="ev-card">
+        <h4>{{attr_sc_dim}}</h4>
+        <ul>{{attr_sc_evidence}}</ul>
+        {{attr_sc_tail}}
+      </div>
+    </div>
+    <div class="card">
+      <h3>双对比解释</h3>
+      <p><strong>与本人历史：</strong>{{history_compare}}</p>
+      <p><strong>与同群体分位：</strong>{{peer_compare}}</p>
+    </div>
+    <div class="card">
+      <h3>跨维度关联（语义化）</h3>
+      <table>
+        <thead><tr><th>关联路径</th><th>核心指标</th><th>结论</th></tr></thead>
+        <tbody>{{cross_rows}}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>关键行为事件</h3>
+      <div style="font-size:12px;color:var(--muted);">风险行为事件</div>
+      <ul>{{risk_behavior_items}}</ul>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">正向行为事件</div>
+      <ul>{{positive_behavior_items}}</ul>
+    </div>
+    <div class="card">
+      <h3>补充归因视角（行为 / 结果 / 环境）</h3>
+      <p><strong>行为因：</strong>{{attribution_behavior}}</p>
+      <p><strong>结果因：</strong>{{attribution_result}}</p>
+      <p><strong>环境因：</strong>{{attribution_environment}}</p>
+    </div>
+  </section>
+
+  <section class="act">
+    <div class="act__head">
+      <span class="act__index">第三幕</span>
+      <h2 class="act__title">行动方案</h2>
+      <span class="act__hint">本周就能做的具体动作</span>
+    </div>
+    <div class="toolkit-grid">
+      <div class="toolkit-card">
+        <h4>谈话开场策略</h4>
+        <p>{{toolkit_opening}}</p>
+        <div class="script">{{toolkit_script}}</div>
+      </div>
+      <div class="toolkit-card">
+        <h4>沟通禁区</h4>
+        <ul>{{toolkit_taboos}}</ul>
+        <h4 style="margin-top:12px;">可用追问</h4>
+        <ul>{{toolkit_followups}}</ul>
+      </div>
+    </div>
+    <div class="card">
+      <h3>升级路径</h3>
+      <p>{{toolkit_channel}}</p>
+    </div>
+    <div class="card">
+      <h3>7 天微计划（按行为原型定制）</h3>
+      <table>
+        <thead><tr><th>日期</th><th>关注点</th><th>动作</th></tr></thead>
+        <tbody>{{personalized_micro_plan_rows}}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>成长方向</h3>
+      <p>{{advice_direction}}</p>
+      <ul>{{advice_plan_items}}</ul>
+    </div>
+    <div class="card">
+      <h3>学生视角摘要（本周）</h3>
+      <ul>{{three_sentence_items}}</ul>
+      <p><strong>本周最该做的一件事：</strong>{{one_priority_action}}</p>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">（通用版 7 天微计划，供学生自查）</div>
+      <ul>{{micro_plan_items}}</ul>
+    </div>
+    <div class="card">
+      <h3>干预闭环</h3>
+      <p>计划动作：{{intervention_action}}</p>
+      <p>计划执行日期：{{intervention_date}}</p>
+    </div>
+  </section>
+
+  <details open>
+    <summary>技术细节 · 五维量化得分（供档案留存）</summary>
+    <div class="tech-body">
+      <table>
+        <thead><tr><th>模式</th><th>标签</th><th>得分（0-100）</th><th>语义评价</th></tr></thead>
+        <tbody>{{mode_rows}}</tbody>
+      </table>
+      <div><img src="{{radar_chart_svg}}" alt="五维能力雷达图" style="width:100%;max-width:560px;" /></div>
+      <table>
+        <thead><tr><th>维度</th><th>个人</th><th>同群体均值</th></tr></thead>
+        <tbody>{{radar_rows}}</tbody>
+      </table>
+    </div>
+  </details>
+
+  <details open>
+    <summary>技术细节 · 学业轨迹演化</summary>
+    <div class="tech-body">
+      <div><img src="{{risk_timeline_svg}}" alt="学业风险演化时序图" style="width:100%;max-width:760px;" /></div>
+      <p>口径：{{trajectory_display_granularity}} · {{trajectory_time_note}}</p>
+      <p>{{trajectory_chart_explanation}}</p>
+      <p>{{trajectory_stage_progress_text}}</p>
+      <div style="background:#e2e8f0;border-radius:8px;height:10px;margin:6px 0 14px;">
+        <div class="progress-bar" style="width:{{trajectory_stage_progress_width}}%;"></div>
+      </div>
+      <p>阶段：{{trajectory_phase}}｜{{trajectory_confidence_summary}}</p>
+      <ul>{{trajectory_nodes}}</ul>
+      <table>
+        <thead><tr><th>时间</th><th>状态</th><th>得分</th><th>转移原因</th></tr></thead>
+        <tbody>{{trajectory_state_sequence_rows}}</tbody>
+      </table>
+      <p><strong>关键拐点</strong></p>
+      <table>
+        <thead><tr><th>时间</th><th>变化量</th><th>状态迁移</th><th>证据提示</th></tr></thead>
+        <tbody>{{trajectory_turning_point_rows}}</tbody>
+      </table>
+      <p><strong>行为归因逻辑链</strong></p>
+      <ul>{{trajectory_event_chain_items}}</ul>
+      <p>{{trajectory_forecast_narrative}}</p>
+      <table>
+        <thead><tr><th>未来窗口</th><th>预测值</th><th>置信区间</th></tr></thead>
+        <tbody>{{forecast_rows}}</tbody>
+      </table>
+      <p><strong>干预仿真：</strong>{{intervention_simulation_summary}}</p>
+    </div>
+  </details>
+
+  <details open>
+    <summary>技术细节 · 知识增强问答 & RAG 证据</summary>
+    <div class="tech-body">
+      <p>LLM 状态：{{llm_narrative_status}}｜模型：{{llm_narrative_model}}</p>
+      <p>QA 状态：{{qa_status}}｜模型：{{qa_model}}</p>
+      <p><strong>问题：</strong>{{qa_question}}</p>
+      <p><strong>回答：</strong>{{qa_answer}}</p>
+      <p><strong>RAG 建议：</strong>{{rag_suggestion}}</p>
+      <ul>{{rag_reference_items}}</ul>
+    </div>
+  </details>
+
+  <details open>
+    <summary>技术细节 · 描述模板输出（归档留痕）</summary>
+    <div class="tech-body">
+      <table>
+        <thead><tr><th>模板类型</th><th>输出内容</th></tr></thead>
+        <tbody>{{template_rows}}</tbody>
+      </table>
+    </div>
+  </details>
+
+  <details open>
+    <summary>技术细节 · 数据源溯源</summary>
+    <div class="tech-body">
+      <p>{{freshness_text}}</p>
+      <table>
+        <thead><tr><th>数据源</th><th>时间字段</th><th>主时间口径</th><th>该生记录数</th><th>最近时间</th></tr></thead>
+        <tbody>{{source_rows}}</tbody>
+      </table>
+      <p>版本对标：{{benchmark_base}} → {{benchmark_current}}</p>
+      <ul>{{benchmark_items}}</ul>
+      <ul>{{update_log_items}}</ul>
+    </div>
+  </details>
+
+</div>
+</body>
+</html>

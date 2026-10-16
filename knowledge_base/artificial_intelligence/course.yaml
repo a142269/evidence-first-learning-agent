@@ -1,0 +1,9 @@
+# 课程清单（course.yaml）—— 知识库平台化改造（2026-07-16）
+# 显示名/简介由此文件提供，前端不再维护写死的 slug→中文名映射表。
+display_name: 人工智能导论
+description: 覆盖机器学习、深度学习、Transformer/LLM、RAG、多智能体等 20 章的高校专业课程知识库（赛题要求的初始知识库）。
+status: published
+owner: teacher
+builtin: true
+created_at: "2026-06-17T00:00:00"
+updated_at: "2026-07-16T00:00:00"

@@ -1,0 +1,164 @@
+{
+  "_meta": {
+    "purpose": "Day3 演示扩展种子：在 seed.json 的 3 学生基础上补到 5 学生 / 100 答题 / 20 KP / 30 KG 边 / 5 路径",
+    "owner": "A",
+    "idempotent": true
+  },
+  "extra_students": [
+    {
+      "user_id": "demo-student-4",
+      "nickname": "小慧（协作型）",
+      "profile": {
+        "knowledge_base": {"level": "中级", "score": 0.65, "topics": ["Python", "前端基础"]},
+        "cognitive_style": {"primary": "读写型", "secondary": "听觉型"},
+        "learning_preference": {"mode": "小组讨论", "pace": "适中", "depth": "应用优先"},
+        "weak_points": {"topics": ["概率统计", "线性代数"], "patterns": ["公式推导卡壳"]},
+        "learning_goal": {"target": "全栈开发岗", "timeline": "5个月"},
+        "time_management": {"weekly_hours": 22, "best_time": "下午", "consistency": "中"},
+        "self_efficacy": {"confidence": 0.62, "persistence": "中", "help_seeking": "组内求助"},
+        "interaction_pattern": {"style": "协商型", "depth": "对话式", "feedback": "需要同伴肯定"}
+      }
+    },
+    {
+      "user_id": "demo-student-5",
+      "nickname": "小强（实践型）",
+      "profile": {
+        "knowledge_base": {"level": "初级", "score": 0.42, "topics": ["Python", "数据库基础"]},
+        "cognitive_style": {"primary": "动手型", "secondary": "视觉型"},
+        "learning_preference": {"mode": "Kaggle 竞赛", "pace": "项目驱动", "depth": "结果导向"},
+        "weak_points": {"topics": ["数学基础", "理论推导"], "patterns": ["不读 docs 直接试"]},
+        "learning_goal": {"target": "数据分析师就业", "timeline": "9个月"},
+        "time_management": {"weekly_hours": 18, "best_time": "晚上", "consistency": "中"},
+        "self_efficacy": {"confidence": 0.55, "persistence": "高", "help_seeking": "搜索优先"},
+        "interaction_pattern": {"style": "实战型", "depth": "案例追问", "feedback": "需要可运行代码"}
+      }
+    },
+    {
+      "user_id": "demo-student-21",
+      "nickname": "林同学（筑基型）",
+      "backfill_identity": true,
+      "profile": {
+        "academic_context": {"major": "计算机科学与技术", "enrollment_year": 2023, "grade": "大三", "class_name": "计科2301"},
+        "knowledge_base": {"level": "初级", "score": 0.46, "topics": ["Python 基础", "数据库", "Web API"]},
+        "cognitive_style": {"score": 0.58, "primary": "听觉型", "secondary": "读写型"},
+        "learning_preference": {"score": 0.72, "mode": "短视频讲解 + 分步练习", "pace": "循序渐进", "depth": "先补前置再实战"},
+        "weak_points": {"score": 0.58, "topics": ["向量嵌入", "张量维度", "检索重排"], "patterns": ["公式与代码对应困难", "容易混淆召回与重排"]},
+        "learning_goal": {"score": 0.68, "target": "RAG 知识库与后端工程", "timeline": "6个月"},
+        "time_management": {"score": 0.56, "weekly_hours": 14, "best_time": "早晨", "consistency": "中"},
+        "self_efficacy": {"score": 0.52, "confidence": 0.48, "persistence": "中高", "help_seeking": "需要分步提示"},
+        "interaction_pattern": {"score": 0.62, "style": "确认型", "depth": "从例子到原理", "feedback": "需要即时纠错与鼓励"}
+      }
+    }
+  ],
+  "extra_paths": [
+    {
+      "id": "seed-path-4",
+      "user_id": "demo-student-4",
+      "title": "全栈 + AI 复合路径",
+      "stages": [
+        {"title": "Web 基础与 API", "kps": ["python_basics", "data_structures"]},
+        {"title": "数据库与缓存", "kps": ["data_structures"]},
+        {"title": "AI 接入与推理服务", "kps": ["ml_basics", "rag"]},
+        {"title": "前后端联调与上线", "kps": ["ai_project_practice"]}
+      ],
+      "current_stage": 1,
+      "progress": 25.0
+    },
+    {
+      "id": "seed-path-5",
+      "user_id": "demo-student-5",
+      "title": "数据科学竞赛驱动路径",
+      "stages": [
+        {"title": "Python 数据栈", "kps": ["python_basics"]},
+        {"title": "统计与可视化", "kps": ["probability_statistics"]},
+        {"title": "经典机器学习", "kps": ["ml_basics", "supervised_learning", "decision_trees"]},
+        {"title": "深度学习入门", "kps": ["neural_networks", "cnn"]},
+        {"title": "Kaggle 竞赛实战", "kps": ["ai_project_practice"]}
+      ],
+      "current_stage": 2,
+      "progress": 40.0
+    },
+    {
+      "id": "seed-path-21",
+      "user_id": "demo-student-21",
+      "title": "RAG 知识库工程筑基路径",
+      "stages": [
+        {"title": "向量与张量前置", "kps": ["linear_algebra", "python_basics"]},
+        {"title": "NLP 与嵌入表示", "kps": ["nlp_basics", "transformer"]},
+        {"title": "检索、分块与重排", "kps": ["rag"]},
+        {"title": "课程知识库项目", "kps": ["rag", "ai_project_practice"]}
+      ],
+      "current_stage": 1,
+      "progress": 28.0
+    }
+  ],
+  "knowledge_points": [
+    {"id": "python_basics", "name": "Python 基础", "course": "AI 入门", "description": "变量、控制流、函数、模块", "bloom": "Apply", "difficulty": 1},
+    {"id": "data_structures", "name": "数据结构", "course": "AI 入门", "description": "列表、字典、栈队列、树图", "bloom": "Apply", "difficulty": 2},
+    {"id": "linear_algebra", "name": "线性代数", "course": "AI 基础", "description": "向量、矩阵、特征值", "bloom": "Understand", "difficulty": 2},
+    {"id": "probability_statistics", "name": "概率与统计", "course": "AI 基础", "description": "分布、期望、贝叶斯", "bloom": "Understand", "difficulty": 2},
+    {"id": "ml_basics", "name": "机器学习基础", "course": "机器学习", "description": "学习范式、评估指标、过拟合", "bloom": "Understand", "difficulty": 2},
+    {"id": "supervised_learning", "name": "监督学习", "course": "机器学习", "description": "线性回归、逻辑回归", "bloom": "Apply", "difficulty": 3},
+    {"id": "unsupervised_learning", "name": "无监督学习", "course": "机器学习", "description": "K-Means、PCA、聚类", "bloom": "Apply", "difficulty": 3},
+    {"id": "decision_trees", "name": "决策树与集成", "course": "机器学习", "description": "CART、随机森林、GBDT", "bloom": "Apply", "difficulty": 3},
+    {"id": "svm", "name": "支持向量机", "course": "机器学习", "description": "最大间隔、核函数", "bloom": "Analyze", "difficulty": 4},
+    {"id": "neural_networks", "name": "神经网络基础", "course": "深度学习", "description": "MLP、激活函数、损失", "bloom": "Apply", "difficulty": 3},
+    {"id": "backpropagation", "name": "反向传播", "course": "深度学习", "description": "链式法则、梯度下降", "bloom": "Analyze", "difficulty": 4},
+    {"id": "cnn", "name": "卷积神经网络", "course": "深度学习", "description": "卷积、池化、ResNet", "bloom": "Apply", "difficulty": 3},
+    {"id": "rnn", "name": "循环神经网络", "course": "深度学习", "description": "时序建模、梯度消失", "bloom": "Apply", "difficulty": 3},
+    {"id": "lstm", "name": "LSTM 与 GRU", "course": "深度学习", "description": "门控机制、长程依赖", "bloom": "Apply", "difficulty": 4},
+    {"id": "attention_mechanism", "name": "注意力机制", "course": "深度学习", "description": "Self-Attention、QKV", "bloom": "Analyze", "difficulty": 4},
+    {"id": "transformer", "name": "Transformer", "course": "深度学习", "description": "Encoder/Decoder、位置编码", "bloom": "Analyze", "difficulty": 4},
+    {"id": "nlp_basics", "name": "NLP 基础", "course": "应用", "description": "分词、词向量、命名实体", "bloom": "Understand", "difficulty": 2},
+    {"id": "rag", "name": "检索增强生成 (RAG)", "course": "应用", "description": "向量库、召回、重排", "bloom": "Evaluate", "difficulty": 4},
+    {"id": "reinforcement_learning", "name": "强化学习", "course": "应用", "description": "MDP、Q-Learning、PPO", "bloom": "Analyze", "difficulty": 4},
+    {"id": "ai_project_practice", "name": "AI 项目实战", "course": "项目", "description": "需求、数据、模型、部署", "bloom": "Create", "difficulty": 5}
+  ],
+  "knowledge_relations": [
+    {"source": "python_basics", "target": "data_structures", "type": "prerequisite", "weight": 0.9},
+    {"source": "python_basics", "target": "ml_basics", "type": "prerequisite", "weight": 0.8},
+    {"source": "linear_algebra", "target": "ml_basics", "type": "prerequisite", "weight": 0.85},
+    {"source": "probability_statistics", "target": "ml_basics", "type": "prerequisite", "weight": 0.85},
+    {"source": "ml_basics", "target": "supervised_learning", "type": "prerequisite", "weight": 0.9},
+    {"source": "ml_basics", "target": "unsupervised_learning", "type": "prerequisite", "weight": 0.85},
+    {"source": "supervised_learning", "target": "decision_trees", "type": "specialization", "weight": 0.8},
+    {"source": "supervised_learning", "target": "svm", "type": "specialization", "weight": 0.75},
+    {"source": "ml_basics", "target": "neural_networks", "type": "prerequisite", "weight": 0.8},
+    {"source": "linear_algebra", "target": "neural_networks", "type": "prerequisite", "weight": 0.8},
+    {"source": "neural_networks", "target": "backpropagation", "type": "related", "weight": 0.9},
+    {"source": "neural_networks", "target": "cnn", "type": "specialization", "weight": 0.85},
+    {"source": "neural_networks", "target": "rnn", "type": "specialization", "weight": 0.85},
+    {"source": "rnn", "target": "lstm", "type": "specialization", "weight": 0.9},
+    {"source": "rnn", "target": "attention_mechanism", "type": "extends", "weight": 0.7},
+    {"source": "lstm", "target": "attention_mechanism", "type": "related", "weight": 0.75},
+    {"source": "attention_mechanism", "target": "transformer", "type": "foundation", "weight": 0.95},
+    {"source": "transformer", "target": "nlp_basics", "type": "enables", "weight": 0.7},
+    {"source": "nlp_basics", "target": "rag", "type": "prerequisite", "weight": 0.8},
+    {"source": "transformer", "target": "rag", "type": "foundation", "weight": 0.85},
+    {"source": "neural_networks", "target": "reinforcement_learning", "type": "related", "weight": 0.6},
+    {"source": "supervised_learning", "target": "reinforcement_learning", "type": "contrast", "weight": 0.5},
+    {"source": "probability_statistics", "target": "reinforcement_learning", "type": "prerequisite", "weight": 0.7},
+    {"source": "cnn", "target": "ai_project_practice", "type": "used_in", "weight": 0.8},
+    {"source": "rag", "target": "ai_project_practice", "type": "used_in", "weight": 0.85},
+    {"source": "transformer", "target": "ai_project_practice", "type": "used_in", "weight": 0.8},
+    {"source": "data_structures", "target": "svm", "type": "used_in", "weight": 0.5},
+    {"source": "decision_trees", "target": "reinforcement_learning", "type": "related", "weight": 0.4},
+    {"source": "ml_basics", "target": "ai_project_practice", "type": "foundational", "weight": 0.85},
+    {"source": "python_basics", "target": "ai_project_practice", "type": "foundational", "weight": 0.9}
+  ],
+  "assessment_recipe": {
+    "_note": "每个学生从 mastery_profile 派生答题与学习行为；student-21 用于同专业同年级的个性化对比演示。",
+    "students": {
+      "demo-student-1": {"mastery_bias": 0.78, "extra_count": 18},
+      "demo-student-2": {"mastery_bias": 0.52, "extra_count": 18},
+      "demo-student-3": {"mastery_bias": 0.88, "extra_count": 18},
+      "demo-student-4": {"mastery_bias": 0.60, "extra_count": 20},
+      "demo-student-5": {"mastery_bias": 0.50, "extra_count": 20},
+      "demo-student-21": {"mastery_bias": 0.43, "extra_count": 24}
+    }
+  },
+  "algorithm_seed_recipe": {
+    "_note": "BKT/DINA 用 mastery_bias 偏置 + KP difficulty 反向调制；SM-2 取 mastery > 0.7 的前 5 个 KP 排日程。",
+    "kp_coverage_per_student": 10
+  }
+}

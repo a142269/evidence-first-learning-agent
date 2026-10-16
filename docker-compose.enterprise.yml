@@ -1,0 +1,142 @@
+# Enterprise-local overlay.  It deliberately leaves docker-compose.yml intact
+# so the existing two-container Electron/demo workflow keeps working.
+#
+# First run (CMD):
+#   copy .env.enterprise.example .env.enterprise
+#   docker compose --env-file .env.enterprise -f docker-compose.yml -f docker-compose.enterprise.yml up --build
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: triple-u-postgres
+    env_file:
+      - .env.enterprise
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-triple_u}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local}
+      POSTGRES_DB: ${POSTGRES_DB:-triple_u}
+      PHOENIX_DB_USER: ${PHOENIX_DB_USER:-phoenix}
+      PHOENIX_DB_PASSWORD: ${PHOENIX_DB_PASSWORD:-change-me-local-phoenix}
+      PHOENIX_DB: ${PHOENIX_DB:-phoenix}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/10-create-phoenix-db.sh:/docker-entrypoint-initdb.d/10-create-phoenix-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - a3net
+
+  redis:
+    image: redis:7-alpine
+    container_name: triple-u-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - a3net
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: triple-u-phoenix
+    env_file:
+      - .env.enterprise
+    environment:
+      PHOENIX_SQL_DATABASE_URL: postgresql://${PHOENIX_DB_USER:-phoenix}:${PHOENIX_DB_PASSWORD:-change-me-local-phoenix}@postgres:5432/${PHOENIX_DB:-phoenix}
+    ports:
+      - "6006:6006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - a3net
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env
+      - .env.enterprise
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-triple_u}:${POSTGRES_PASSWORD:-change-me-local}@postgres:5432/${POSTGRES_DB:-triple_u}
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - a3net
+
+  backend:
+    env_file:
+      - .env
+      - .env.enterprise
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-triple_u}:${POSTGRES_PASSWORD:-change-me-local}@postgres:5432/${POSTGRES_DB:-triple_u}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERY_INGEST_ENABLED: "true"
+      LANGGRAPH_STRICT_MSGPACK: "true"
+      V2_AUTH_REQUIRED: ${V2_AUTH_REQUIRED:-true}
+      V2_STUDENT_COURSES: ${V2_STUDENT_COURSES:-artificial_intelligence}
+      V2_TEACHER_COURSES: ${V2_TEACHER_COURSES:-artificial_intelligence}
+      V2_COURSE_AUTH_MODE: ${V2_COURSE_AUTH_MODE:-environment}
+      V2_REQUIRE_CHECKPOINTER: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006/v1/traces
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      phoenix:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: triple-u-celery-worker
+    env_file:
+      - .env
+      - .env.enterprise
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-triple_u}:${POSTGRES_PASSWORD:-change-me-local}@postgres:5432/${POSTGRES_DB:-triple_u}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    command: ["celery", "-A", "backend.app.worker:celery_app", "worker", "--loglevel=INFO"]
+    healthcheck:
+      # The backend image's HTTP /healthz probe is not valid for a Celery
+      # process: verify that this worker can answer through Redis instead.
+      test: ["CMD-SHELL", "celery -A backend.app.worker:celery_app inspect ping --destination celery@$$HOSTNAME --timeout 5 2>/dev/null | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+      - ./logs:/app/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - a3net
+
+volumes:
+  postgres_data:
+  redis_data:

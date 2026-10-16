@@ -1,0 +1,213 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel previous in-progress runs on the same branch to save minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-security:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scan Python dependencies
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip-audit -r requirements.txt
+
+  quality:
+    name: Lint / Migrate / Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+
+      - name: Install runtime + dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff mypy types-PyYAML "pytest>=8" "pytest-benchmark>=5.2" pytest-cov alembic pyyaml python-pptx
+
+      # Catch real bugs: undefined names + syntax errors only.
+      # Style (imports / docstrings / etc.) is deferred — pyproject has the
+      # full rule set for local dev; CI starts narrow and tightens over time.
+      - name: Ruff (critical only)
+        run: |
+          ruff check --select=F821,F823,E9 backend/app scripts/ tests/
+
+      # Strict type-check on A + B curated sets (see mypy.ini for the list).
+      # 6/24 扩到 16 个模块 (Day 5-9 共 10 + A 6/24 新增 6: P1.1/P1.2/bridge/cache/hyde/rrf)。
+      - name: Mypy strict (A + B curated set)
+        run: |
+          mypy --config-file mypy.ini \
+            backend/app/services/question_bank.py \
+            backend/app/services/knowledge_index.py \
+            backend/app/services/realdina_service.py \
+            backend/app/research/evaluation/dina_real_adapter.py \
+            backend/app/research/evaluation/calibrated_adapter.py \
+            backend/app/services/timemachine_service.py \
+            backend/app/services/knowledge_graph/retriever.py \
+            backend/app/services/knowledge_graph/store.py \
+            backend/app/services/spaced_repetition/hlr.py \
+            backend/app/services/cognitive_diagnosis/bloom_6x3.py \
+            backend/app/services/pedagogical_safety.py \
+            backend/app/services/claim_ledger.py \
+            backend/app/services/pedagogical_bridge.py \
+            backend/app/services/prompt_cache.py \
+            backend/app/services/rag/hyde.py \
+            backend/app/services/rag/rrf.py
+
+      # Smoke-test the alembic chain on a throwaway SQLite file so we catch
+      # broken migrations before they hit anyone else's working tree.
+      - name: Alembic upgrade head smoke
+        env:
+          DATABASE_URL: "sqlite:///./build/ci_smoke.db"
+        run: |
+          mkdir -p build
+          python -m alembic upgrade head
+          python -m alembic downgrade base
+
+      - name: Pytest (no coverage, no benchmarks)
+        env:
+          DATABASE_URL: "sqlite:///./build/ci_tests.db"
+          A3_OFFLINE_DEMO: "true"
+        run: |
+          python -c "from backend.app.core.database import init_db; init_db()"
+          pytest tests/ --no-cov --benchmark-disable -q
+
+      # 6/24 新增：性能压测（CI 模式只跑 5 并发 × 30 请求，避免占资源）
+      - name: Load test smoke (light)
+        run: |
+          python -m scripts.load_test --concurrency 5 --requests 30 --json
+
+  enterprise-contract:
+    name: Enterprise PostgreSQL / Redis contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: triple_u
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: triple_u
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U triple_u -d triple_u"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://triple_u:ci-only-password@localhost:5432/triple_u
+      TEST_V2_POSTGRES_URL: postgresql+psycopg://triple_u:ci-only-password@localhost:5432/triple_u
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+      V2_AUTH_REQUIRED: "true"
+      V2_STUDENT_COURSES: artificial_intelligence
+      A3_OFFLINE_DEMO: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Migrate fresh pgvector database
+        run: |
+          python -m alembic upgrade head
+          python -c "import os, psycopg; url=os.environ['DATABASE_URL'].replace('postgresql+psycopg://', 'postgresql://', 1); conn=psycopg.connect(url); row=conn.execute(\"SELECT extname FROM pg_extension WHERE extname = 'vector'\").fetchone(); assert row == ('vector',), row"
+
+      - name: Run V2 security, retrieval and Golden Set contracts
+        run: |
+          pytest \
+            tests/a/test_v2_access.py \
+            tests/a/test_learning_graph_safety.py \
+            tests/a/test_embedding_provider_resilience.py \
+            tests/a/test_learning_runtime_retrieval.py \
+            tests/a/test_golden_set_evaluator.py \
+            tests/a/test_golden_set_v2.py \
+            tests/a/test_golden_set_runner.py \
+            tests/a/test_learning_runs_v2.py \
+            tests/a/test_learning_runs_v2_lifecycle.py \
+            tests/a/test_learning_run_reconciliation.py \
+            tests/a/test_run_leases.py \
+            tests/a/test_run_lease_migration.py \
+            tests/a/test_persistent_auth.py \
+            tests/a/test_auth_migration.py \
+            tests/a/test_auth_restart.py \
+            tests/a/test_v2_auth_throttle.py \
+            tests/a/test_postgres_api_recovery.py \
+            tests/a/test_learning_package.py \
+            tests/a/test_learning_package_evaluator.py \
+            tests/a/test_learning_package_collection.py \
+            tests/a/test_conversation_memory_v2.py \
+            tests/a/test_learning_checkpoint_postgres.py \
+            tests/a/test_deployment_policy.py \
+            tests/a/test_v1_production_access.py \
+            tests/a/test_enterprise_retriever.py \
+            tests/a/test_knowledge_ingest_enterprise.py \
+            tests/a/test_v2_unfinished_resume.py \
+            tests/a/test_v2_unfinished_postgres.py \
+            tests/a/test_v2_event_idempotency.py \
+            tests/a/test_v2_ingestion_idempotency.py \
+            tests/a/test_v2_ingestion_postgres.py \
+            tests/a/test_vector_reindex.py \
+            tests/a/test_v2_eval_cost_guard.py \
+            --no-cov --benchmark-disable -q
+
+      - name: Optional MCP stdio protocol contract
+        run: |
+          python -m pip install -r requirements-mcp.txt
+          pytest tests/a/test_mcp_readonly_protocol.py --no-cov --benchmark-disable -q

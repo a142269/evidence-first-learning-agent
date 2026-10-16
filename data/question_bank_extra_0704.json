@@ -1,0 +1,527 @@
+[
+  {
+    "id": "q-ml_basics-0704-00",
+    "kp_id": "ml_basics",
+    "kp_name": "机器学习基础",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "下列关于机器学习中训练集 / 验证集 / 测试集的说法，哪项最准确？",
+    "difficulty": 2,
+    "options": [
+      "A. 三者可以互相替代使用",
+      "B. 训练集用于拟合参数，验证集用于调超参，测试集只用于最终评估",
+      "C. 测试集可以反复用来调超参",
+      "D. 验证集只在训练开始前用一次"
+    ],
+    "answer": "B",
+    "explanation": "训练集用于拟合模型参数，验证集用于调超参，测试集只在最终评估时使用一次。如果用测试集反复调参，会导致模型对测试集过拟合，真实部署时泛化能力下降。",
+    "tags": ["ml_basics", "understand"],
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-ml_basics-0704-01",
+    "kp_id": "ml_basics",
+    "kp_name": "机器学习基础",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "下列哪个不是监督学习任务的典型例子？",
+    "difficulty": 1,
+    "options": [
+      "A. 邮件垃圾分类",
+      "B. 手写数字识别",
+      "C. 用户购买行为聚类",
+      "D. 房价回归预测"
+    ],
+    "answer": "C",
+    "explanation": "聚类是无监督学习的代表。监督学习需要带标签数据（A、B、D 都属于监督学习：分类或回归）。",
+    "tags": ["ml_basics", "remember"],
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-ml_basics-0704-02",
+    "kp_id": "ml_basics",
+    "kp_name": "机器学习基础",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "如果一个模型在训练集上准确率 99%，在测试集上只有 65%，最可能的原因是？",
+    "difficulty": 2,
+    "options": [
+      "A. 欠拟合",
+      "B. 过拟合",
+      "C. 数据有噪声但模型没问题",
+      "D. 测试集分布与训练集完全一致"
+    ],
+    "answer": "B",
+    "explanation": "训练远高于测试集是过拟合的典型表现。常用缓解方法：增加数据、正则化、Dropout、交叉验证选更简单的模型。",
+    "tags": ["ml_basics", "apply"],
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-ml_basics-0704-03",
+    "kp_id": "ml_basics",
+    "kp_name": "机器学习基础",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "在 5 折交叉验证中，每一折大约有多少数据被用作验证集？",
+    "difficulty": 2,
+    "options": [
+      "A. 1/2",
+      "B. 1/3",
+      "C. 1/5",
+      "D. 4/5"
+    ],
+    "answer": "C",
+    "explanation": "k 折交叉验证把数据均分成 k 份，每次留 1 份作验证，k-1 份作训练。在 5 折中，每折 1/5 数据为验证集。",
+    "tags": ["ml_basics", "analyze"],
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-ml_basics-0704-04",
+    "kp_id": "ml_basics",
+    "kp_name": "机器学习基础",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "下列哪个指标**不适合**用来评估严重不平衡的二分类问题？",
+    "difficulty": 2,
+    "options": [
+      "A. 准确率（Accuracy）",
+      "B. F1 分数",
+      "C. AUC-ROC",
+      "D. 召回率（Recall）"
+    ],
+    "answer": "A",
+    "explanation": "当正负样本比例 1:99 时，模型全部预测为负也能拿到 99% 准确率，但毫无意义。应使用 Precision/Recall/F1/AUC 等对类别不敏感的指标。",
+    "tags": ["ml_basics", "understand", "evaluation"],
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-decision_trees-0704-00",
+    "kp_id": "decision_trees",
+    "kp_name": "决策树",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "决策树中常用的不纯度度量不包括下列哪一项？",
+    "difficulty": 1,
+    "options": [
+      "A. 信息增益（Information Gain）",
+      "B. 基尼系数（Gini Impurity）",
+      "C. 均方误差（MSE）",
+      "D. 交叉熵（Cross-Entropy）"
+    ],
+    "answer": "C",
+    "explanation": "MSE 是回归树的分裂准则（用于回归任务）；信息增益、基尼系数、交叉熵是分类树的常用不纯度。",
+    "tags": ["decision_trees", "remember"],
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-decision_trees-0704-01",
+    "kp_id": "decision_trees",
+    "kp_name": "决策树",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "在 sklearn 的 DecisionTreeClassifier 中，下列哪个参数**直接**控制树的深度上限？",
+    "difficulty": 2,
+    "options": [
+      "A. min_samples_split",
+      "B. max_depth",
+      "C. n_estimators",
+      "D. criterion"
+    ],
+    "answer": "B",
+    "explanation": "max_depth 直接限制树的最大深度；min_samples_split 控制节点分裂所需的最小样本数；n_estimators 是集成方法参数；criterion 是分裂准则。",
+    "tags": ["decision_trees", "apply", "sklearn"],
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-decision_trees-0704-02",
+    "kp_id": "decision_trees",
+    "kp_name": "决策树",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "决策树相比 KNN 的最大优势之一是？",
+    "difficulty": 1,
+    "options": [
+      "A. 不需要训练阶段",
+      "B. 可解释性强，可输出 if-then 规则",
+      "C. 对高维稀疏数据更鲁棒",
+      "D. 天然支持多分类无需修改"
+    ],
+    "answer": "B",
+    "explanation": "决策树可以转化为直观的 if-then 规则，便于解释。KNN 则是惰性学习，没有显式模型。",
+    "tags": ["decision_trees", "understand"],
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-decision_trees-0704-03",
+    "kp_id": "decision_trees",
+    "kp_name": "决策树",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "随机森林（Random Forest）相比单棵决策树，最主要的改进是？",
+    "difficulty": 2,
+    "options": [
+      "A. 增加模型可解释性",
+      "B. 减少训练时间",
+      "C. 通过 Bagging + 特征随机降低方差，缓解过拟合",
+      "D. 改变分裂准则"
+    ],
+    "answer": "C",
+    "explanation": "RF 在每棵树训练时引入样本 Bagging 和特征子集随机，让多棵树之间去相关，从而显著降低方差。代价是单棵不可解释。",
+    "tags": ["decision_trees", "analyze", "ensemble"],
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "comparing",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-decision_trees-0704-04",
+    "kp_id": "decision_trees",
+    "kp_name": "决策树",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "对连续特征做决策树分裂时，sklearn 默认采用什么策略？",
+    "difficulty": 2,
+    "options": [
+      "A. 排序后扫描所有可能的二分阈值",
+      "B. 用 KMeans 离散化后枚举",
+      "C. 用中位数二分",
+      "D. 必须先做归一化"
+    ],
+    "answer": "A",
+    "explanation": "sklearn 对连续特征先按值排序，再扫描每个相邻值之间的中点作为候选阈值，选最优。代价 O(n log n)。",
+    "tags": ["decision_trees", "apply"],
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-svm-0704-00",
+    "kp_id": "svm",
+    "kp_name": "支持向量机",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "SVM 的核心思想是？",
+    "difficulty": 1,
+    "options": [
+      "A. 最小化训练误差",
+      "B. 最大化分类间隔（margin）",
+      "C. 最小化模型参数量",
+      "D. 最大化似然函数"
+    ],
+    "answer": "B",
+    "explanation": "SVM 通过求解最大间隔超平面提升泛化能力，是结构风险最小化的代表。",
+    "tags": ["svm", "remember"],
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-svm-0704-01",
+    "kp_id": "svm",
+    "kp_name": "支持向量机",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "线性不可分时，SVM 通过什么技术使数据在高维空间变得线性可分？",
+    "difficulty": 2,
+    "options": [
+      "A. 数据增强",
+      "B. 核函数（Kernel Trick）",
+      "C. 随机投影",
+      "D. 主成分分析"
+    ],
+    "answer": "B",
+    "explanation": "核函数（如 RBF、多项式）隐式把数据映射到高维空间，使原本线性不可分的问题在新空间线性可分，无需显式计算映射。",
+    "tags": ["svm", "apply", "kernel"],
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-svm-0704-02",
+    "kp_id": "svm",
+    "kp_name": "支持向量机",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "关于 SVM 的支持向量（Support Vectors），下列说法正确的是？",
+    "difficulty": 2,
+    "options": [
+      "A. 是距离超平面最远的样本",
+      "B. 是距离超平面最近的样本，决定了超平面的位置",
+      "C. 是所有训练样本的子集用于测试",
+      "D. 是被错误分类的样本"
+    ],
+    "answer": "B",
+    "explanation": "支持向量是距离分类超平面最近的样本点，它们落在 margin 边界上。删除非支持向量不会改变超平面。",
+    "tags": ["svm", "analyze"],
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-mlp-0704-00",
+    "kp_id": "mlp",
+    "kp_name": "多层感知机",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "MLP 中最常用的激活函数 ReLU 的公式是？",
+    "difficulty": 1,
+    "options": [
+      "A. f(x) = sigmoid(x)",
+      "B. f(x) = tanh(x)",
+      "C. f(x) = max(0, x)",
+      "D. f(x) = x"
+    ],
+    "answer": "C",
+    "explanation": "ReLU f(x) = max(0, x)，计算简单、缓解梯度消失，是现代深度网络的默认选择。",
+    "tags": ["mlp", "remember", "activation"],
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-mlp-0704-01",
+    "kp_id": "mlp",
+    "kp_name": "多层感知机",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "使用 Adam 优化器训练 MLP 时，学习率一般设置为？",
+    "difficulty": 2,
+    "options": [
+      "A. 1.0 左右",
+      "B. 0.1 左右",
+      "C. 0.001（1e-3）左右",
+      "D. 必须为 0"
+    ],
+    "answer": "C",
+    "explanation": "Adam 默认学习率常设 1e-3（PyTorch 默认）。SGD 则常用 0.1 配合动量。",
+    "tags": ["mlp", "apply", "optimizer"],
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-mlp-0704-02",
+    "kp_id": "mlp",
+    "kp_name": "多层感知机",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "为什么深度网络训练时通常要做 Batch Normalization？",
+    "difficulty": 2,
+    "options": [
+      "A. 减少参数",
+      "B. 缓解内部协变量偏移（Internal Covariate Shift），加速收敛",
+      "C. 防止过拟合",
+      "D. 让网络变成线性"
+    ],
+    "answer": "B",
+    "explanation": "BN 在每层激活前对 mini-batch 做归一化，让输入分布更稳定，配合大学习率也能稳定训练。",
+    "tags": ["mlp", "understand", "normalization"],
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-mlp-0704-03",
+    "kp_id": "mlp",
+    "kp_name": "多层感知机",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "Dropout 在训练时的核心机制是？",
+    "difficulty": 2,
+    "options": [
+      "A. 随机删除部分神经元，避免对某些路径过度依赖",
+      "B. 把所有权重除以 2",
+      "C. 把所有梯度置零",
+      "D. 强制使用 ReLU 激活"
+    ],
+    "answer": "A",
+    "explanation": "Dropout 在每个 batch 随机让一部分神经元失活，等价于训练大量子网络的集成，从而缓解过拟合。推理时关闭。",
+    "tags": ["mlp", "analyze", "regularization"],
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "differentiating",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cnn-0704-00",
+    "kp_id": "cnn",
+    "kp_name": "卷积神经网络",
+    "bloom": "Remember",
+    "type": "multiple_choice",
+    "stem": "CNN 中卷积层相比全连接层的核心优势是？",
+    "difficulty": 1,
+    "options": [
+      "A. 减少参数、共享权重、保留空间局部性",
+      "B. 可以处理非欧数据",
+      "C. 不需要激活函数",
+      "D. 训练更快是因为 GPU 兼容"
+    ],
+    "answer": "A",
+    "explanation": "卷积通过局部感受野 + 权重共享，大幅减少参数量，同时保留像素空间局部结构。",
+    "tags": ["cnn", "remember"],
+    "bloom_6x3": {
+      "level": "remember",
+      "sub_level": "recalling",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cnn-0704-01",
+    "kp_id": "cnn",
+    "kp_name": "卷积神经网络",
+    "bloom": "Apply",
+    "type": "multiple_choice",
+    "stem": "对一个 32x32 的特征图做 5x5 卷积（stride=1, padding=0），输出特征图大小是？",
+    "difficulty": 2,
+    "options": [
+      "A. 28x28",
+      "B. 32x32",
+      "C. 36x36",
+      "D. 30x30"
+    ],
+    "answer": "A",
+    "explanation": "输出尺寸 = 输入 - 卷积核 + 1 = 32 - 5 + 1 = 28。",
+    "tags": ["cnn", "apply"],
+    "bloom_6x3": {
+      "level": "apply",
+      "sub_level": "executing",
+      "knowledge_dimension": "procedural",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cnn-0704-02",
+    "kp_id": "cnn",
+    "kp_name": "卷积神经网络",
+    "bloom": "Understand",
+    "type": "multiple_choice",
+    "stem": "最大池化（Max Pooling）在 CNN 中主要起什么作用？",
+    "difficulty": 1,
+    "options": [
+      "A. 增加参数量",
+      "B. 降维、扩大感受野、引入平移不变性",
+      "C. 替代激活函数",
+      "D. 防止梯度消失"
+    ],
+    "answer": "B",
+    "explanation": "Max Pooling 通过取局部窗口最大值降维，增强对小幅平移的鲁棒性，扩大后续层的有效感受野。",
+    "tags": ["cnn", "understand"],
+    "bloom_6x3": {
+      "level": "understand",
+      "sub_level": "explaining",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  },
+  {
+    "id": "q-cnn-0704-03",
+    "kp_id": "cnn",
+    "kp_name": "卷积神经网络",
+    "bloom": "Analyze",
+    "type": "multiple_choice",
+    "stem": "ResNet 引入残差连接的主要目的是？",
+    "difficulty": 2,
+    "options": [
+      "A. 减少训练数据",
+      "B. 缓解深层网络梯度消失，使训练上百层网络成为可能",
+      "C. 替代卷积层",
+      "D. 提升推理速度"
+    ],
+    "answer": "B",
+    "explanation": "ResNet 的 y = F(x) + x 让梯度有恒等映射通路，使深层网络（50/101/152 层）也能稳定训练。",
+    "tags": ["cnn", "analyze", "resnet"],
+    "bloom_6x3": {
+      "level": "analyze",
+      "sub_level": "comparing",
+      "knowledge_dimension": "conceptual",
+      "method": "manual",
+      "score": 1
+    }
+  }
+]

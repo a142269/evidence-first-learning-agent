@@ -1,0 +1,109 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--paper-200);
+  color: var(--ink);
+  font-family: var(--sans-cn);
+  text-rendering: geometricPrecision;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 62% 30%, rgba(255, 210, 141, 0.22), transparent 32%),
+    radial-gradient(circle at 18% 88%, rgba(238, 203, 158, 0.25), transparent 26%),
+    linear-gradient(112deg, var(--paper-50) 0%, var(--paper-200) 58%, var(--paper-300) 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* ============================================================
+ * teacher-skin · 教师端视觉皮肤（依据 前端提示词/前端教师风格.md）
+ * 挂在学生端页面根元素上，把 companion 时代的调色板变量整体
+ * 重定向为教师端 tokens：暖白背景 / 中性细边框 / 克制橙色。
+ * 只换配色变量，不改任何布局与业务结构。
+ * ============================================================ */
+.teacher-skin {
+  /* 文字 */
+  --ink: #24211d;
+  --ink-muted: #68635b;
+  --neutral-900: #181612;
+  --neutral-800: #24211d;
+  --neutral-700: #3d3831;
+  --neutral-600: #68635b;
+  --neutral-500: #68635b;
+  --neutral-400: #918b82;
+  --neutral-300: #b3aea6;
+  --muted: #68635b;
+
+  /* 表面与边框 */
+  --neutral-0: #ffffff;
+  --neutral-50: #fbfaf7;
+  --neutral-100: #f6f4ef;
+  --neutral-200: #e7e2da;
+  --paper: #ffffff;
+  --paper-2: #f6f4ef;
+  --paper-50: #fbfaf7;
+  --paper-100: #f8f7f3;
+  --paper-200: #f6f4ef;
+  --paper-300: #efeae3;
+  --paper-400: #e7e2da;
+  --paper-500: #d8d1c7;
+  --line: #e7e2da;
+  --line-strong: #d8d1c7;
+  --border-soft: 1px solid #e7e2da;
+
+  /* 品牌橙（克制） */
+  --orange: #e85d16;
+  --orange-dark: #d75011;
+  --orange-soft: #fff1e8;
+  --orange-50: #fff1e8;
+  --orange-100: #f3c5a8;
+  --orange-200: #f3c5a8;
+  --orange-300: #eeb28c;
+  --orange-400: #e97a3a;
+  --orange-500: #e85d16;
+  --orange-600: #d75011;
+  --orange-700: #bf450d;
+
+  /* 语义色 */
+  --success: #23966a;
+  --warning: #a86d19;
+  --danger: #b84940;
+
+  /* 阴影与圆角：默认无明显阴影 */
+  --shadow-1: none;
+  --shadow-2: 0 8px 24px rgba(35, 31, 25, 0.05);
+  --shadow-3: 0 8px 24px rgba(35, 31, 25, 0.05);
+  --shadow-card: 0 8px 24px rgba(35, 31, 25, 0.05);
+  --shadow-btn: 0 8px 24px rgba(35, 31, 25, 0.08);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+}

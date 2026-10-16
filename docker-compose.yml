@@ -1,0 +1,57 @@
+version: "3.8"
+
+# A3 智学领航多智能体系统 · 两容器编排
+# 用法:
+#   docker compose up -d --build
+#   python -m scripts.docker_smoke --wait 12
+#
+# 默认 frontend 通过自身 nginx 反代 /api/* 到 backend 容器，浏览器只看见 5173 一个端口。
+# 也可改 args.VITE_API_BASE_URL 让前端直连远程后端（远程 demo 场景）。
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: a3-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # 离线 demo 兜底：无 LLM API Key 也能跑（演示日红线）
+      A3_OFFLINE_DEMO: "0"
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - a3net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # 空字符串 = 同源相对路径模式 = 浏览器走 nginx 反代
+        VITE_API_BASE_URL: ""
+    container_name: a3-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - a3net
+
+networks:
+  a3net:
+    driver: bridge

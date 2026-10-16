@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+.env.enterprise
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
+.playwright-cli/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+data/knowledge_base/courses/*.pdf
+# 多模态运行时缓存/诊断产物（保留 demo_* 样例资源）
+data/artifacts/mp3/_cache_*.mp3
+data/artifacts/mp3/vid_*.mp3
+data/artifacts/mp3/diagnostic_*.mp3
+data/artifacts/video/vid_*.mp4
+data/artifacts/video/vid_*_merged.mp3
+data/artifacts/video/diagnostic_*.mp4
+data/artifacts/registry.json
+data/artifacts/registry.json.tmp
+*.db
+*.sqlite3
+
+# Quality tools cache
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.benchmarks/
+.tmp/
+.worktrees/
+
+# Coverage
+htmlcov/
+.coverage
+
+# Local backups (e.g. diagnosis reports saved before git pull)
+*.local
+coverage.xml
+
+# Locally generated learning artifacts and teacher uploads.  Curated demo
+# assets that are already tracked remain versioned; new runtime output stays
+# local so it cannot accidentally be included in a release or WIP commit.
+data/artifacts/evaluation_report/
+data/artifacts/mermaid_png/
+data/artifacts/quiz/
+data/teacher_uploads/
+data/ingest_staging/
+knowledge_base/*/uploads/
+output/
+
+# Node (frontend)
+node_modules/
+.pnpm-store/
+
+# Electron 桌面版构建产物
+dist-electron/
+dist_electron/
+backend.spec.bak
+
+# Windows reserved device names that git cannot index
+nul
+NUL
+con
+CON
+prn
+PRN
+aux
+AUX
+
+# Claude 本地 skill 缓存（外部 skill，不入仓库）
+.skills/
+
+.agents/
+
+a3-deploy-*.zip
