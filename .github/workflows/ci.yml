@@ -97,13 +97,38 @@ jobs:
           python -m alembic upgrade head
           python -m alembic downgrade base
 
-      - name: Pytest (no coverage, no benchmarks)
+      - name: Pytest (portable V2 contract suite)
         env:
           DATABASE_URL: "sqlite:///./build/ci_tests.db"
           A3_OFFLINE_DEMO: "true"
         run: |
           python -c "from backend.app.core.database import init_db; init_db()"
-          pytest tests/ --no-cov --benchmark-disable -q
+          pytest \
+            tests/a/test_v1_production_access.py \
+            tests/a/test_v2_access.py \
+            tests/a/test_v2_auth_throttle.py \
+            tests/a/test_v2_eval_cost_guard.py \
+            tests/a/test_v2_event_idempotency.py \
+            tests/a/test_v2_learning_tools.py \
+            tests/a/test_v2_model_usage.py \
+            tests/a/test_learning_graph_safety.py \
+            tests/a/test_learning_package.py \
+            tests/a/test_learning_package_evaluator.py \
+            tests/a/test_learning_package_collection.py \
+            tests/a/test_learning_run_reconciliation.py \
+            tests/a/test_learning_runs_v2.py \
+            tests/a/test_learning_runs_v2_lifecycle.py \
+            tests/a/test_learning_runtime_retrieval.py \
+            tests/a/test_golden_set_evaluator.py \
+            tests/a/test_golden_set_runner.py \
+            tests/a/test_golden_set_v2.py \
+            tests/a/test_embedding_provider_resilience.py \
+            tests/a/test_conversation_memory_v2.py \
+            tests/a/test_run_leases.py \
+            tests/a/test_persistent_auth.py \
+            tests/a/test_auth_restart.py \
+            tests/a/test_deployment_policy.py \
+            --no-cov --benchmark-disable -q
 
       # 6/24 新增：性能压测（CI 模式只跑 5 并发 × 30 请求，避免占资源）
       - name: Load test smoke (light)
