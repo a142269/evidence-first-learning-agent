@@ -15,7 +15,8 @@ sqlalchemy>=2.0.0
 alembic>=1.13.0
 psycopg[binary]>=3.2.0
 pgvector>=0.3.0
-chromadb>=0.4.0
+# The production RAG path uses PostgreSQL + pgvector.  ChromaDB remains
+# compatible with historical documents but is not required at runtime.
 
 # --- LLM 集成 ---
 langchain>=1.0.0,<2.0.0
