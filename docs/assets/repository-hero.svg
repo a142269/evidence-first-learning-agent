@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
-  <title id="title">Triple-U Evidence-First Learning Agent</title>
-  <desc id="desc">A dark gradient banner showing an evidence-first learning agent workflow.</desc>
+  <title id="title">智学领航——个性化学习多Agent平台</title>
+  <desc id="desc">A dark gradient banner showing a personalized learning multi-agent workflow.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1220"/><stop offset="0.55" stop-color="#13263d"/><stop offset="1" stop-color="#173f4b"/></linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff6b2c"/><stop offset="1" stop-color="#ffb15b"/></linearGradient>
@@ -11,9 +11,9 @@
   <circle cx="1025" cy="78" r="180" fill="#1fb6aa" opacity=".08" filter="url(#glow)"/><circle cx="1070" cy="330" r="150" fill="#ff6b2c" opacity=".08" filter="url(#glow)"/>
   <g transform="translate(70 66)">
     <rect width="56" height="56" rx="16" fill="url(#accent)"/><path d="M15 18h8v20h-8zm17 0h9a7 7 0 0 1 0 14h-9zm0 7h8a2 2 0 1 0 0-4h-8z" fill="white" opacity=".96"/>
-    <text x="76" y="24" fill="#ffae68" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3">TRIPLE-U</text>
-    <text x="76" y="61" fill="white" font-family="Segoe UI,Arial,sans-serif" font-size="38" font-weight="750">Evidence-First Learning Agent</text>
-    <text x="0" y="112" fill="#b9ccda" font-family="Segoe UI,Arial,sans-serif" font-size="18">Traceable answers · Durable workflows · Human review</text>
+    <text x="76" y="24" fill="#ffae68" font-family="Microsoft YaHei,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3">智学领航</text>
+    <text x="76" y="61" fill="white" font-family="Microsoft YaHei,Segoe UI,Arial,sans-serif" font-size="32" font-weight="750">个性化学习多Agent平台</text>
+    <text x="0" y="112" fill="#b9ccda" font-family="Microsoft YaHei,Segoe UI,Arial,sans-serif" font-size="18">可追溯回答 · 持久工作流 · 人工审核</text>
     <g transform="translate(0 148)" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="600">
       <rect width="132" height="36" rx="18" fill="#ffffff" opacity=".08" stroke="#ffffff" stroke-opacity=".12"/><circle cx="20" cy="18" r="5" fill="#ff7a39"/><text x="34" y="23" fill="#e8f3f8">LangGraph</text>
       <g transform="translate(144)"><rect width="145" height="36" rx="18" fill="#ffffff" opacity=".08" stroke="#ffffff" stroke-opacity=".12"/><circle cx="20" cy="18" r="5" fill="#55c4b8"/><text x="34" y="23" fill="#e8f3f8">Hybrid RAG</text></g>

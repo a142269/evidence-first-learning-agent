@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="docs/assets/repository-hero.svg" alt="Triple-U Evidence-First Learning Agent" width="100%" />
+  <img src="docs/assets/repository-hero.svg" alt="智学领航——个性化学习多Agent平台" width="100%" />
 </p>
+
+# 智学领航——个性化学习多Agent平台
 
 <p align="center">
   <strong>面向高校课程的企业级、可追溯、可恢复学习 Agent</strong><br />
@@ -20,7 +22,7 @@
 
 ## 项目概览
 
-Triple-U 把课程问答、个性化讲解、练习生成与教师审核组织成一条可审计的学习工作流。每个回答都携带实际使用的来源；长任务通过 PostgreSQL 检查点和执行租约实现断线恢复；高风险内容在生成前拦截，需要人工确认的内容进入教师审核。
+智学领航把课程问答、个性化讲解、练习生成与教师审核组织成一条可审计的学习工作流。每个回答都携带实际使用的来源；长任务通过 PostgreSQL 检查点和执行租约实现断线恢复；高风险内容在生成前拦截，需要人工确认的内容进入教师审核。
 
 <p align="center">
   <img src="docs/assets/product-learning-package.png" alt="学习包生成页面" width="92%" />

@@ -1,7 +1,7 @@
 {
   "name": "a3-learning-desktop",
   "version": "1.0.0",
-  "description": "智学领航 · A3 个性化学习多智能体系统（桌面版）",
+  "description": "智学领航——个性化学习多Agent平台（桌面版）",
   "author": "A3 Team",
   "license": "MIT",
   "main": "dist-electron/main.js",
