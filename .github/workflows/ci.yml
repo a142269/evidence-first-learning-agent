@@ -133,7 +133,8 @@ jobs:
       # 6/24 新增：性能压测（CI 模式只跑 5 并发 × 30 请求，避免占资源）
       - name: Load test smoke (light)
         run: |
-          python -m scripts.load_test --concurrency 5 --requests 30 --json
+          python -m scripts.load_test --endpoint system_status --concurrency 5 --requests 30 --json
+          python -m scripts.load_test --endpoint cov_demo_cases --concurrency 5 --requests 30 --json
 
   enterprise-contract:
     name: Enterprise PostgreSQL / Redis contract
