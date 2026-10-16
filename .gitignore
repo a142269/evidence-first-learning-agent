@@ -62,6 +62,7 @@ coverage.xml
 data/artifacts/evaluation_report/
 data/artifacts/mermaid_png/
 data/artifacts/quiz/
+data/rag/
 data/teacher_uploads/
 data/ingest_staging/
 knowledge_base/*/uploads/
