@@ -63,6 +63,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
+      # When the scan fails, publish only file paths/line numbers/rule ids so the
+      # failure is actionable without ever printing the matched value.
+      - name: Secret scan failure summary (paths and rules only)
+        if: failure()
+        run: |
+          sarif="$(find . -maxdepth 3 -name 'gitleaks-results.sarif' -print -quit)"
+          if [ -z "$sarif" ]; then echo "no gitleaks sarif found"; exit 0; fi
+          python3 - "$sarif" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          findings = []
+          for run in data.get("runs", []):
+              for result in run.get("results", []):
+                  location = (result.get("locations") or [{}])[0].get("physicalLocation", {})
+                  path = location.get("artifactLocation", {}).get("uri", "?")
+                  line = location.get("region", {}).get("startLine", "?")
+                  findings.append(f"{path}:{line} [{result.get('ruleId', '?')}]")
+          summary = "; ".join(findings[:12]) or "no results"
+          print("GITLEAKS_FINDINGS " + summary)
+          print(f"::error title=gitleaks-summary::{summary}")
+          PY
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
