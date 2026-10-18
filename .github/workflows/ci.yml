@@ -118,14 +118,19 @@ jobs:
           python -m alembic downgrade base
 
       # Parse every shipped Compose recipe (no daemon needed). Templates are
-      # copied to their documented names because env_file requires them.
+      # copied to their documented names because env_file requires them; the
+      # production template intentionally ships empty secrets, so fill them
+      # with documented local-only placeholder values for parsing.
       - name: Validate Compose configurations
         run: |
           cp .env.example .env
           cp .env.enterprise.example .env.enterprise
+          cp .env.production.example .env.production
+          export POSTGRES_PASSWORD=ci-only-password PHOENIX_DB_PASSWORD=ci-only-password \
+                 OPENAI_API_KEY=ci-only-password A3_CORS_ORIGINS=https://ci.invalid
           docker compose -f docker-compose.yml config > /dev/null
           docker compose --env-file .env.enterprise -f docker-compose.yml -f docker-compose.enterprise.yml config > /dev/null
-          docker compose --env-file .env.production.example -f docker-compose.production.yml config > /dev/null
+          docker compose --env-file .env.production -f docker-compose.production.yml config > /dev/null
 
       - name: Pytest (portable V2 contract suite)
         env:

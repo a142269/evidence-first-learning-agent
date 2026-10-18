@@ -16,7 +16,7 @@
 
 ## 2. 准备
 
-1. 复制模板并替换全部 `REPLACE_WITH_*`：`cp .env.production.example .env.production`。
+1. 复制模板并填写所有空白项：`cp .env.production.example .env.production`（数据库/Phoenix 口令、模型 Key、`A3_CORS_ORIGINS` 等，模板中一律留空，避免占位值被误用）。
 2. 生成强随机的 `POSTGRES_PASSWORD` / `PHOENIX_DB_PASSWORD`（≥12 字符）与模型 API Key；不要提交 `.env.production`。
 3. 设置 `A3_CORS_ORIGINS` 为真实的 **https** 前端来源。
 4. 将前端暴露端口（默认 `127.0.0.1:5173`）放在 TLS 反向代理之后。
