@@ -1,0 +1,24 @@
+# Gitleaks configuration: extend the default rules and allow only documented,
+# non-secret placeholders. No real credential is ever allowlisted here.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented local placeholders and environment-variable interpolation"
+# Ship templates contain only REPLACE_WITH_* markers by design; production
+# values must come from an untracked .env.production file (see .gitignore).
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\.enterprise\.example$''',
+  '''(^|/)\.env\.production\.example$''',
+]
+# Interpolation references such as ${POSTGRES_PASSWORD:?} and ${VAR:-default}
+# are not secret values. Placeholder markers and synthetic test keys are
+# intentionally non-secret.
+regexes = [
+  '''REPLACE_WITH_[A-Z0-9_]+''',
+  '''\$\{[A-Z_][A-Z0-9_]*:[-?][^}]*\}''',
+  '''change-me[a-z0-9-]*''',
+  '''test-key-not-real''',
+  '''ci-only-password''',
+]
