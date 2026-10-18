@@ -21,4 +21,7 @@ regexes = [
   '''change-me[a-z0-9-]*''',
   '''test-key-not-real''',
   '''ci-only-password''',
+  '''(?i)must-not-appear''',
+  '''(?i)untrusted-instruction-[a-z0-9-]+''',
+  '''(?i)(?:startup|database)-private-token''',
 ]
