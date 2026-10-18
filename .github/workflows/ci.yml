@@ -52,6 +52,11 @@ jobs:
     name: Lint / Migrate / Test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Write access is used only to publish a path-only diagnostic file when the
+    # secret scan fails (the gitleaks action removes its SARIF/binary before
+    # later steps can inspect them).
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -112,6 +117,33 @@ jobs:
           print("GITLEAKS_FINDINGS " + summary)
           print(f"::error title=gitleaks-summary::{summary}")
           PY
+
+      # On failure publish only file:line/rule lines from the job summary to a
+      # short-lived diagnostic branch, so the failure can be triaged without
+      # exposing any matched value in public logs.
+      - name: Publish gitleaks summary paths (diagnostic)
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python3 - <<'PY'
+          import os, re, pathlib
+          summary = pathlib.Path(os.environ.get("GITHUB_STEP_SUMMARY", ""))
+          text = summary.read_text(errors="replace") if summary.exists() else ""
+          pattern = re.compile(r'[A-Za-z0-9_./\\-]+\.(?:py|js|ts|tsx|vue|json|jsonl|yml|yaml|md|toml|txt|sh|css|html):\d+')
+          lines = [line.strip()[:300] for line in text.splitlines() if pattern.search(line)]
+          pathlib.Path("gitleaks-paths.txt").write_text(
+              "\n".join(lines) + "\n" if lines else "no path-like lines in job summary\n", encoding="utf-8")
+          print(f"extracted={len(lines)}")
+          PY
+          git config user.email "ci@users.noreply.github.com"
+          git config user.name "ci-diagnostic"
+          git checkout -B ci/gitleaks-report
+          git add gitleaks-paths.txt
+          git commit -m "ci: gitleaks finding paths (diagnostic, no secret values)" || exit 0
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:ci/gitleaks-report --force
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
