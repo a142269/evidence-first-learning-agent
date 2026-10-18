@@ -52,98 +52,41 @@ jobs:
     name: Lint / Migrate / Test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Write access is used only to publish a path-only diagnostic file when the
-    # secret scan fails (the gitleaks action removes its SARIF/binary before
-    # later steps can inspect them).
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
-
-      # When the scan fails, publish only file paths/line numbers/rule ids so the
-      # failure is actionable without ever printing the matched value.
-      - name: Secret scan failure summary (paths and rules only)
-        if: failure()
+      # Pinned, dockerized gitleaks. Only path:line/rule annotations are
+      # published; matched values are redacted and never printed.
+      - name: Secret scan (gitleaks)
         run: |
-          set +e
-          sarif="$(find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$HOME" /opt -maxdepth 6 \
-            -name 'gitleaks-results.sarif' 2>/dev/null | head -1)"
-          binary="$(find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$HOME" /opt /usr/local/bin \
-            -maxdepth 6 -type f -name 'gitleaks' -perm -u+x 2>/dev/null | head -1)"
-          echo "sarif=$sarif binary=$binary"
-          if [ -z "$sarif" ] && [ -n "$binary" ]; then
-            "$binary" detect --source "$GITHUB_WORKSPACE" \
-              --config "$GITHUB_WORKSPACE/.gitleaks.toml" \
-              --report-format json --report-path /tmp/gitleaks.json --redact --no-banner \
-              > /tmp/gitleaks.out 2>&1 || true
-            sarif=""
-            emit="$(python3 - <<'PY'
-          import json
-          try:
-              data = json.load(open('/tmp/gitleaks.json', encoding='utf-8'))
-          except Exception:
-              data = []
-          findings = [f"{item.get('File')}:{item.get('StartLine')} [{item.get('RuleID')}]"
-                      for item in data]
-          print("; ".join(findings[:12]) or "no findings parsed")
-          PY
-          )"
-            echo "::error title=gitleaks-summary::$emit"
-            exit 0
-          fi
-          if [ -z "$sarif" ]; then
-            echo "::error title=gitleaks-summary::no sarif and no gitleaks binary found"
-            exit 0
-          fi
-          python3 - "$sarif" <<'PY'
-          import json, sys
-          data = json.load(open(sys.argv[1], encoding="utf-8"))
-          findings = []
-          for run in data.get("runs", []):
-              for result in run.get("results", []):
-                  location = (result.get("locations") or [{}])[0].get("physicalLocation", {})
-                  path = location.get("artifactLocation", {}).get("uri", "?")
-                  line = location.get("region", {}).get("startLine", "?")
-                  findings.append(f"{path}:{line} [{result.get('ruleId', '?')}]")
-          summary = "; ".join(findings[:12]) or "no results"
-          print("GITLEAKS_FINDINGS " + summary)
-          print(f"::error title=gitleaks-summary::{summary}")
-          PY
-
-      # On failure publish only file:line/rule lines from the job summary to a
-      # short-lived diagnostic branch, so the failure can be triaged without
-      # exposing any matched value in public logs.
-      - name: Publish gitleaks summary paths (diagnostic)
-        if: failure()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set +e
+          image="ghcr.io/gitleaks/gitleaks:v8.24.3"
+          docker pull --quiet "$image" >/dev/null 2>&1 || image="ghcr.io/gitleaks/gitleaks:latest"
+          mkdir -p build
+          docker run --rm -v "$PWD:/repo" -w /repo "$image" detect \
+            --source . --config .gitleaks.toml --report-format json \
+            --report-path build/gitleaks.json --redact --no-banner \
+            > build/gitleaks.log 2>&1 || true
           python3 - <<'PY'
-          import os, re, pathlib
-          summary = pathlib.Path(os.environ.get("GITHUB_STEP_SUMMARY", ""))
-          text = summary.read_text(errors="replace") if summary.exists() else ""
-          pattern = re.compile(r'[A-Za-z0-9_./\\-]+\.(?:py|js|ts|tsx|vue|json|jsonl|yml|yaml|md|toml|txt|sh|css|html):\d+')
-          lines = [line.strip()[:300] for line in text.splitlines() if pattern.search(line)]
-          pathlib.Path("gitleaks-paths.txt").write_text(
-              "\n".join(lines) + "\n" if lines else "no path-like lines in job summary\n", encoding="utf-8")
-          print(f"extracted={len(lines)}")
+          import json, pathlib, sys
+          path = pathlib.Path("build/gitleaks.json")
+          if not path.exists():
+              print("::error title=gitleaks::scan produced no report (image/run failure)")
+              sys.exit(2)
+          try:
+              findings = json.loads(path.read_text(encoding="utf-8"))
+          except ValueError:
+              print("::error title=gitleaks::report was not valid JSON")
+              sys.exit(2)
+          for item in findings[:25]:
+              file = str(item.get("File", "?")).replace("\n", " ")
+              line = int(item.get("StartLine") or 0)
+              rule = str(item.get("RuleID", "?"))
+              print(f"::error file={file},line={line},title=gitleaks {rule}::{file}:{line} [{rule}]")
+          print(f"gitleaks_findings={len(findings)}")
+          sys.exit(1 if findings else 0)
           PY
-          git config user.email "ci@users.noreply.github.com"
-          git config user.name "ci-diagnostic"
-          git checkout -B ci/gitleaks-report
-          git add gitleaks-paths.txt
-          git commit -m "ci: gitleaks finding paths (diagnostic, no secret values)" || exit 0
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            HEAD:ci/gitleaks-report --force
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
