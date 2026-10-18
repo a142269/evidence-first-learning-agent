@@ -68,8 +68,36 @@ jobs:
       - name: Secret scan failure summary (paths and rules only)
         if: failure()
         run: |
-          sarif="$(find . -maxdepth 3 -name 'gitleaks-results.sarif' -print -quit)"
-          if [ -z "$sarif" ]; then echo "no gitleaks sarif found"; exit 0; fi
+          set +e
+          sarif="$(find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$HOME" /opt -maxdepth 6 \
+            -name 'gitleaks-results.sarif' 2>/dev/null | head -1)"
+          binary="$(find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" "$HOME" /opt /usr/local/bin \
+            -maxdepth 6 -type f -name 'gitleaks' -perm -u+x 2>/dev/null | head -1)"
+          echo "sarif=$sarif binary=$binary"
+          if [ -z "$sarif" ] && [ -n "$binary" ]; then
+            "$binary" detect --source "$GITHUB_WORKSPACE" \
+              --config "$GITHUB_WORKSPACE/.gitleaks.toml" \
+              --report-format json --report-path /tmp/gitleaks.json --redact --no-banner \
+              > /tmp/gitleaks.out 2>&1 || true
+            sarif=""
+            emit="$(python3 - <<'PY'
+          import json
+          try:
+              data = json.load(open('/tmp/gitleaks.json', encoding='utf-8'))
+          except Exception:
+              data = []
+          findings = [f"{item.get('File')}:{item.get('StartLine')} [{item.get('RuleID')}]"
+                      for item in data]
+          print("; ".join(findings[:12]) or "no findings parsed")
+          PY
+          )"
+            echo "::error title=gitleaks-summary::$emit"
+            exit 0
+          fi
+          if [ -z "$sarif" ]; then
+            echo "::error title=gitleaks-summary::no sarif and no gitleaks binary found"
+            exit 0
+          fi
           python3 - "$sarif" <<'PY'
           import json, sys
           data = json.load(open(sys.argv[1], encoding="utf-8"))
