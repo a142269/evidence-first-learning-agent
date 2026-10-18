@@ -24,4 +24,5 @@ regexes = [
   '''(?i)must-not-appear''',
   '''(?i)untrusted-instruction-[a-z0-9-]+''',
   '''(?i)(?:startup|database)-private-token''',
+  '''partial-idempotency-[a-z0-9-]+''',
 ]

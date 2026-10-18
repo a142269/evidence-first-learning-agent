@@ -465,11 +465,11 @@ def test_quality_review_accepts_explicit_partial_verdicts(verdict):
 # 11. Idempotent replay of a partial run must not execute the workflow again.
 def test_partial_run_idempotent_replay_returns_same_result(scripted):
     client, _, replies, calls = scripted
-    key = "partial-idempotency-key-0001"
+    idem = "partial-idempotency-test-0001"
 
     def send():
         return client.post("/api/v2/learning-runs/stream",
-                           headers={**ALICE, "Idempotency-Key": key},
+                           headers={**ALICE, "Idempotency-Key": idem},
                            json={"message": MESSAGE, "mode": "learning_package",
                                  "session_id": "partial-idempotent"})
 
