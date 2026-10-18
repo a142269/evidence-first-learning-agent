@@ -42,9 +42,9 @@ jobs:
           if-no-files-found: ignore
 
   linux-lockfile:
-    name: Linux Python 3.12 lockfile generation and install
+    name: Linux Python 3.12 lockfile install
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       DATABASE_URL: sqlite:///./build/lock_smoke.db
       A3_OFFLINE_DEMO: 'true'
@@ -55,30 +55,18 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: requirements.txt
-      - name: Install pip-tools
-        run: python -m pip install --upgrade pip "pip-tools==7.4.1"
-      # The committed requirements.lock.txt was generated on Windows; this job
-      # proves a Linux 3.12 lock can be generated and installed. The artifact is
-      # uploaded for a maintainer to review/commit as requirements.lock.linux.txt.
-      - name: Generate Linux lock from requirements.txt
-        run: |
-          mkdir -p build
-          python -m piptools compile --no-emit-index-url --no-emit-trusted-host \
-            --strip-extras --generate-hashes \
-            --output-file=build/requirements.lock.linux.txt requirements.txt
-      - name: Install the generated Linux lock
-        run: python -m pip install --require-hashes -r build/requirements.lock.linux.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements.lock.linux.txt
+      - name: Install the committed Linux 3.12 lock
+        run: python -m pip install --require-hashes -r requirements.lock.linux.txt
       - name: Smoke imports and core learning-package tests
         run: |
           python -c "import fastapi, langgraph, sqlalchemy, psycopg; print('imports ok')"
           pytest tests/a/test_learning_package.py tests/a/test_learning_package_partial.py \
             tests/a/test_structured_output_robustness.py \
             --basetemp=build/pytest-lock -o addopts= --benchmark-disable -q
-      - name: Upload generated Linux lock
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: requirements-lock-linux
-          path: build/requirements.lock.linux.txt
-          if-no-files-found: ignore
+      - name: Regeneration hint
+        run: |
+          echo "Regenerate the committed Linux lock with uv on Linux/CI:"
+          echo "  uv pip compile --python-version 3.12 --python-platform linux --generate-hashes --no-header --output-file requirements.lock.linux.txt requirements.txt"

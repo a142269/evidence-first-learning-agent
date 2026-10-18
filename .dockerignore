@@ -55,3 +55,12 @@ reports/
 .tmp/
 tmp/
 *.tmp
+
+# Build artefacts / local outputs / non-runtime trees
+output/
+docs/
+tests/
+mobile/
+electron/
+evals/
+frontend/

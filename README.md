@@ -131,7 +131,7 @@ python -m scripts.seed_demo
 uvicorn backend.app.main:app --reload --port 8000
 ```
 
-Windows / Python 3.12 可使用 `pip install -r requirements.lock.txt` 安装固定版本；该锁文件在 Windows 上解析并验证过定向测试，不能保证 Linux 的平台依赖完整。Linux CI 的核心任务仍使用 `requirements.txt`；nightly 工作流新增 `linux-lockfile` 任务，在 Ubuntu + Python 3.12 上生成、安装并冒烟验证 Linux 锁文件，并上传生成的 `requirements.lock.linux.txt` 作为 artifact。该 artifact 需要维护者在 Linux 环境复核后再提交为仓库锁文件；远端运行结果尚未验证。
+Windows / Python 3.12 可使用 `pip install -r requirements.lock.txt` 安装固定版本；该锁文件在 Windows 上解析并验证过定向测试。Linux / Python 3.12 使用已提交的 `requirements.lock.linux.txt`（uv 生成、带哈希，144 个包）：`python -m pip install --require-hashes -r requirements.lock.linux.txt`。nightly 的 `linux-lockfile` 任务会在 Ubuntu + Python 3.12 上按哈希安装该锁并运行核心学习包测试；如需重新生成（例如新增依赖后）使用 `uv pip compile --python-version 3.12 --python-platform linux --generate-hashes --no-header --output-file requirements.lock.linux.txt requirements.txt`。
 
 另开一个终端：
 

@@ -119,7 +119,17 @@
 - **提交与推送**：此前未提交的三轮优化成果已合并为提交 `e39e4c2`，并为 CI 修复追加提交；`main` 已推送到 `origin/main`。
 - **远端 GitHub Actions**：[CI run #17](https://github.com/a142269/evidence-first-learning-agent/actions/runs/39114689528) **全部通过**：Frontend typecheck/build、Dependency vulnerability scan、Lint/Migrate/Test（含 Secret scan、Ruff、Mypy、Alembic、Compose 解析、pytest、覆盖率门禁、轻量压测）、Enterprise PostgreSQL/Redis contract（真实 PG/Redis 服务容器）。
 - **CI 修复过程**：gitleaks 曾因合成测试夹具（`partial-idempotency-key-0001`）误报而阻断流水线；已重命名为带 `test` 的合成值，并将 CI 改为固定版本的 dockerized gitleaks（只输出 file:line/rule 注解、不输出匹配值），补充 pytest 失败测试名注解与 Compose 解析步骤；诊断用临时分支 `ci/gitleaks-report` 已删除。
-- **仍未验证/未完成（发布门）**：未执行 `docker-compose.production.yml` 全栈 `up --build`（用户约束禁止自行下载/构建依赖与镜像）；TLS/反向代理、Phoenix、备份、迁移窗口仍未验证；nightly 的 Linux 锁任务需在远端手动触发/等待运行。
+
+### 依赖下载授权后的验收（2026-10-18 第六批）
+
+用户明确授权下载依赖后，完成此前因“不自行下载”约束而阻塞的两项：
+
+- **生产 Compose 全栈构建/启动（本地）**：`docker compose --env-file .env.production -f docker-compose.production.yml up -d --build` 退出码 0，构建 + 就绪 **211.3s**；postgres/redis/Phoenix/migrate/backend/worker/frontend 全部按依赖顺序启动，backend 与 frontend 健康检查通过；`alembic current` 正常、`vector` 扩展存在；通过受信任 CLI 创建教师并授予数据库课程。
+- 后端边界检查（真实容器内）全部符合预期：`/healthz` 200、`/docs`、`/redoc`、`/openapi.json` 404、匿名 `/metrics` 401、匿名 V1 401、匿名 V2 401、教师登录 200、`/auth/me` 200、`/metrics` 教师 200、白名单外 V1 403、未授权课程 V2 403、缺失令牌 401。
+- 前端容器健康；宿主 `http://127.0.0.1:15173/` 返回 200 且包含 HTML；nginx `/api` 反代下匿名 V2 与登录请求均按预期 401。
+- 测试后 `down -v --remove-orphans` 清理本栈容器与卷；未触碰其他项目容器。构建镜像：backend/worker/migrate 2.18GB、frontend 277MB（本地 D 盘，未上传）。构建上下文通过 `.dockerignore`/`frontend/.dockerignore` 排除 node_modules、dist、output、tests 等。
+- **Linux Python 3.12 锁文件**：使用 `uv pip compile --python-version 3.12 --python-platform linux --generate-hashes` 生成 `requirements.lock.linux.txt`（144 个包、全部带哈希）；在干净 `python:3.12-slim` 容器中通过腾讯云 PyPI 镜像（与 PyPI 同内容）执行 `pip install --no-build-isolation --require-hashes` 成功，并运行学习包核心测试：**66 passed**。nightly 的 `linux-lockfile` 任务改为安装该已提交锁并跑核心测试；README 记录重新生成命令。
+- **仍未验证/未完成（发布门）**：真实公网部署（TLS/反向代理/域名/证书）、备份恢复、迁移维护窗口、Phoenix 版本固定，以及真实模型新任务评测与人工盲评仍需人工/部署环境完成。本机的生产栈使用本地生成口令与合成模型 Key，未调用真实模型，不代表公网生产验收。
 
 ### 生产边界与部署配方（2026-10-18 第三批）
 
@@ -128,7 +138,7 @@
 - `validate_deployment` 加强：数据库口令需 ≥12 字符且不得含 `change-me/changeme/replace/example/placeholder`；模型凭据与 CORS 来源同样拒绝占位标记（含 `REPLACE_WITH`/`your-domain`/`change-me`）；`/docs/`、`/docs/*`（含 `oauth2-redirect`）在 production 下一律 404。模板在启动时会失败关闭（有测试覆盖），填充后的 https 来源可通过。
 - 新增 [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)：生产边界、启动命令、通过 `scripts/manage_access` 创建教师/授权课程、验证清单与未验证限制。README 增加链接。
 - CI 质量任务新增 Compose 配置解析步骤（demo、demo+enterprise、production 三套）；本地 `docker compose config` 三套均通过（demo/enterprise 需先按文档复制 `.env`/`.env.enterprise`）。
-- **仍未验证/未完成**：生产 Compose 全栈 `up --build`（受用户“勿自行下载依赖/镜像”约束）、TLS/备份/监控、Phoenix 镜像仍为 `latest`（正式部署前应固定）。数据库迁移往返、真实 PostgreSQL/Redis 集成与部分完成恢复已完成（见第四批与第五批）。
+- **仍未验证/未完成**：真实公网部署（TLS/域名/备份/监控）与 Phoenix 镜像固定；本机已完成生产 Compose 全栈构建/启动与应用边界验收（见第六批），但不等于公网生产验收。数据库迁移往返、真实 PostgreSQL/Redis 集成与部分完成恢复已完成（见第四批与第六批）。
 - **F8–F10（第三方许可/来源）部分完成**：独立审计生成根目录 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)（机器清单，非法律意见），覆盖 151 个 Python 组件、95 个 Web npm 组件、285 个桌面 npm 组件、126 个受跟踪媒体/打包文件；5 个 UNKNOWN 许可（均未安装的 Python 组件，未猜测）；`docs/03-开源参考与协议.md` 已链接完整清单。**仍需人工补齐**：`frontend/dist` 与桌面包无 LICENSE/NOTICE 文本；`frontend/public/integrated-map` 下的 React 构建无源码/来源；30 个陈旧 React bundle 无来源；125 个媒体文件无来源证明；psycopg 家族/edge-tts 为 LGPL，`imageio-ffmpeg` 捆绑 GPL FFmpeg 7.1，桌面分发前需人工许可审查；`docs/03` 仅覆盖部分直接依赖。
 
 ## 四、本轮变更文件
@@ -143,23 +153,25 @@
 
 第五批（提交与远端 CI 修复）：`.gitleaks.toml`（新增）、`.github/workflows/ci.yml`（dockerized gitleaks、pytest 失败注解、Compose 解析）、`tests/a/test_learning_package_partial.py`（合成 idempotency 夹具重命名）、`tests/a/test_static_and_ws_safety.py`（Linux 平台兼容）、`tests/a/test_learning_package_partial_postgres.py` 与 helper（新增）、`docs/OPTIMIZATION_STATUS_2026-10-18.md`、`docs/PRODUCTION_DEPLOYMENT.md`。以上前四批内容已随提交 `e39e4c2` 进入 `origin/main`；后续 CI 修复提交为独立的 `ci:` 系列提交。
 
+第六批（用户授权下载依赖后）：`requirements.lock.linux.txt`（新增，144 个包、带哈希）、`.dockerignore`、`frontend/.dockerignore`（构建上下文优化）、`.github/workflows/nightly.yml`（改为安装已提交的 Linux 锁）、`README.md`、`docs/OPTIMIZATION_STATUS_2026-10-18.md`、`docs/PRODUCTION_DEPLOYMENT.md`。
+
 磁盘上的 `frontend/node_modules`、`frontend/dist`、`.coverage`、`htmlcov`、`output/` 均为被忽略的本地产物，未加入提交范围。
 
 ## 五、剩余事项（建议下一步）
 
 1. **真实人工评测（优先事项 4）**：两位独立评审完成留出集盲评与逐 claim 审查，必要时第三人裁决；程序不证明人的身份或评分独立性。**这是当前唯一必须由人完成的关键项。**
-2. **生产全栈验收**：在目标环境执行 `docker-compose.production.yml` 的 `up --build`、TLS/反向代理、Phoenix、备份与迁移窗口；本机已用隔离容器完成应用层生产边界冒烟、真实 PG/Redis 集成与迁移往返，但**不等于**生产全栈验收（且用户约束禁止本地构建/下载镜像）。
-3. **Linux 锁文件**：nightly 的 `linux-lockfile` 任务需要手动触发并等待一次远端运行（push 触发的 CI 不含 nightly）；复核 artifact 后提交 `requirements.lock.linux.txt` 并验证安装。
+2. **公网生产部署**：在目标环境执行生产 Compose（TLS/反向代理/域名/证书），完成真实的备份恢复、迁移维护窗口与监控接入；本机已完成全栈 `up --build` 与应用边界验收（见第六批），但不等于公网生产验收。
+3. **Linux 锁文件**：已生成并提交 `requirements.lock.linux.txt`，在干净 Linux 容器中按哈希安装并跑通 66 项核心测试；nightly 已改为安装该锁。仍需一次远端 nightly 手动触发运行（push 触发的 CI 不含 nightly）。
 4. **真实模型独立任务验证**：在未使用过的新任务上复测 v2.8，并单独验证部分交付分支（练习失败/删题）；如实记录失败、调用数、延迟与可用 tokens，不虚构账单或人工评分。
 5. **许可与素材（F8–F10）**：`THIRD_PARTY_NOTICES.md` 已提供机器清单；仍需人工补齐 `frontend/dist` 与桌面包的 LICENSE/NOTICE、integrated-map React 构建源码/来源、125 个媒体文件来源，并完成 GPL/LGPL 分发审查。
-6. **交付材料**：真实演示视频、Release、部署说明复核（PRODUCTION_DEPLOYMENT.md 已提供部署说明，真实部署验证待做）。
-7. **已完成的交付项**：三轮优化已提交并推送；远端 CI run #17 全绿（见上）；隔离容器上的 PostgreSQL/Redis 集成、迁移往返与部分完成恢复已验证；心跳抖动测试已修复。
-7. **提交前复核**：按 `output/baseline-audit-20261018/report.md` 的提交前建议，区分三轮改动与此前未提交成果，确认不包含 `output/` 原始资料或任何密钥。
+6. **交付材料**：真实演示视频、GitHub Release、部署材料复核（PRODUCTION_DEPLOYMENT.md 已提供部署说明，公网部署验证待做）。
+7. **已完成的交付项**：四轮优化已提交并推送；远端 CI run #17/#18 全绿；生产 Compose 全栈本地构建/启动与边界验收通过；真实 PG/Redis 集成、迁移往返与部分完成恢复已验证；Linux 锁文件已生成并验证；心跳抖动测试已修复。
+8. **提交前复核**：按 `output/baseline-audit-20261018/report.md` 的提交前建议确认不包含 `output/` 原始资料或任何密钥（本轮提交已做路径脱敏与密钥扫描）。
 
 ## 六、约束遵守情况
 
-- 未自行下载依赖或 Docker 镜像：前端依赖只从本机 npm 缓存离线安装（`npm ci --offline`），未联网；未执行 `docker pull`/`docker compose up`。真实模型调用使用已授权额度，范围为有界诊断（13 次）与两组各 12 任务复测（44/43 次调用），原始响应只存本地 Git 忽略目录。
-- 未上传任何密钥、令牌、连接串、私有课程原文或原始评测资料。
+- **早期阶段**未下载依赖或 Docker 镜像；**2026-10-18 用户明确授权下载依赖后**，在隔离容器与生产栈构建中下载了 pip/npm 依赖并构建生产镜像（仅本机/一次性容器，未提交任何密钥或私有数据）；真实模型调用使用已授权额度（有界诊断 + 两组各 12 任务复测），原始响应只存本地 Git 忽略目录。
+- 未上传任何密钥、令牌、连接串、私有课程原文或原始评测资料；提交前检查了候选文件并脱敏本地绝对路径。
 - 未执行 `git reset --hard`、`git clean`、覆盖用户数据或他人的工作区改动。
-- 测试使用 `output/<独立目录>` 下的新 `--basetemp` 与隔离 SQLite 文件。
-- 本轮未 commit、未 push；工作区仍保留此前未提交成果与两批改动。
+- 测试使用 `output/<独立目录>` 下的新 `--basetemp` 与隔离 SQLite/一次性容器。
+- 本轮已 commit 并 push 到 `origin/main`；工作区干净，远端 CI 已验证。

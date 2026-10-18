@@ -62,18 +62,18 @@ docker compose --env-file .env.production -f docker-compose.production.yml \
 ## 6. 验证清单
 
 - [x] 2026-10-18 应用层生产边界冒烟（真实隔离 PostgreSQL/Redis）：`validate_deployment` 通过；`/healthz` 200；`/docs`、`/redoc`、`/openapi.json`、`/docs/oauth2-redirect` 404；匿名 `/metrics` 401；教师登录/`auth/me` 200；`/metrics` 教师 200；V1 白名单外 403；未授权课程 V2 403。
+- [x] 2026-10-18 本机生产 Compose 全栈 `up --build`（用户授权下载依赖后）：构建 + 就绪 211s；postgres/redis/Phoenix/migrate/backend/worker/frontend 均正常，backend/frontend 健康检查通过；`alembic current` 正常，pgvector 扩展存在；教师创建/课程授权与 nginx `/api` 反代验证通过；测试后已 `down -v` 清理。
 - [x] 生产环境 uvicorn 完整进程启动约 18s，`/healthz` 200（Windows 本机 checkpointer 不可用属平台限制，Linux 目标不受影响）。
 - [x] `docker compose ... config` 三套配方退出码 0，且输出里没有占位凭据。
-- [ ] 生产 Compose 全栈 `up --build`（受“勿自行下载依赖/镜像”约束，未在本机执行）。
-- [ ] 后端容器 `/healthz` 200；`docker compose ps` 全部 healthy。
-- [ ] `alembic current` 为 head；PG 扩展 `vector` 存在（隔离容器已单独验证迁移往返与 vector）。
-- [ ] 教师审核、运行恢复与 SSE 在真实 PostgreSQL 下完成一次人工走查（隔离容器测试已覆盖部分完成恢复，但非部署环境）。
-- [ ] 备份/恢复与 TLS 由部署方负责；本仓库不包含备份编排。
+- [ ] 目标环境的 TLS/反向代理/域名/证书（本机验证仅绑定回环端口）。
+- [ ] 备份恢复、迁移维护窗口、监控告警接入（部署方职责）。
+- [ ] 教师审核、运行恢复与 SSE 在目标部署环境的一次人工走查（隔离容器/本机栈已覆盖契约与部分完成恢复）。
 
 ## 7. 尚未完成 / 限制
 
-- **未启动完整生产栈**：`docker-compose.production.yml` 的 `up` 与后端镜像构建未在本机实际执行；`docker compose config` 仅证明配置可解析。
-- 已验证部分真实数据库路径（2026-10-18）：用一次性隔离容器（本机已有 `pgvector/pgvector:pg16`、`redis:7-alpine` 镜像，未拉取）跑通 Alembic `upgrade head → downgrade base → upgrade head`、pgvector 扩展、33 文件企业合同测试（353 passed）以及部分完成学习包在真实 PostgreSQL 检查点上的跨进程恢复；但这不等于生产栈、TLS、Phoenix、备份与部署窗口验收。
+- **本机已验证**（2026-10-18）：`docker-compose.production.yml` 全栈 `up --build` 成功，后端/前端健康，迁移与 pgvector、教师创建/课程授权、生产边界（docs 404、metrics 权限、V1/V2 匿名拒绝、白名单外 403）均通过；测试后已 `down -v` 清理。
+- **目标环境仍需验证**：TLS/反向代理/域名证书、备份恢复、迁移维护窗口、监控告警；本机验证使用回环端口与本地生成口令，未调用真实模型。
+- Linux 依赖锁：`requirements.lock.linux.txt` 已提交（uv 生成、带哈希，144 包），在干净 Linux 容器中安装并跑通 66 项核心测试；nightly 会安装该锁并复跑核心测试。
 - 第三方许可/NOTICE 见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)（机器生成，非法律意见）；GPL/LGPL 与无来源素材需人工审查。
 - Phoenix 镜像默认 `latest`，正式部署前应固定经审核的 tag。
 - 监控/告警、日志聚合、备份、TLS 与密钥管理属于部署方职责。
