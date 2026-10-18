@@ -6,6 +6,7 @@ production).  No network, no providers.
 """
 import asyncio
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 import pytest
@@ -45,9 +46,17 @@ def test_resolve_dist_candidate_blocks_traversal(tmp_path):
     assert main._resolve_dist_candidate(dist, "index.html") == (dist / "index.html").resolve()
     assert main._resolve_dist_candidate(dist, "integrated-map/page.html") == \
         (dist / "integrated-map/page.html").resolve()
-    for traversal in ("../outside.txt", "..\\outside.txt", "integrated-map/../../outside.txt",
-                      "../..//outside.txt", "./../outside.txt"):
+    traversals = ["../outside.txt", "integrated-map/../../outside.txt",
+                  "../..//outside.txt", "./../outside.txt"]
+    if os.name == "nt":
+        traversals.append("..\\outside.txt")
+    for traversal in traversals:
         assert main._resolve_dist_candidate(dist, traversal) is None, traversal
+    if os.name != "nt":
+        # A backslash is a literal filename character on POSIX, not a separator;
+        # it stays inside the distribution and can never escape it.
+        candidate = main._resolve_dist_candidate(dist, "..\\outside.txt")
+        assert candidate is None or candidate.is_relative_to(dist.resolve())
     # Missing in-dist paths still resolve inside; the caller only serves files.
     candidate = main._resolve_dist_candidate(dist, "missing/page")
     assert candidate is not None and candidate.is_relative_to(dist.resolve())

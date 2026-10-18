@@ -162,7 +162,9 @@ jobs:
           DATABASE_URL: "sqlite:///./build/ci_tests.db"
           A3_OFFLINE_DEMO: "true"
         run: |
+          mkdir -p build
           python -c "from backend.app.core.database import init_db; init_db()"
+          set +e
           pytest \
             tests/a/test_v1_production_access.py \
             tests/a/test_static_and_ws_safety.py \
@@ -201,7 +203,13 @@ jobs:
             tests/a/test_persistent_auth.py \
             tests/a/test_auth_restart.py \
             tests/a/test_deployment_policy.py \
-            --no-cov --benchmark-disable -q
+            --no-cov --benchmark-disable -q > build/pytest.log 2>&1
+          status=$?
+          tail -n 60 build/pytest.log
+          if [ "$status" -ne 0 ]; then
+            grep -E "^(FAILED|ERROR) " build/pytest.log | head -20 | sed 's/^/::error title=pytest::/'
+          fi
+          exit "$status"
 
       - name: Core learning package coverage gate
         env:
