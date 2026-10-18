@@ -97,12 +97,16 @@ def test_existing_database_backfills_both_course_resource_sets(app_client: TestC
     assert resources_api._resources
 
 
-def test_recovered_legacy_multimedia_is_assigned_to_ai_course():
+def test_recovered_legacy_multimedia_is_assigned_to_ai_course(tmp_path):
     from backend.app import main
     from backend.app.api.v1.artifacts.registry import get_artifact_registry, reset_artifact_registry
 
     reset_artifact_registry()
-    main._scan_and_register_existing_artifacts()
+    for directory, extension in (("mp3", "mp3"), ("pptx", "pptx"), ("mermaid_png", "png"), ("video", "mp4")):
+        folder = tmp_path / "artifacts" / directory
+        folder.mkdir(parents=True)
+        (folder / ("sample." + extension)).write_bytes(b"test artifact")
+    main._scan_and_register_existing_artifacts(tmp_path)
     records = get_artifact_registry().list(limit=1000)
 
     expected_types = {"mp3", "pptx", "mermaid_png", "video"}

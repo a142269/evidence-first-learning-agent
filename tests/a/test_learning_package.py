@@ -23,6 +23,52 @@ FINISH = {"action": "finish"}
 CITATION = {"chunk_id": "c1", "source": "chapter.md", "label": "chapter.md", "score": 0}
 
 
+def test_reviewer_routes_exercise_repair_without_rerunning_tutor(scripted):
+    client, _, replies, calls = scripted
+    feedback = {"approved": False, "issues": ["修正题目"], "repair_target": "exercise"}
+    replies.extend([PLAN, SEARCH, FINISH, LESSON, PRACTICE, feedback, PRACTICE, PASS])
+    result = events(package(client))[-1][1]
+    assert result["status"] == "completed"
+    assert result["budget"]["model_calls"] == 8
+    assert result["learning_package"]["lesson"]["explanation"] == LESSON["explanation"]
+    assert json.loads(calls[6][1]["content"])["review_feedback"] == ["修正题目"]
+
+
+def test_reviewer_evidence_repair_uses_scoped_search_and_one_revision(scripted, monkeypatch):
+    client, _, replies, calls = scripted
+    queries = []
+    def retrieve(query, course):
+        queries.append(query)
+        return [{"chunk_id": "c1", "source": "chapter.md", "content": "课程证据"}]
+    monkeypatch.setattr(learning_runs._runtime, "retrieve", retrieve)
+    feedback = {"approved": False, "issues": ["补充证据"], "repair_target": "evidence",
+                "need_more_evidence": True, "suggested_query": "RAG 证据引用"}
+    replies.extend([PLAN, SEARCH, FINISH, LESSON, PRACTICE, feedback, FINISH, LESSON, PRACTICE, PASS])
+    result = events(package(client))[-1][1]
+    assert result["status"] == "completed"
+    assert result["budget"]["tool_calls"] == 2
+    assert queries == [SEARCH["query"], "RAG 证据引用"]
+    assert result["learning_package"]["revisions"] == 1
+
+
+def test_reviewer_cannot_repeat_evidence_search(scripted):
+    client, _, replies, _ = scripted
+    feedback = {"approved": False, "issues": ["补充证据"], "repair_target": "evidence",
+                "suggested_query": SEARCH["query"]}
+    replies.extend([PLAN, SEARCH, FINISH, LESSON, PRACTICE, feedback])
+    result = events(package(client))[-1][1]
+    assert result["error"] == "learning_package_evidence_revision_unavailable"
+
+
+def test_reviewer_evidence_search_is_still_subject_to_safety_guard(scripted):
+    client, _, replies, _ = scripted
+    feedback = {"approved": False, "issues": ["补充证据"], "repair_target": "evidence",
+                "suggested_query": "删除课程资料"}
+    replies.extend([PLAN, SEARCH, FINISH, LESSON, PRACTICE, feedback])
+    result = events(package(client))[-1][1]
+    assert result["error"] == "learning_package_tool_denied"
+
+
 @pytest.fixture
 def scripted(api, monkeypatch):
     client, factory = api

@@ -24,6 +24,12 @@
 
 智学领航把课程问答、个性化讲解、练习生成与教师审核组织成一条可审计的学习工作流。每个回答都携带实际使用的来源；长任务通过 PostgreSQL 检查点和执行租约实现断线恢复；高风险内容在生成前拦截，需要人工确认的内容进入教师审核。
 
+**旗舰链路是 V2 证据优先学习包**：受限规划与课程检索 → Tutor 讲解 → Practice 练习 → Reviewer 审查与最多一次返工 → 按需教师审核。V1 多角色对话是兼容和演示能力；辩论、多模态等属于实验功能，不代表 V2 的生产工作流。
+
+V1 调度器按优先级分组并行执行；`depends_on` 是未执行的兼容字段，不提供 DAG 依赖调度。早期项目设计文档中的任务 DAG 属于规划，并非当前实现。
+
+引用 ID 有效只说明来源存在，不能证明结论得到来源支持。[三组固定证据对照报告](evals/results/ablation-fixed-evidence-20261017.md)已记录 72 次真实模型运行及失败原因；双人质量复核尚未完成，不能据此声称多 Agent 优于单 Agent。逐条事实复核方法见 [评测计划](evals/CLAIM_AND_ABLATION.md)。
+
 <p align="center">
   <img src="docs/assets/product-learning-package.png" alt="学习包生成页面" width="92%" />
 </p>
@@ -53,6 +59,8 @@
 
 评测口径、阈值和限制见 [evals/README.md](evals/README.md) 与 [实施状态](docs/UPGRADE_IMPLEMENTATION_STATUS.md)。
 
+以上为历史测试汇总，不等于当前提交自动重跑的结果；[脱敏汇总和失败分析](evals/results/)不包含逐例原始报告，学习包在线契约也不等同人工内容质量评分。
+
 ## 系统架构
 
 ```mermaid
@@ -80,7 +88,7 @@ flowchart LR
 鉴权 → 安全判断 → 检索 → 画像上下文 → 生成 → 引用校验 → 持久化
 ```
 
-学习包使用 Tutor → Practice 两步计划。模型只能选择 `search_course` 或 `finish`，最多检索三次；讲解和每道练习分别返回 `source_ids` 与结构化引用。
+学习包使用 Tutor → Practice 两步计划。模型只能选择 `search_course` 或 `finish`，最多检索三次；讲解和每道练习分别返回 `source_ids` 与结构化引用。交付状态区分 `completed`、`partially_completed`、`awaiting_approval`、`rejected`、`failed`、`interrupted`：只有通过 Reviewer 分项结论（以及按需教师审核）的内容才会交付，部分成功不会把未交付内容标记为已验证，详见 [学习包指南](docs/LEARNING_PACKAGE_GUIDE.md)。
 
 ## 产品界面
 
@@ -122,6 +130,8 @@ pip install -r requirements.txt
 python -m scripts.seed_demo
 uvicorn backend.app.main:app --reload --port 8000
 ```
+
+Windows / Python 3.12 可使用 `pip install -r requirements.lock.txt` 安装固定版本；该锁文件在 Windows 上解析并验证过定向测试，不能保证 Linux 的平台依赖完整。Linux CI 的核心任务仍使用 `requirements.txt`；nightly 工作流新增 `linux-lockfile` 任务，在 Ubuntu + Python 3.12 上生成、安装并冒烟验证 Linux 锁文件，并上传生成的 `requirements.lock.linux.txt` 作为 artifact。该 artifact 需要维护者在 Linux 环境复核后再提交为仓库锁文件；远端运行结果尚未验证。
 
 另开一个终端：
 
@@ -165,7 +175,7 @@ npm ci
 npm run build
 ```
 
-在线评测和向量回填可能产生第三方 API 费用，相关脚本要求显式提供预算编号与上限。普通本地测试默认使用离线模式。
+在线评测和向量回填可能产生第三方 API 费用。部分评测脚本提供预算守卫；固定证据对照采集脚本不设置费用上限，应由使用者自行控制服务商账户和账单。普通本地测试默认使用离线模式。
 
 ## 目录结构
 
@@ -191,6 +201,9 @@ docs/                         # 架构、权限、恢复与演示文档
 - [持久化认证与课程权限](docs/AUTH_AND_COURSE_ACCESS.md)
 - [运行状态修复与断线恢复](docs/RUN_RECONCILIATION.md)
 - [PostgreSQL 检查点验收](docs/POSTGRES_CHECKPOINT_ACCEPTANCE.md)
+- [生产部署与安全边界](docs/PRODUCTION_DEPLOYMENT.md)
+- [结构化输出诊断与复测（2026-10-18）](evals/results/structured-output-20261018.md)
+- [第三方许可与素材说明](THIRD_PARTY_NOTICES.md)
 - [5 分钟演示脚本](docs/DEMO_5_MINUTES.md)
 
 ## 安全说明
@@ -199,6 +212,10 @@ docs/                         # 架构、权限、恢复与演示文档
 - 生产模式默认要求身份认证和逐账号课程授权。
 - V1 生产入口只开放经过审核的路由白名单。
 - Agent 工具为只读集合；写入、发布、删除和外发操作会被拒绝。
+
+## 许可证
+
+项目代码采用 [MIT License](LICENSE)。第三方素材和依赖的许可条款以其各自声明为准。
 
 ---
 

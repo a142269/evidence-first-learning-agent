@@ -1,0 +1,10 @@
+{
+  "source": "local historical report package-standard-final-report.json, 2026-10-16",
+  "evaluator_version": "learning-package-1.0",
+  "dataset_signature": "e153077681caeb67f773f9ea65c0382ff8f9ca6b70692dc0639b24548d0814dd",
+  "evaluation_mode": "offline_replay",
+  "prediction_kind": "recorded",
+  "collection_mode": "recorded_authenticated_sse",
+  "summary": {"case_count": 13, "contract_passed_cases": 13, "contract_pass_rate": 1.0, "completed_case_count": 10, "human_reviewed_cases": 0, "human_review_coverage": 0.0, "learning_quality_pass_rate": null, "recorded_p50_latency_ms": 32097.99, "recorded_p95_latency_ms": 76629.75},
+  "limitations": ["Aggregate transcription; per-case source records are not published.", "Three cases are expected refusal or review boundaries, not completed packages.", "No human quality assessment was completed."]
+}

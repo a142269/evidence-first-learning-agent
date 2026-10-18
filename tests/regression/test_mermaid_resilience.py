@@ -35,6 +35,14 @@ def test_malicious_dsl_handled_within_budget(renderer, label, text):
     assert isinstance(result, dict)
 
 
+def test_oversized_diagram_rejected_before_render(renderer, monkeypatch):
+    def unexpected(*args, **kwargs):
+        raise AssertionError("oversized diagrams must not reach the renderer")
+    monkeypatch.setattr(renderer._studio.renderer, "render", unexpected)
+    result = renderer.render("graph TD\n" + "A --> B\n" * 301)
+    assert result["method"] == "validation_failed"
+
+
 def test_extract_blocks_on_garbage_is_safe():
     """The static `extract_blocks` helper must never throw."""
     garbage_inputs = [None, "", " ", "no markers here", "```not mermaid\n``"]

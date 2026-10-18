@@ -9,8 +9,8 @@
 2. Planner 输出 JSON 任务计划：一个 Tutor 步骤、一个依赖该步骤的 Practice 步骤。验证角色、ID、依赖关系，拒绝循环、未知依赖或未知角色。
 3. Tutor 执行受限 ReAct-style 检索决策循环，只能输出 `search_course` 或 `finish`，最多检索 3 次。每次检索结果作为 observation 回到下一次模型决策；可以改写查询再检索。工具课程范围由服务端身份校验结果注入。这不是开放式多工具 Agent。
 4. Tutor 依据证据生成讲解；Practice 读取该讲解作为依赖产物，生成三道带答案、解析及来源 ID 的练习。
-5. Reviewer 检查目标覆盖、讲解、题目与证据。首次拒绝触发讲解与练习全部返工，第二次拒绝终止并报告失败。
-6. 可选教师审核：待审核草稿不会发送给学生，也不会写入可召回的会话记忆。通过后交付结果，拒绝后不交付草稿。
+5. Reviewer 检查目标覆盖、讲解、题目与证据，并给出分项结论 `lesson_approved` / `practice_approved`。整包通过时交付讲解与三道练习；首次拒绝按问题选择返工：练习问题只重做练习；讲解问题重做讲解及依赖练习；证据不足时在原有预算内补充课程检索，再重做讲解与练习。第二次拒绝通常终止并报告失败；重复查询或检索预算耗尽时，补证据返工会失败关闭。Reviewer 可以显式给出部分交付结论（讲解可交付而练习不可交付），或删除个别判定错误的题目后交付其余内容，见「部分成功」一节。
+6. 可选教师审核：待审核草稿不会发送给学生，也不会写入可召回的会话记忆。通过后交付结果，拒绝后不交付草稿。部分交付的学习包同样先经过教师审核，审核草稿带 `partial_completion`，审核通过不改变未交付内容的未验证状态。
 
 学习计划是有约束的两步骤计划，不是任意 Agent DAG。返工属于有限修订，不宣称实现开放式全自动重规划。
 工具决策使用 JSON Schema 校验的模型输出，不依赖模型提供商原生 Function Calling，也不执行模型输出的代码或 URL。
@@ -34,11 +34,37 @@
 | 逻辑模型调用 | 最多 12 次 |
 | 累计模型输入 | 最多 100000 字符 |
 | 每次模型输出请求上限 | 2048 tokens |
+| 结构化输出重试 | 普通无效输出最多 2 次尝试；长度截断最多 3 次尝试（计入模型调用总预算） |
 | 学习包流式执行超时 | 180 秒 |
 
 重复查询会停止检索；有证据时继续生成，无证据时失败。无证据、无效输出、未知工具、无效引用或二次质量失败都不会返回成功学习包。
 返回的 `budget.output_token_limit` 是累计请求输出上限，不是实际消耗；`model_calls` 是编排层调用数，不统计底层 HTTP 重试。真实 token usage 与费用统计仍待接入。
 Reviewer 是一次模型质量检查，不是事实正确性的证明；引用检查验证来源 ID 是否属于检索证据，不冒充语义忠实度评估。
+
+结构化输出解析会容忍 Markdown 围栏和 JSON 前后的说明文字，但仍按 Schema 严格校验。2026-10-18 的诊断确认，开发集此前的结构化输出失败是**输出长度截断**（`finish_reason=length` 或 JSON 未闭合，落在每次调用的输出 token 上限），不是字段错误或拒答：失败样本的 Practice 调用 6/6 次恰好停在上限。现在的处理是识别截断后追加一次固定文案的精简要求（不回显模型输出），最多 3 次尝试；仍失败则关闭式失败。实验器为公平比较采用 1024 tokens/调，生产默认为 2048 tokens/调；该重试只提高格式完成率，不证明内容质量。
+
+## 部分成功（partially_completed）
+
+运行状态区分 `completed`、`partially_completed`、`awaiting_approval`、`rejected`、`failed`、`interrupted`。**整体失败仍然关闭处理**：没有任何可交付内容时不交付。部分交付只在“一部分已独立审核通过、另一部分不可交付”时发生，并且必须由 Reviewer 显式给出分项结论；省略分项字段时仍按整包结论处理，系统不会从模糊拒绝中推断“部分通过”。
+
+| 场景 | Reviewer 输出（关键字段） | 交付结果 |
+|---|---|---|
+| 练习连续两次无法生成（无效 JSON 或引用无法核对） | `approved=false, lesson_approved=true, practice_approved=false` | 仅讲解；`withheld_parts=["practice"]`，reason `practice_unavailable` |
+| 练习返工一次后仍被拒绝 | `approved=false, lesson_approved=true, practice_approved=false` | 仅讲解；reason `practice_not_approved` |
+| 个别题目被判定不可交付，其余可交付 | `practice_approved=true`、`dropped_exercises=[题号]`，`approved` 表示余下内容是否全部可交付 | 删除对应题号后交付讲解与其余练习；`withheld_exercise_numbers` 记录原始题号（页面标注为“原第 N 题”），reason `exercise_not_approved` |
+| 讲解未通过 | `lesson_approved=false` | 不交付任何内容；练习依赖讲解，即使练习通过也不单独交付 |
+| Reviewer 对未生成的产物给出通过 | 任意 | 视为契约冲突，失败关闭（`learning_package_quality_failed`） |
+
+交付前的强制校验与边界：
+
+- **证据**：每个交付单元（讲解、每道保留的练习）的 `source_ids` 必须属于本次检索证据；被删除或被拒绝的内容不会进入 SSE、持久化结果或教师审核草稿。
+- **审核**：被交付的讲解或练习必须带有 Reviewer 的显式通过结论。`quality.reviewer_passed` 表示 Reviewer 是否通过“本次交付的内容”：练习被整体拒收的部分交付为 false；仅删除个别题目的部分交付在 Reviewer 通过余下内容时为 true。无论哪种情况都会带 `quality.partial_completion=true` 与 `quality.delivered_parts`，不会把部分结果报告成完整计划全部通过。Reviewer 的原始 `issues`/`suggested_query` 可能引用被拒收的题目文本，因此部分交付只把它们保留在内部审核状态，交付结果中的 `learning_package.review.issues` 清空、`suggested_query` 置空，并记录 `withheld_issue_count`/`withheld_suggested_query`。
+- **教师审核与授权**：`require_approval=true` 时仍先返回 `review.required`；教师草稿（`result.approval`）携带 `partial_completion`，通过后状态为 `partially_completed`，拒绝后为 `rejected` 且不交付草稿。学生看不到草稿；跨用户、跨课程访问仍按既有授权规则拒绝。
+- **SSE 与持久化**：终态事件仍为 `run.completed`，其 `status` 为 `partially_completed`，payload 包含 `partial_completion`、只含已交付部分的 `learning_package` 和 `budget`。同一份结果写入 `agent_runs`：`artifact_count` 为实际交付的讲解/练习单元数（0–2），`success_count` 只统计完整 `completed`，部分完成记为 0。GET 查询、`/events` 审计、断线后 `reconcile` 都复用该交付契约；`reconcile` 只读稳定检查点，不重新调用模型，也不能把部分结果升级为 `completed`。
+- **检查点历史**：被拒收的中间产物可能保留在 LangGraph 的检查点历史中用于审计，但不会通过 API 交付，也不会写入 `agent_runs` 结果；需要更强删除保证的部署应另行制定检查点清理策略。
+- **记忆边界**：会话记忆只召回 `completed` 运行；`partially_completed` 不作为后续问题的历史上下文（保守处理）。
+- **页面**：显示“部分完成”，并明确说明未交付内容不会因为部分交付而被视为已验证。
+- 这些测试验证执行与交付契约，不构成真实模型质量或事实支撑评测。
 
 ## API 示例
 
@@ -56,11 +82,11 @@ Reviewer 是一次模型质量检查，不是事实正确性的证明；引用�
 
 省略 mode 或传 `answer` 使用普通问答，也能读取同一范围的会话历史。
 返回 SSE 的 node.started / node.completed 是实际节点事件；retrieval.completed 只包含证据数量与耗时。
-run.completed 中包含 learning_package（计划、讲解、练习、审核结果和返工次数）、budget、memory_run_ids。
+run.completed 中包含 learning_package（计划、讲解、练习、审核结果和返工次数）、budget、memory_run_ids；部分交付时另含 partial_completion，且 learning_package 只包含已交付内容。
 等待人工审核时只向请求者发送 review.required。教师使用任务编号查询草稿，再调用 `/{run_id}/resume` 提交 approved。
-教师用 edited_answer 替换答案时，不再交付旧结构化学习包，最终 citations 置空；替换文本没有经过来源映射校验，不能继承旧引用。模型审核结果也不标记为对新文本的验证。
+教师用 edited_answer 替换答案时，不再交付旧结构化学习包，最终 citations 置空；替换文本没有经过来源映射校验，不能继承旧引用。模型审核结果也不标记为对新文本的验证。替换部分交付草稿时同样清除 `partial_completion`，按人工替换内容处理。
 
-本批工作流版本为 `learning-workflows-v2.2`。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
+本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.8`。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
 
 ## 细粒度引用契约
 
@@ -77,4 +103,5 @@ run.completed 中包含 learning_package（计划、讲解、练习、审核结�
 自动化用可控模型输出、临时 SQLite 和真实 LangGraph 测试模型决策循环、依赖传递、来源约束、记忆隔离和审核恢复；前端测试拆分 UTF-8、CRLF、提前 EOF 和终止事件。
 这些测试验证执行机制，不代表真实模型的学习包质量。本次只做离线验证，不读取或使用 `.env.enterprise` 密钥。
 旧版 66 条在线基线（历史）的 64/66、Recall@5 95.83%、引用完整性 100% 不能作为新版成绩。新版 76 条 Golden Set 与学习包待完整 Docker + PostgreSQL + 云端模型验收；76 条当前覆盖普通问答、拒答和内容人审。学习包已另建 [24 条用例、离线采集/故障注入执行器、评测器及人工审查契约](../evals/LEARNING_PACKAGE_EVAL.md)，并通过 24 条模拟模型的预期行为验证。另已完成 [7 项真实 PostgreSQL 跨进程检查点恢复测试](POSTGRES_CHECKPOINT_ACCEPTANCE.md)，验证检查点提交后应用进程退出的审核恢复；模型与检索仍是桩，不等同完整 API 或云端质量验收。在线验收须先取得用户授权，并会产生模型及 Embedding 调用费用。
-后续已完成 5 项真实 PostgreSQL API 故障修复（身份/模型/检索为桩），并独立完成 SQLite/PostgreSQL 真实登录跨进程及课程授权撤销验证，见 [登录与课程授权](AUTH_AND_COURSE_ACCESS.md)。这些结果不合并宣称为云端端到端验收。PostgreSQL 服务自身恢复、原生工具协议适配、真实 token 统计、可检索长期经验和任意 DAG 重规划仍是后续工作。
+后续已完成 5 项真实 PostgreSQL API 故障修复（身份/模型/检索为桩），并独立完成 SQLite/PostgreSQL 真实登录跨进程及课程授权撤销验证，见 [登录与课程授权](AUTH_AND_COURSE_ACCESS.md)。这些结果不合并宣称为云端端到端验收。
+2026-10-18 另在一次性隔离容器（本机已有 PostgreSQL 16 + pgvector、Redis 7 镜像，未拉取）上验证：Alembic `upgrade head → downgrade base → upgrade head` 通过，企业合同测试子集 353 passed；新增真实 PostgreSQL 跨进程测试验证部分完成学习包在教师审核后仍保持 `partially_completed`、仅交付 2 道练习且恢复时不重跑模型/检索（`tests/a/test_learning_package_partial_postgres.py`）。这不等于生产全栈、TLS、Phoenix 或云端质量验收。PostgreSQL 服务自身恢复、原生工具协议适配、真实 token 统计、可检索长期经验和任意 DAG 重规划仍是后续工作。

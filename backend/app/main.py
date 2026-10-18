@@ -38,6 +38,25 @@ app = FastAPI(
 async def _require_auth_for_api(request, call_next):
     path = request.url.path
 
+    if production_mode():
+        # Operational surfaces are not part of the unauthenticated production
+        # surface: docs/OpenAPI stay hidden, metrics require a privileged session.
+        normalized = path.rstrip("/") or "/"
+        if (normalized in {"/docs", "/redoc", "/openapi.json"}
+                or path.startswith("/docs/")):
+            return JSONResponse(status_code=404, content={"detail": "not found"})
+        if normalized == "/metrics" or path.startswith("/metrics/"):
+            try:
+                token = _parse_bearer_token(request.headers.get("Authorization"))
+                session = await asyncio.to_thread(_get_session, token)
+            except Exception as exc:
+                detail = getattr(exc, "detail", "authorization_required")
+                status_code = getattr(exc, "status_code", 401)
+                return JSONResponse(status_code=status_code, content={"detail": detail})
+            if session.role not in {"teacher", "admin"}:
+                return JSONResponse(status_code=403, content={"detail": "privileged_role_required"})
+            return await call_next(request)
+
     if production_mode() and path.startswith("/api/v1/"):
         # Public login/registration still have an exact method/path check. The
         # authenticated legacy surface is checked again after session lookup.
@@ -163,7 +182,7 @@ async def _warmup() -> None:
         stats = rag.stats()
         LOGGER.info(f"[startup] RAG 已就绪: {stats}")
     except Exception as exc:
-        LOGGER.warning(f"[startup] RAG 预热失败（不影响运行）: {exc}")
+        LOGGER.warning("[startup] RAG 预热失败（不影响运行）: %s", type(exc).__name__)
 
     # 空库时自动导入种子数据（幂等，已有数据则跳过）
     try:
@@ -176,19 +195,19 @@ async def _warmup() -> None:
                 seed_all(verbose=True)
                 LOGGER.info("[startup] 种子数据导入完成")
     except Exception as exc:
-        LOGGER.warning(f"[startup] 种子数据导入失败（不影响运行）: {exc}")
+        LOGGER.warning("[startup] 种子数据导入失败（不影响运行）: %s", type(exc).__name__)
 
     # 扫描并注册现有资源文件
     try:
         inserted = _ensure_course_resources()
         LOGGER.info("[startup] course resources ready: %s", inserted)
     except Exception as exc:
-        LOGGER.warning("[startup] course resource backfill failed: %s", exc)
+        LOGGER.warning("[startup] course resource backfill failed: %s", type(exc).__name__)
 
     try:
         _scan_and_register_existing_artifacts()
     except Exception as exc:
-        LOGGER.warning(f"[startup] 资源扫描失败（不影响运行）: {exc}")
+        LOGGER.warning("[startup] 资源扫描失败（不影响运行）: %s", type(exc).__name__)
 
 @app.on_event("shutdown")
 async def _shutdown_agent_runtime() -> None:
@@ -200,14 +219,14 @@ async def _shutdown_agent_runtime() -> None:
 LEGACY_ARTIFACT_COURSE = "artificial_intelligence"
 
 
-def _scan_and_register_existing_artifacts():
+def _scan_and_register_existing_artifacts(base_path: Path | None = None):
     """扫描 data/artifacts 目录并注册现有资源"""
     from backend.app.api.v1.artifacts.registry import get_artifact_registry
     import hashlib
     import json
 
     registry = get_artifact_registry()
-    base_path = Path(__file__).parent.parent.parent / "data"
+    base_path = base_path or Path(__file__).parent.parent.parent / "data"
     artifact_dir = base_path / "artifacts"
 
     count = 0
@@ -462,6 +481,23 @@ def _find_frontend_dist() -> Path | None:
 
 _FRONTEND_DIST = _find_frontend_dist()
 
+
+def _resolve_dist_candidate(dist_root: Path, full_path: str) -> Path | None:
+    """Resolve a request path inside the built frontend, refusing traversal.
+
+    Returns None when the resolved candidate escapes ``dist_root`` (or cannot be
+    resolved). Callers must still check that the candidate is a regular file.
+    """
+    try:
+        root = dist_root.resolve()
+        candidate = (root / full_path).resolve()
+    except (OSError, ValueError):
+        return None
+    if not candidate.is_relative_to(root):
+        return None
+    return candidate
+
+
 if _FRONTEND_DIST:
     from fastapi.responses import FileResponse
 
@@ -480,8 +516,11 @@ if _FRONTEND_DIST:
         # 不拦截 API 和已挂载的静态资源
         if full_path.startswith(("api/", "healthz", "metrics", "assets/")):
             return JSONResponse(status_code=404, content={"detail": "not found"})
-        # 如果请求的是 dist 中的真实文件（如 integrated-map/index.html），直接返回
-        candidate = _FRONTEND_DIST / full_path
+        # 如果请求的是 dist 中的真实文件（如 integrated-map/index.html），直接返回。
+        # _resolve_dist_candidate 拒绝 ../ 等越界路径，不允许读取 dist 之外的任意文件。
+        candidate = _resolve_dist_candidate(_FRONTEND_DIST, full_path)
+        if candidate is None:
+            return JSONResponse(status_code=404, content={"detail": "not found"})
         if candidate.is_file():
             return FileResponse(str(candidate))
         # SPA fallback：返回 index.html 让 Vue Router 处理

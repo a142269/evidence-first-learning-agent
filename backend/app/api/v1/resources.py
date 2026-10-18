@@ -56,7 +56,7 @@ def _load_from_db() -> None:
             for row in db.query(ResourceRecord).all():
                 _resources[row.id] = _row_to_dict(row)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[resources] DB load failed, memory only: %s", exc)
+        logger.warning("[resources] DB load failed, memory only: %s", type(exc).__name__)
 
 
 def persist_resource(record: dict[str, Any]) -> None:
@@ -84,7 +84,7 @@ def persist_resource(record: dict[str, Any]) -> None:
             row.created_at = float(record.get("created_at") or 0.0)
             db.commit()
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[resources] DB persist failed for %s: %s", rid, exc)
+        logger.warning("[resources] DB persist failed for %s: %s", rid, type(exc).__name__)
 
 
 def get_resource_dict(resource_id: str) -> dict[str, Any] | None:
@@ -102,7 +102,7 @@ def get_resource_dict(resource_id: str) -> dict[str, Any] | None:
                 _resources[resource_id] = record
                 return record
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[resources] DB get failed for %s: %s", resource_id, exc)
+        logger.warning("[resources] DB get failed for %s: %s", resource_id, type(exc).__name__)
     return None
 
 
@@ -119,7 +119,7 @@ def delete_resource_record(resource_id: str) -> bool:
                     db.commit()
                     found = True
         except Exception as exc:  # noqa: BLE001
-            logger.warning("[resources] DB delete failed for %s: %s", resource_id, exc)
+            logger.warning("[resources] DB delete failed for %s: %s", resource_id, type(exc).__name__)
     return found
 
 

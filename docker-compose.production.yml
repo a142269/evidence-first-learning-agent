@@ -1,0 +1,188 @@
+# Production-oriented stack (2026-10-18).
+#
+# Purpose: unlike docker-compose.yml / docker-compose.enterprise.yml this file
+# actually enables the production security boundary:
+#   - APP_ENV=production so validate_deployment() runs and the V1 surface fails
+#     closed (only the explicit production allowlist is reachable);
+#   - every secret is required via ${VAR:?}; there are no default passwords;
+#   - only the frontend port is published, on loopback by default;
+#   - database/Redis/Phoenix stay on the internal network.
+#
+# Usage (fill .env.production first; see .env.production.example):
+#   docker compose --env-file .env.production -f docker-compose.production.yml config
+#   docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+#
+# Operational prerequisites (not automated here):
+#   - alembic migrations run by the `migrate` service before the backend starts;
+#   - create the first teacher account with the trusted host CLI:
+#       docker compose ... exec backend python -m scripts.manage_access create-teacher <account>
+#     and grant courses with `python -m scripts.manage_access grant <account> --course <course>`;
+#   - put a TLS reverse proxy in front of the published frontend port.
+#
+# This file has not been exercised against a running Docker engine here.
+
+name: evidence-first-learning-agent
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:?set POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set a strong POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB:?set POSTGRES_DB}"
+      PHOENIX_DB_USER: "${PHOENIX_DB_USER:?set PHOENIX_DB_USER}"
+      PHOENIX_DB_PASSWORD: "${PHOENIX_DB_PASSWORD:?set PHOENIX_DB_PASSWORD}"
+      PHOENIX_DB: "${PHOENIX_DB:?set PHOENIX_DB}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/10-create-phoenix-db.sh:/docker-entrypoint-initdb.d/10-create-phoenix-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - internal
+
+  phoenix:
+    image: "${PHOENIX_IMAGE:-arizephoenix/phoenix:latest}"
+    restart: unless-stopped
+    environment:
+      PHOENIX_SQL_DATABASE_URL: "postgresql://${PHOENIX_DB_USER:?}:${PHOENIX_DB_PASSWORD:?}@postgres:5432/${PHOENIX_DB:?}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}"
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      A3_OFFLINE_DEMO: "0"
+      V2_AUTH_REQUIRED: "true"
+      V2_COURSE_AUTH_MODE: database
+      V2_REQUIRE_CHECKPOINTER: "true"
+      LLM_PROVIDER: "${LLM_PROVIDER:?set LLM_PROVIDER}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:?set OPENAI_BASE_URL}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:?set OPENAI_API_KEY}"
+      OPENAI_MODEL: "${OPENAI_MODEL:?set OPENAI_MODEL}"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}"
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERY_INGEST_ENABLED: "true"
+      LANGGRAPH_STRICT_MSGPACK: "true"
+      A3_CORS_ORIGINS: "${A3_CORS_ORIGINS:?set https A3_CORS_ORIGINS}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006/v1/traces
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+      - ./logs:/app/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      phoenix:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - internal
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      A3_OFFLINE_DEMO: "0"
+      V2_AUTH_REQUIRED: "true"
+      V2_COURSE_AUTH_MODE: database
+      LLM_PROVIDER: "${LLM_PROVIDER:?set LLM_PROVIDER}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:?set OPENAI_BASE_URL}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:?set OPENAI_API_KEY}"
+      OPENAI_MODEL: "${OPENAI_MODEL:?set OPENAI_MODEL}"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}"
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    command: ["celery", "-A", "backend.app.worker:celery_app", "worker", "--loglevel=INFO"]
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A backend.app.worker:celery_app inspect ping --destination celery@$$HOSTNAME --timeout 5 2>/dev/null | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_BIND:-127.0.0.1}:${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  internal:
+    driver: bridge

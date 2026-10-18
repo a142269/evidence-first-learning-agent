@@ -26,7 +26,7 @@ from backend.app.core.database import SessionLocal
 from backend.app.core.models import AgentRunRecord
 
 LOGGER = logging.getLogger(__name__)
-WORKFLOW_VERSION = "learning-workflows-v2.2"
+WORKFLOW_VERSION = "learning-workflows-v2.3"
 
 
 class LearningRunRequest(BaseModel):
@@ -136,7 +136,13 @@ def apply_settled_state(record: RunRecord, state: dict[str, Any],
         record.result = {"approval": interrupt_payload(state)}
         return
     rejected = state.get("review_status") == "rejected" or bool(decision and not decision.approved)
-    record.status = "rejected" if rejected or state.get("safety_blocked") else "completed"
+    blocked = bool(state.get("safety_blocked"))
+    # A partial delivery is only valid when the reviewed lesson package exists;
+    # a human replacement clears the package (and the partial marker).
+    partial = (not rejected and not blocked
+               and bool(state.get("learning_package") and state.get("partial_completion")))
+    record.status = ("rejected" if rejected or blocked
+                     else "partially_completed" if partial else "completed")
     record.result = {
         "answer": state.get("answer", ""),
         "citations": [] if rejected else state.get("citations", []),
@@ -146,10 +152,12 @@ def apply_settled_state(record: RunRecord, state: dict[str, Any],
     }
     if decision or state.get("review_status") in {"approved", "rejected"}:
         record.result["review"] = {"approved": decision.approved if decision else not rejected}
-    if not rejected and not state.get("safety_blocked"):
+    if not rejected and not blocked:
         record.result["memory_run_ids"] = state.get("memory_run_ids", [])
         if state.get("learning_package"):
             record.result["learning_package"] = state["learning_package"]
+        if partial:
+            record.result["partial_completion"] = state["partial_completion"]
         if state.get("tool_audit"):
             record.result["tool_audit"] = state["tool_audit"]
     if state.get("budget"):

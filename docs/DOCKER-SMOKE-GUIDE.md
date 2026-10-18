@@ -214,6 +214,6 @@ docker compose ps             # 看健康状态
 |------|------|------|
 | `Cannot connect to Docker daemon` | Docker Desktop 没启动 | 启动 Docker Desktop |
 | frontend 启动但 /api/ 404 | nginx conf 反代地址错 | 确认 `frontend/Dockerfile` 内 nginx 配置 `proxy_pass http://backend:8000;`（service 名而非 localhost） |
-| backend healthcheck 失败 | curl 缺失 / 端口未通 | docker exec 进 backend 容器 `curl http://localhost:8000/healthz` |
+| backend healthcheck 失败 | 服务未就绪或端口未通 | 查看 `docker compose logs backend`；健康检查改用镜像内 Python 请求 `http://127.0.0.1:8000/healthz`（镜像不再安装 curl） |
 | docker_smoke 9 项里 frontend 2 项失败但 backend 7 项过 | nginx 还在启动 | 加 `--wait 20` 多等几秒 |
 | 浏览器 /cockpit 显示空白 + 控制台 CORS 错 | 同源模式没生效 | 检查 dist 里 JS chunk grep `VITE_API_BASE_URL` 是否被 build 时替换为 `""`；如果还是 `127.0.0.1:8000`，重 build：`docker compose build --no-cache frontend` |

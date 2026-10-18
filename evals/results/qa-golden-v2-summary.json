@@ -1,0 +1,8 @@
+{
+  "source": "local historical report golden-full-r2-report.json, 2026-10-16",
+  "evaluator_version": "2.0",
+  "dataset_signature": "e0995b89e7394db9cfc91aff809454107e0461d8094a5a9a123e92e928c51f4d",
+  "evaluation_mode": "online",
+  "summary": {"case_count": 76, "passed_cases": 74, "pass_rate": 0.9737, "hit_at_5": 0.9583, "recall_at_5": 0.9479, "citation_presence": 1.0, "citation_validity": 1.0, "security_and_review_pass_rate": 1.0, "average_latency_ms": 6886.57, "p50_latency_ms": 5270.07, "p95_latency_ms": 23296.27},
+  "limitations": ["Aggregate transcription; per-case source records are not published.", "Citation validity checks IDs, not factual support.", "Two cases did not hit their annotated sources."]
+}

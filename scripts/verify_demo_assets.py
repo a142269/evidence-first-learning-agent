@@ -163,7 +163,8 @@ def check_cov_demo_service_all_axes() -> dict[str, Any]:
 def check_http_routes_registered() -> dict[str, Any]:
     from backend.app.main import app
 
-    paths = {r.path for r in app.routes if hasattr(r, "path")}
+    # OpenAPI expands included routers on both old and deferred-router FastAPI versions.
+    paths = set(app.openapi()["paths"])
     required = {
         "/api/v1/chat/with-cov",
         "/api/v1/chat/cov-demo-cases",

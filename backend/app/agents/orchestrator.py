@@ -81,7 +81,7 @@ class AgentTask:
     action: str                  # 具体动作: generate_doc, create_mindmap 等
     input_data: dict             # 输入参数
     priority: int = 0            # 优先级
-    depends_on: List[str] = field(default_factory=list)  # 依赖任务ID
+    depends_on: List[str] = field(default_factory=list)  # 兼容字段；当前调度器不执行依赖关系
 
 
 @dataclass
@@ -530,11 +530,10 @@ class AgentOrchestrator:
 
     def _plan_tasks(self, intents: List[str], profile: dict) -> List[AgentTask]:
         """
-        任务编排 —— 将意图列表转化为带依赖的任务DAG
+        将意图列表转化为按优先级分组的任务。
 
-        借鉴旧项目模式:
-        - features/ 的依赖计算：先算 common_features → 再算 mode_features
-        - 此处：先算 profile → 再根据结果决定生成哪些资源
+        同一优先级并行，组之间按优先级执行；不解析 depends_on，
+        不提供 DAG 调度、依赖失败传播或依赖结果注入。
         """
         tasks = []
         task_id = 0

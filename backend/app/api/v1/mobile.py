@@ -432,6 +432,14 @@ async def mark_mobile_room_read(
 
 @router.websocket("/ws")
 async def mobile_websocket(websocket: WebSocket) -> None:
+    from backend.app.core.deployment_policy import production_mode
+
+    if production_mode():
+        # HTTP middleware does not run for websocket scopes, and this V1 surface
+        # is not in the production allowlist: fail closed instead of serving the
+        # legacy demo socket in a production deployment.
+        await websocket.close(code=4403, reason="v1_route_unavailable_in_production")
+        return
     await websocket.accept()
     user_id = ""
     try:

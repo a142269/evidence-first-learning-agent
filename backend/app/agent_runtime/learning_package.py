@@ -17,7 +17,7 @@ from backend.app.agent_runtime.learning_graph import EvidenceFirstGraph, Learnin
 from backend.app.agent_runtime.usage_meter import record_model_usage
 
 
-PROMPT_VERSION = "learning-package-v2.4"
+PROMPT_VERSION = "learning-package-v2.8"
 ROLE_CONTRACTS = {
     "Planner": {"input": "authenticated goal, bounded learning context", "output": "LearningPlan",
                 "tools": ("get_learning_profile", "get_recent_mistakes", "get_prerequisites"),
@@ -29,6 +29,71 @@ ROLE_CONTRACTS = {
     "Reviewer": {"input": "plan, artifacts and evidence", "output": "QualityReview",
                  "tools": (), "handoff": "approve or one actionable revision"},
 }
+
+# Fixed, model-visible compactness guidance for a retry after a length-truncated
+# response. It never echoes model output and never relaxes schema validation.
+_TRUNCATION_GUIDANCE = {
+    "LearningPlan": "每个 goal 不超过 120 字，只输出一个 JSON 对象。",
+    "Lesson": "explanation 压缩到 350 字以内，保留 1-5 个 source_ids，只输出一个 JSON 对象。",
+    "Practice": "每题 question 不超过 120 字、answer 不超过 120 字、explanation 不超过 160 字，"
+                "保留三道题且每条 source_ids 非空，只输出一个完整 JSON 对象。",
+    "QualityReview": "issues 最多 5 条且每条不超过 100 字，只输出一个 JSON 对象。",
+}
+
+
+def _json_object_span(text: str) -> tuple[int, int] | None:
+    """Return the span of the first complete top-level JSON object, if any."""
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth, in_string, escaped = 0, False, False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return start, index + 1
+    return None
+
+
+def _extract_json_object(text: str) -> str:
+    """Tolerate a leading Markdown fence or surrounding prose without relaxing validation."""
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        newline = stripped.find("\n")
+        if newline >= 0:
+            stripped = stripped[newline + 1:]
+        if stripped.endswith("```"):
+            stripped = stripped[:-3].strip()
+    span = _json_object_span(stripped)
+    if span is None:
+        return stripped
+    return stripped[span[0]:span[1]]
+
+
+def _looks_truncated(raw: object, finish_reason: object) -> bool:
+    """A incomplete top-level object or an explicit provider length stop is truncation."""
+    if finish_reason == "length":
+        return True
+    if not isinstance(raw, str):
+        return False
+    stripped = raw.strip()
+    if stripped.startswith("```"):
+        newline = stripped.find("\n")
+        if newline >= 0:
+            stripped = stripped[newline + 1:]
+    return "{" in stripped and _json_object_span(stripped) is None
 
 
 class PackageFailure(RuntimeError):
@@ -91,13 +156,62 @@ class Practice(Contract):
 
 
 class QualityReview(Contract):
+    """Reviewer verdict for the whole deliverable.
+
+    ``lesson_approved`` / ``practice_approved`` are optional per-part verdicts
+    used only for an explicit partial delivery.  When omitted they inherit
+    ``approved`` so the historical all-or-nothing contract still holds and a
+    partial delivery can never be inferred from an ambiguous rejection.
+    ``dropped_exercises`` lists 1-based exercise numbers the reviewer rejects;
+    the remaining exercises must still be approved by ``practice_approved``.
+    """
+
     approved: bool = Field(strict=True)
     issues: list[str] = Field(max_length=5)
+    repair_target: Literal["lesson", "exercise", "evidence"] = "lesson"
+    need_more_evidence: bool = Field(default=False, strict=True)
+    suggested_query: str = Field(default="", max_length=500)
+    lesson_approved: bool | None = Field(default=None, strict=True)
+    practice_approved: bool | None = Field(default=None, strict=True)
+    dropped_exercises: list[int] = Field(default_factory=list, max_length=2)
+
+    @property
+    def lesson_ok(self) -> bool:
+        return self.approved if self.lesson_approved is None else self.lesson_approved
+
+    @property
+    def practice_ok(self) -> bool:
+        return self.approved if self.practice_approved is None else self.practice_approved
+
+    @property
+    def explicit_partial(self) -> bool:
+        return (self.lesson_approved is not None or self.practice_approved is not None
+                or bool(self.dropped_exercises))
 
     @model_validator(mode="after")
     def consistent(self):
-        if self.approved == bool(self.issues) or any(not item.strip() or len(item) > 500 for item in self.issues):
-            raise ValueError("approval requires no issues; rejection requires actionable issues")
+        if any(not item.strip() or len(item) > 500 for item in self.issues):
+            raise ValueError("issues require bounded non-empty text")
+        if self.dropped_exercises:
+            numbers = self.dropped_exercises
+            if numbers != sorted(set(numbers)) or any(not 1 <= number <= 3 for number in numbers):
+                raise ValueError("dropped exercises must be unique ascending numbers 1-3")
+        if self.dropped_exercises and not self.practice_ok:
+            raise ValueError("dropped exercises require an approved remaining practice")
+        if self.approved:
+            if self.issues:
+                raise ValueError("approval requires no issues")
+            if not (self.lesson_ok and self.practice_ok):
+                raise ValueError("approval requires both parts approved")
+            if self.need_more_evidence or self.suggested_query:
+                raise ValueError("approved review cannot request additional evidence")
+        else:
+            if self.lesson_ok and self.practice_ok:
+                raise ValueError("a non-approved verdict must withhold a part or drop exercises")
+            if not self.issues and not self.explicit_partial:
+                raise ValueError("rejection requires actionable issues or an explicit part verdict")
+            if (self.need_more_evidence or self.repair_target == "evidence") and not self.suggested_query:
+                raise ValueError("evidence repair requires a search query")
         return self
 
 
@@ -115,6 +229,8 @@ class PackageState(LearningState, total=False):
     profile_context: str
     planning_context: dict[str, Any]
     tool_audit: list[dict[str, Any]]
+    practice_error: str
+    partial_completion: dict[str, Any]
 
 
 class LearningPackageGraph(EvidenceFirstGraph):
@@ -142,7 +258,7 @@ class LearningPackageGraph(EvidenceFirstGraph):
         builder.add_edge("tool", "decide")
         builder.add_edge("tutor", "practice")
         builder.add_edge("practice", "review")
-        builder.add_conditional_edges("review", lambda s: "compose" if s["package_review"]["approved"] else "tutor")
+        builder.add_conditional_edges("review", self._route_package_review)
         builder.add_conditional_edges("compose", self._needs_review)
         builder.add_conditional_edges("approval", self._route_review_decision)
         for name in ("verify", "rejected", "safe_decline"):
@@ -187,7 +303,10 @@ class LearningPackageGraph(EvidenceFirstGraph):
                            "profile": state.get("profile_context", ""), **payload}, ensure_ascii=False)
         messages = [{"role": "system", "content": system}, {"role": "user", "content": data}]
         retryable_schema = schema in {LearningPlan, Lesson, Practice, QualityReview}
-        for attempt in range(2 if retryable_schema else 1):
+        max_attempts = 2 if retryable_schema else 1
+        attempt = 0
+        while attempt < max_attempts:
+            attempt += 1
             budget = dict(state.get("budget", {}))
             calls = budget.get("model_calls", 0) + 1
             chars = budget.get("input_chars", 0) + sum(len(m["content"]) for m in messages)
@@ -199,29 +318,46 @@ class LearningPackageGraph(EvidenceFirstGraph):
                 messages, max_tokens=self.MAX_OUTPUT_TOKENS_PER_CALL)
             if isinstance(response, dict):
                 raw = response["text"]
+                finish_reason = response.get("finish_reason")
             else:
                 raw = response
+                finish_reason = None
                 response = {"text": raw, "usage": None}
             state["budget"] = record_model_usage(state["budget"], response)
             text = ""
             try:
                 if not isinstance(raw, str) or len(raw) > 24000:
                     raise ValueError("invalid response")
-                text = raw.strip()
-                if text.startswith("```json\n") and text.endswith("```"):
-                    text = text[8:-3].strip()
+                text = _extract_json_object(raw)
                 return schema.model_validate_json(text).model_dump()
-            except (ValidationError, ValueError):
-                if attempt == 0 and retryable_schema:
-                    try:
-                        repairable = schema is not LearningPlan or isinstance(json.loads(text), dict)
-                    except (ValueError, TypeError):
-                        repairable = schema is not LearningPlan
-                    if repairable:
-                        messages.append({"role": "user", "content":
-                            f"上一条输出未通过 {schema.__name__} JSON Schema 校验。请仅输出符合该 Schema 的 JSON。"})
-                        continue
-                raise PackageFailure("learning_package_invalid_output") from None
+            except (ValidationError, ValueError) as exc:
+                truncated = _looks_truncated(raw, finish_reason)
+                if retryable_schema and truncated and attempt < 3:
+                    # Length truncation is near-deterministic; allow one extra
+                    # compact retry, still bounded by the overall call budget.
+                    max_attempts = max(max_attempts, 3)
+                if not retryable_schema or attempt >= max_attempts:
+                    raise PackageFailure("learning_package_invalid_output") from None
+                try:
+                    repairable = (truncated or schema is not LearningPlan
+                                  or isinstance(json.loads(text), dict))
+                except (ValueError, TypeError):
+                    repairable = truncated or schema is not LearningPlan
+                if not repairable:
+                    raise PackageFailure("learning_package_invalid_output") from None
+                # Do not copy model-provided values or field names into the retry prompt.
+                if truncated:
+                    guidance = ("上次输出不是完整的 JSON（可能在长度上限处被截断）；"
+                                + _TRUNCATION_GUIDANCE.get(
+                                    schema.__name__, "请精简文本并闭合所有括号与字符串。"))
+                elif isinstance(exc, ValidationError) and any(
+                    error.get("type") == "json_invalid" for error in exc.errors()
+                ):
+                    guidance = "上次输出不是完整的 JSON；请闭合所有括号与字符串，避免多余文本。"
+                else:
+                    guidance = "检查字段类型、长度和必填字段。"
+                messages.append({"role": "user", "content":
+                    f"上一条输出未通过 {schema.__name__} JSON Schema 校验。{guidance}请仅输出符合该 Schema 的 JSON。"})
         raise PackageFailure("learning_package_invalid_output")
 
     async def _planner(self, state):
@@ -335,23 +471,126 @@ class LearningPackageGraph(EvidenceFirstGraph):
     async def _practice(self, state):
         step = self._step(state, "practice")
         dependencies = {key: state["artifacts"][key] for key in step.depends_on}
-        practice = await self._ask(state, "Practice", "基于上游讲解和证据生成三道递进练习，含答案和解析。"
-                                   "source_ids 必须来自证据 chunk_id。",
-                                   {"goal": step.goal, "dependencies": dependencies, "evidence": state["evidence"],
-                                    "review_feedback": state.get("package_review", {}).get("issues", [])}, Practice)
-        for exercise in practice["exercises"]:
-            self._check_sources(exercise["source_ids"], state)
+        try:
+            practice = await self._ask(state, "Practice", "基于上游讲解和证据生成三道递进练习，含答案和解析。"
+                                       "source_ids 必须来自证据 chunk_id。",
+                                       {"goal": step.goal, "dependencies": dependencies, "evidence": state["evidence"],
+                                        "review_feedback": state.get("package_review", {}).get("issues", [])}, Practice)
+            for exercise in practice["exercises"]:
+                self._check_sources(exercise["source_ids"], state)
+        except PackageFailure as exc:
+            # A rejected practice batch must not silently discard a lesson that
+            # may already be deliverable.  Only contract failures of this part
+            # are degradable; budget, tool and safety failures still abort run.
+            if exc.code not in {"learning_package_invalid_output", "learning_package_invalid_citation"}:
+                raise
+            # Drop a superseded practice batch: a failed rework must not leave
+            # previously rejected exercises in state as if they were current.
+            remaining = {key: value for key, value in state.get("artifacts", {}).items()
+                         if key != step.id}
+            return {"practice_error": exc.code, "artifacts": remaining}
         return {"artifacts": {**state["artifacts"], step.id: practice}}
 
     async def _review(self, state):
-        review = await self._ask(state, "Reviewer", "独立检查讲解与题目是否满足用户目标、事实是否受证据支持、"
-                                "答案解析是否正确且题目有递进。通过时 issues 为空，否则给出可执行修改意见。",
-                                {"plan": state["plan"], "artifacts": state["artifacts"],
-                                 "evidence": state["evidence"]}, QualityReview)
+        plan = LearningPlan.model_validate(state["plan"])
+        practice_step = next(step for step in plan.steps if step.role == "practice")
+        practice_missing = practice_step.id not in state.get("artifacts", {})
+        instruction = (
+            "独立检查讲解与题目是否满足用户目标、事实是否受证据支持、答案解析是否正确且题目有递进。"
+            "始终给出分项结论 lesson_approved 与 practice_approved；只有明确标记为可交付的部分才允许交付。"
+            "整包完全通过时 approved=true 且 issues 为空；不通过时给出可执行修改意见，"
+            "repair_target 选择 lesson、exercise 或 evidence；需补检索时填写 suggested_query。"
+            "如果讲解可交付但练习不可交付，可给出部分交付结论：approved=false、lesson_approved=true、"
+            "practice_approved=false。如果只有个别题目错误，可用 dropped_exercises 填写 1-3 的题号"
+            "（最多两道、升序不重复），并令 practice_approved=true 表示其余题目可交付；"
+            "此时 approved 表示余下内容是否全部可交付。"
+        )
+        if practice_missing:
+            instruction += (
+                "本次练习生成不可用：只审核讲解。若讲解可交付，输出 approved=false、"
+                "lesson_approved=true、practice_approved=false，issues 可留空；否则按常规拒绝。"
+            )
+        review = await self._ask(state, "Reviewer", instruction,
+                                 {"plan": state["plan"], "artifacts": state["artifacts"],
+                                  "evidence": state["evidence"], "practice_available": not practice_missing},
+                                 QualityReview)
+        lesson_ok = review["approved"] if review["lesson_approved"] is None else review["lesson_approved"]
+        practice_ok = review["approved"] if review["practice_approved"] is None else review["practice_approved"]
         revisions = state.get("revisions", 0)
-        if not review["approved"] and revisions >= 1:
+        if practice_missing and (review["approved"] or practice_ok or review["dropped_exercises"]):
+            # An artifact that was never produced cannot be reviewed as delivered.
             raise PackageFailure("learning_package_quality_failed")
-        return {"package_review": review, "revisions": revisions + int(not review["approved"])}
+        updates: dict[str, Any] = {"package_review": review, "revisions": revisions}
+        if lesson_ok and practice_ok:
+            # Fully approved deliverable; a non-empty drop list still withholds
+            # the rejected exercises, so the run settles as partially_completed.
+            if review["dropped_exercises"]:
+                updates.update(self._drop_exercises(state, review["dropped_exercises"]))
+            return updates
+        if review["need_more_evidence"] or review["repair_target"] == "evidence":
+            query = review["suggested_query"]
+            if state.get("budget", {}).get("tool_calls", 0) >= self.MAX_TOOL_CALLS or query.casefold() in state.get("searches", []):
+                raise PackageFailure("learning_package_evidence_revision_unavailable")
+            updates["revisions"] = revisions + 1
+            updates["decision"] = {"action": "search_course", "query": query}
+            return updates
+        if not lesson_ok:
+            if revisions >= 1:
+                raise PackageFailure("learning_package_quality_failed")
+            updates["revisions"] = revisions + 1
+            return updates  # one bounded repair, routed by repair_target
+        # The lesson is reviewed as deliverable; the practice part is not.
+        if practice_missing or revisions >= 1:
+            updates.update(self._withhold_practice(state))
+            return updates
+        updates["revisions"] = revisions + 1
+        return updates  # one bounded repair attempt for the practice part
+
+    def _drop_exercises(self, state, dropped):
+        plan = LearningPlan.model_validate(state["plan"])
+        tutor = next(step for step in plan.steps if step.role == "tutor")
+        practice = next(step for step in plan.steps if step.role == "practice")
+        rejected = set(dropped)
+        kept = [exercise for index, exercise in enumerate(state["artifacts"][practice.id]["exercises"], 1)
+                if index not in rejected]
+        return {
+            "artifacts": {tutor.id: state["artifacts"][tutor.id],
+                          practice.id: {"exercises": kept}},
+            "partial_completion": {
+                "status": "partially_completed", "delivered_parts": ["lesson", "practice"],
+                "withheld_parts": [], "withheld_exercise_numbers": list(dropped),
+                "reason": "exercise_not_approved",
+            },
+        }
+
+    def _withhold_practice(self, state):
+        plan = LearningPlan.model_validate(state["plan"])
+        tutor = next(step for step in plan.steps if step.role == "tutor")
+        practice = next(step for step in plan.steps if step.role == "practice")
+        reason = "practice_unavailable" if practice.id not in state.get("artifacts", {}) else "practice_not_approved"
+        return {
+            # Drop the rejected practice artifact from the checkpointed state so
+            # unreviewed exercises are not retained as if they were deliverable.
+            "artifacts": {tutor.id: state["artifacts"][tutor.id]},
+            "partial_completion": {
+                "status": "partially_completed", "delivered_parts": ["lesson"],
+                "withheld_parts": ["practice"], "withheld_exercise_numbers": [],
+                "reason": reason,
+            },
+        }
+
+    @staticmethod
+    def _route_package_review(state):
+        review = state["package_review"]
+        if review["approved"] or state.get("partial_completion"):
+            return "compose"
+        if review.get("need_more_evidence") or review.get("repair_target") == "evidence":
+            return "tool"
+        lesson_ok = review["approved"] if review.get("lesson_approved") is None else review["lesson_approved"]
+        if lesson_ok:
+            # The lesson is already acceptable; only the practice part may be repaired.
+            return "practice"
+        return "practice" if review.get("repair_target") == "exercise" else "tutor"
 
     def _source_evidence(self, source_ids, state):
         self._check_sources(source_ids, state)
@@ -382,22 +621,45 @@ class LearningPackageGraph(EvidenceFirstGraph):
     async def _compose(self, state):
         tutor, practice = LearningPlan.model_validate(state["plan"]).steps
         lesson = self._with_citations(state["artifacts"][tutor.id], state)
+        practice_artifact = state["artifacts"].get(practice.id)
         exercises = [self._with_citations(item, state)
-                     for item in state["artifacts"][practice.id]["exercises"]]
-        text = ["## 学习讲解", lesson["explanation"], self._citation_text(lesson), "## 练习与解析"]
-        for index, exercise in enumerate(exercises, 1):
-            text.append(f"### 第 {index} 题\n{exercise['question']}\n\n答案：{exercise['answer']}\n\n解析：{exercise['explanation']}")
-            text.append(self._citation_text(exercise))
-        return {"answer": "\n\n".join(text), "learning_package": {
+                     for item in practice_artifact["exercises"]] if practice_artifact else []
+        partial = state.get("partial_completion") or {}
+        text = ["## 学习讲解", lesson["explanation"], self._citation_text(lesson)]
+        if exercises:
+            text.append("## 练习与解析")
+            for index, exercise in enumerate(exercises, 1):
+                text.append(f"### 第 {index} 题\n{exercise['question']}\n\n答案：{exercise['answer']}\n\n解析：{exercise['explanation']}")
+                text.append(self._citation_text(exercise))
+        if partial:
+            # Fixed wording only: the withheld part is described by status, never
+            # by unreviewed model text.
+            if "practice" in partial.get("withheld_parts", []):
+                text.append("> 说明：本次仅交付已通过内容审核的讲解；练习题未通过内容检查，未随本次结果交付。")
+            elif partial.get("withheld_exercise_numbers"):
+                numbers = "、".join(str(number) for number in partial["withheld_exercise_numbers"])
+                text.append(f"> 说明：本次仅交付已通过内容审核的讲解与其余练习；原第 {numbers} 题未通过内容检查，未交付。")
+        review_out = state["package_review"]
+        if partial:
+            # Reviewer issue/query text may quote the withheld artifacts; keep it
+            # in the internal review state for audit, never in the delivered package.
+            review_out = {**review_out, "issues": [], "suggested_query": "",
+                          "withheld_issue_count": len(review_out.get("issues", [])),
+                          "withheld_suggested_query": bool(review_out.get("suggested_query"))}
+        package = {
             "plan": state["plan"], "lesson": lesson, "exercises": exercises,
-            "review": state["package_review"], "revisions": state.get("revisions", 0),
-        }}
+            "review": review_out, "revisions": state.get("revisions", 0),
+        }
+        if partial:
+            package["partial_completion"] = partial
+        return {"answer": "\n\n".join(text), "learning_package": package}
 
     def _approval(self, state, config):
         updates = super()._approval({**state, "evidence": self._used_evidence(state)}, config)
         # A human-edited answer replaces the rendered package, not its old copy.
         if "answer" in updates or updates["review_status"] == "rejected":
             updates["learning_package"] = {}
+            updates["partial_completion"] = {}
         return updates
 
     async def _verify(self, state):
@@ -405,4 +667,10 @@ class LearningPackageGraph(EvidenceFirstGraph):
         result = await super()._verify({**state, "evidence": self._used_evidence(state)})
         result["quality"]["reviewer_passed"] = bool(state.get("learning_package") and state.get("package_review", {}).get("approved"))
         result["quality"]["human_edited"] = not bool(state.get("learning_package"))
+        partial = state.get("partial_completion") or {}
+        if partial:
+            # Mark the delivery so reviewers/clients cannot mistake it for a
+            # complete plan pass, even when the delivered part is approved.
+            result["quality"]["partial_completion"] = True
+            result["quality"]["delivered_parts"] = list(partial.get("delivered_parts", []))
         return result

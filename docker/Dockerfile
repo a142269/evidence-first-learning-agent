@@ -1,9 +1,8 @@
 FROM python:3.12-slim
 
-# 系统依赖（curl 健康检查 / ffmpeg 视频合成 / 中文字体渲染）
+# 系统依赖（ffmpeg 视频合成 / 中文字体渲染）
 RUN sed -i 's|deb.debian.org|mirrors.cloud.tencent.com|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get -o Acquire::Retries=3 update && apt-get install -y --no-install-recommends \
-    curl \
     ffmpeg \
     fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
@@ -36,6 +35,6 @@ ENV A3_OFFLINE_DEMO=1 \
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -fsS http://localhost:8000/api/v1/system/status || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)" || exit 1
 
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -28,7 +28,8 @@ const labels: Record<string, string> = {
 };
 const states: Record<string, string> = {
   idle: "准备开始", running: "正在生成", awaiting_approval: "等待教师审核", reviewing: "正在审核",
-  completed: "已完成", rejected: "未通过", failed: "执行失败", disconnected: "连接已断开", interrupted: "执行已中断",
+  completed: "已完成", partially_completed: "部分完成（仅交付已审核内容）", rejected: "未通过",
+  failed: "执行失败", disconnected: "连接已断开", interrupted: "执行已中断",
 };
 const errors: Record<string, string> = {
   authorization_required: "请先使用真实账号登录。", invalid_token: "登录已失效，请重新登录。",
@@ -73,6 +74,17 @@ const costLabel = computed(() => {
   if (cost?.status === "estimated") return `模型费用估算 ¥${cost.amount_cny}`;
   return `模型费用未知；已记录 ${budget.actual_input_tokens || 0} 输入 / ${budget.actual_output_tokens || 0} 输出 token，${budget.usage_unknown_calls || 0} 次调用未返回用量`;
 });
+
+// Server-provided delivery metadata only; withheld item text is never rendered.
+function deliveredPartsLabel(partial: Record<string, any> | undefined): string {
+  if (!partial) return "已审核内容";
+  if (partial.withheld_exercise_numbers?.length) {
+    return `讲解与其余练习（原第 ${partial.withheld_exercise_numbers.join("、")} 题未交付）`;
+  }
+  if ((partial.withheld_parts || []).includes("practice")) return "仅讲解（练习未交付）";
+  if ((partial.withheld_parts || []).length) return "仅讲解（部分内容未交付）";
+  return "已审核内容";
+}
 
 function handleEvent(event: LearningEvent) {
   if (event.name === "run.started") {
@@ -229,6 +241,9 @@ onBeforeUnmount(() => controller?.abort());
     <section v-if="result.approval && teacher" class="panel">
       <h2>教师审核</h2>
       <p v-if="result.approval.message">学习目标：{{ result.approval.message }}</p>
+      <p v-if="result.approval.partial_completion" class="partial" role="status">
+        本次仅对可交付部分发起审核：{{ deliveredPartsLabel(result.approval.partial_completion) }}。审核通过不代表未交付内容已经验证。
+      </p>
       <pre>{{ result.approval.draft_answer }}</pre>
       <ul><li v-for="citation in result.approval.citations" :key="citation.chunk_id">{{ citation.source }}（{{ citation.chunk_id }}）</li></ul>
       <label for="review-edit">替换答案（可选）</label>
@@ -236,7 +251,10 @@ onBeforeUnmount(() => controller?.abort());
       <div class="actions"><button :disabled="busy || status !== 'awaiting_approval'" @click="execute(true)">{{ reviewEdit.trim() ? '替换并交付' : '通过并交付' }}</button><button class="secondary" :disabled="busy || status !== 'awaiting_approval'" @click="execute(false)">不予通过</button></div>
     </section>
     <section v-if="result.answer" class="panel result">
-      <h2>{{ status === 'completed' ? '学习内容' : '处理结果' }}</h2>
+      <h2>{{ ['completed', 'partially_completed'].includes(status) ? '学习内容' : '处理结果' }}</h2>
+      <p v-if="result.partial_completion" class="partial" role="status">
+        本次为部分交付：{{ deliveredPartsLabel(result.partial_completion) }}。未交付内容未通过内容检查，不会因为部分交付而被视为已验证。
+      </p>
       <p v-if="result.memory_run_ids?.length" class="muted">已参考本会话 {{ result.memory_run_ids.length }} 次历史回答。</p>
       <template v-if="result.learning_package">
         <h3>学习安排</h3>
@@ -269,6 +287,7 @@ button.secondary { background: #fff; color: #246a60; } button:disabled { opacity
 .muted, .run-id { color: #63737e; font-size: 13px; } .run-id { overflow-wrap: anywhere; }
 .citations { color: #52656d; font-size: 13px; overflow-wrap: anywhere; } .citations p { margin-bottom: 4px; }
 .error { color: #a63030; line-height: 1.6; } li { margin: 8px 0; line-height: 1.6; }
+.partial { background: #fff8e6; border: 1px solid #e6c56a; border-radius: 8px; padding: 10px 12px; color: #7a5a12; line-height: 1.7; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.8; } article { padding: 12px 0; border-bottom: 1px solid #e4eaed; }
 summary { cursor: pointer; color: #246a60; } p { line-height: 1.7; }
 :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid #69a5da; outline-offset: 3px; }

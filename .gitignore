@@ -11,8 +11,10 @@ venv/
 
 # Environment
 .env
-.env.local
-.env.enterprise
+.env.*
+!.env.example
+!.env.enterprise.example
+!.env.production.example
 
 # IDE
 .vscode/
@@ -59,9 +61,8 @@ coverage.xml
 # Locally generated learning artifacts and teacher uploads.  Curated demo
 # assets that are already tracked remain versioned; new runtime output stays
 # local so it cannot accidentally be included in a release or WIP commit.
-data/artifacts/evaluation_report/
-data/artifacts/mermaid_png/
-data/artifacts/quiz/
+data/artifacts/
+data/benchmarks/
 data/rag/
 data/teacher_uploads/
 data/ingest_staging/

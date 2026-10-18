@@ -141,6 +141,9 @@ class ASTSecurityAnalyzer:
         if not code.strip():
             return False, "代码为空", warnings
 
+        if "\x00" in code:
+            return False, "代码包含非法字节 (NUL)", warnings
+
         # 1. 语法检查
         try:
             tree = ast.parse(code)

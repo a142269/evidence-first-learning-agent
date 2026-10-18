@@ -28,7 +28,14 @@ async def initialize_checkpointer() -> bool:
 
         context = AsyncPostgresSaver.from_conn_string(_postgres_uri(database_url))
         checkpointer = await context.__aenter__()
-        await checkpointer.setup()
+        try:
+            await checkpointer.setup()
+        except BaseException:
+            try:
+                await context.__aexit__(None, None, None)
+            except Exception as cleanup_error:
+                LOGGER.warning("Failed to close unsuccessful checkpointer (%s)", type(cleanup_error).__name__)
+            raise
         _context = context
         _checkpointer = checkpointer
         LOGGER.info("LangGraph PostgreSQL checkpointer initialized")

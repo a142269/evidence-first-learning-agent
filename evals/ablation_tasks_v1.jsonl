@@ -1,0 +1,24 @@
+{"id":"ab-001","split":"dev","question":"解释人工智能的主要目标和常见应用，并设计三道由浅入深的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/00_ai_overview.md"]}
+{"id":"ab-002","split":"dev","question":"比较监督学习与无监督学习，给出三道应用场景判断题及解析。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/01_ml_fundamentals.md"]}
+{"id":"ab-003","split":"dev","question":"讲解训练集、验证集和测试集的作用，并设计三道递进练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/01_ml_fundamentals.md"]}
+{"id":"ab-004","split":"dev","question":"说明神经网络中的神经元、权重和激活函数，附三道递进练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/03_neural_network_basics.md"]}
+{"id":"ab-005","split":"dev","question":"解释梯度下降的基本思路与学习率作用，设计三道有答案的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/02_math_foundations.md"]}
+{"id":"ab-006","split":"dev","question":"讲解卷积神经网络中卷积和池化的作用，并提供三道递进练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/04_cnn_and_vision.md"]}
+{"id":"ab-007","split":"dev","question":"讲解 Transformer 的注意力机制与序列表示，附三道由浅入深的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/05_transformer_and_llm.md"]}
+{"id":"ab-008","split":"dev","question":"解释 RAG 的检索与生成阶段以及引用用途，附三道练习和解析。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/09_rag.md"]}
+{"id":"ab-009","split":"dev","question":"说明强化学习中智能体、环境、动作和奖励的关系，附三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/07_reinforcement_learning.md"]}
+{"id":"ab-010","split":"dev","question":"介绍 AI Agent 的感知、规划和执行，提供三道递进练习及答案。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/10_ai_agent.md"]}
+{"id":"ab-011","split":"dev","question":"介绍决策树如何进行分类并说明过拟合风险，附三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/15_decision_trees_ensemble.md"]}
+{"id":"ab-012","split":"dev","question":"讲解循环神经网络处理序列的基本方式，提供三道递进练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/18_rnn_and_lstm.md"]}
+{"id":"ab-013","split":"holdout","question":"说明人工智能系统的能力边界，设计三道识别适用场景的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/00_ai_overview.md"]}
+{"id":"ab-014","split":"holdout","question":"比较分类任务和回归任务，并用三道题训练应用场景选择。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/13_supervised_learning.md"]}
+{"id":"ab-015","split":"holdout","question":"解释聚类的目标以及它与有标签分类的区别，设计三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/14_unsupervised_learning.md"]}
+{"id":"ab-016","split":"holdout","question":"解释反向传播与参数更新的关系，并设计三道循序渐进的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/17_backpropagation.md"]}
+{"id":"ab-017","split":"holdout","question":"解释卷积核如何提取图像特征，并给出三道有解析的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/04_cnn_and_vision.md"]}
+{"id":"ab-018","split":"holdout","question":"解释大语言模型中的上下文和注意力，提供三道由理解到应用的练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/05_transformer_and_llm.md"]}
+{"id":"ab-019","split":"holdout","question":"讲解检索增强生成中的来源引用与事实核查关系，并设计三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/09_rag.md"]}
+{"id":"ab-020","split":"holdout","question":"比较强化学习中的奖励与监督学习中的标签，并设计三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/07_reinforcement_learning.md","artificial_intelligence/chapters/13_supervised_learning.md"]}
+{"id":"ab-021","split":"holdout","question":"解释多 Agent 协作的角色分工与协调问题，设计三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/06_multi_agent_systems.md"]}
+{"id":"ab-022","split":"holdout","question":"说明支持向量机的分类间隔概念，并提供三道递进练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/16_svm.md"]}
+{"id":"ab-023","split":"holdout","question":"解释 RNN 与 LSTM 在处理长期依赖时的区别，设计三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/18_rnn_and_lstm.md"]}
+{"id":"ab-024","split":"holdout","question":"解释多模态模型如何处理不同类型的信息，并附三道练习。","course_id":"artificial_intelligence","expected_sources":["artificial_intelligence/chapters/08_multimodal_llm.md"]}

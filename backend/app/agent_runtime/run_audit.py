@@ -147,11 +147,15 @@ def finish_run(*, run_id: str, status: str, result: dict[str, Any], started_at: 
         if record is None:
             raise RunPersistenceError("run_not_found")
         output = result.get("result", {})
-        values = dict(status=status, duration_ms=duration_ms, success_count=int(status == "completed"),
+        package = output.get("learning_package") or {}
+        values = dict(status=status, duration_ms=duration_ms,
+                      # Only a full delivery counts as success; partially_completed
+                      # is recorded as its own status and kept out of this counter.
+                      success_count=int(status == "completed"),
                       lease_expires_at=None,
                       metadata_data={**(record.metadata_data or {}), **result},
                       tool_calls=int(output.get("budget", {}).get("tool_calls", 0)),
-                      artifact_count=2 if output.get("learning_package") else 0)
+                      artifact_count=int(bool(package.get("lesson"))) + int(bool(package.get("exercises"))))
         if expected_status is None:
             for key, value in values.items():
                 setattr(record, key, value)
@@ -170,7 +174,8 @@ def finish_run(*, run_id: str, status: str, result: dict[str, Any], started_at: 
             ))
 
         sequence = _next_event_sequence(session, run_id)
-        terminal_event = {"completed": "run.completed", "awaiting_approval": "review.required",
+        terminal_event = {"completed": "run.completed", "partially_completed": "run.completed",
+                          "awaiting_approval": "review.required",
                           "failed": "run.failed", "interrupted": "run.interrupted",
                           "rejected": "run.completed"}.get(status, "run.status_changed")
         session.add(AgentCheckpointRecord(

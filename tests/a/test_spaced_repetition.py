@@ -49,11 +49,7 @@ def isolated_algorithm_state(tmp_path, monkeypatch):
 class TestSpacedRepetitionEndpoints:
     def test_endpoint_registered(self):
         """5 个端点都已注册"""
-        routes = {
-            r.path
-            for r in app.routes
-            if hasattr(r, "path") and "/spaced-repetition" in r.path
-        }
+        routes = set(app.openapi()["paths"])
         for expected in (
             "/api/v1/spaced-repetition/daily/{user_id}",
             "/api/v1/spaced-repetition/review",

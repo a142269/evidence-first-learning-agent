@@ -1,6 +1,6 @@
 # A3 个性化学习多智能体系统 - Python 依赖
-# Python >= 3.10
-# 安装: pip install -r requirements.txt --break-system-packages
+# Python 3.12
+# 安装: python -m pip install -r requirements.txt
 
 # --- Web 框架 ---
 fastapi>=0.110.0

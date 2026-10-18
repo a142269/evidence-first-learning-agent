@@ -1,18 +1,18 @@
 [tool.poetry]
-name = "a3-learning-agent-system"
+name = "evidence-first-learning-agent"
 version = "0.1.0"
-description = "Multi-Agent System for Personalized Learning Resource Generation"
-authors = ["Your Name <you@example.com>"]
+description = "Evidence-first multi-agent platform for personalized learning"
+license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-fastapi = "^0.104.0"
-uvicorn = "^0.23.2"
-pydantic = "^2.4.2"
-pydantic-settings = "^2.0.3"
+python = "^3.12"
+fastapi = ">=0.110.0"
+uvicorn = ">=0.29.0"
+pydantic = ">=2.6.0"
+pydantic-settings = ">=2.1.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-python-multipart = "^0.0.6"
+python-multipart = ">=0.0.9"
 requests = "^2.31.0"
 alembic = "^1.18.4"
 python-pptx = "^0.6.0"
@@ -32,7 +32,7 @@ build-backend = "poetry.core.masonry.api"
 # Ruff — Lint + Format（Phase 0 质量门禁 #1）
 # ================================================================
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 100
 extend-exclude = [
     "frontend/",

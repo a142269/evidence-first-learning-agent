@@ -132,9 +132,14 @@ def test_mermaid_renderer_does_not_reuse_unverified_legacy_error_png(tmp_path, m
 
 
 def test_media_content_client_forces_xunfei_spark(monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+    from backend.app.core import config as config_module
     from backend.app.core.llm_client import create_xunfei_spark_client
 
     monkeypatch.delenv("A3_OFFLINE_DEMO", raising=False)
+    fake = replace(config_module.get_config().llm, spark_app_id="test-app", spark_api_key="test-key", spark_api_secret="test-secret")
+    monkeypatch.setattr(config_module, "get_config", lambda: SimpleNamespace(llm=fake))
     client = create_xunfei_spark_client()
 
     assert client.config.provider == "spark"

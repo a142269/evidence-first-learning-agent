@@ -236,9 +236,11 @@ class LLMClient:
             )
             response.raise_for_status()
             data = response.json()
-            text = data["choices"][0]["message"]["content"]
+            choice = data["choices"][0]
+            text = choice["message"]["content"]
             if not isinstance(text, str) or not text.strip():
                 raise ValueError("empty_model_response")
+            finish_reason = choice.get("finish_reason")
             raw_usage = data.get("usage")
             usage = None
             if isinstance(raw_usage, dict):
@@ -248,7 +250,8 @@ class LLMClient:
                         and input_tokens >= 0 and output_tokens >= 0):
                     usage = {"input_tokens": input_tokens, "output_tokens": output_tokens}
             return {"text": text, "model": str(data.get("model") or payload["model"]),
-                    "usage": usage}
+                    "usage": usage,
+                    "finish_reason": finish_reason if isinstance(finish_reason, str) else None}
 
         try:
             return await asyncio.to_thread(request)

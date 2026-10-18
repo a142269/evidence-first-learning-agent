@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import threading
 import uuid
 
 import pytest
@@ -118,7 +119,11 @@ def test_expired_review_claim_cannot_restore_checkpoint_from_previous_execution(
 def test_heartbeat_failure_cancels_graph_and_prevents_success(api, monkeypatch):
     client, factory = api
     stopped = []
+    # Only fail the lease after the Graph has actually entered generation;
+    # otherwise this races a slow thread-pool retrieval and is flaky.
+    generating = threading.Event()
     async def generate(*_args):
+        generating.set()
         try:
             await asyncio.sleep(3)
             return "should not deliver"
@@ -129,6 +134,7 @@ def test_heartbeat_failure_cancels_graph_and_prevents_success(api, monkeypatch):
     def renew(run_id, token):
         calls.append(run_id)
         if len(calls) > 1:
+            assert generating.wait(5), "graph never started generating"
             expire_clock(factory, run_id)
         original(run_id, token)
     monkeypatch.setattr(run_leases, "renew", renew)

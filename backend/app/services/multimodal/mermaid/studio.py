@@ -165,6 +165,13 @@ class MermaidStudio:
     def _validate_and_render(
         self, code: str, *, kind: str, name_hint: str, start: float,
     ) -> MermaidResult:
+        # Bound work before invoking validators or browser renderers.
+        if len(code) > 20000 or code.count("\n") > 300:
+            return MermaidResult(
+                kind=kind, mermaid_code=code, validation_passed=False,
+                error="Mermaid source exceeds size limits", method="validation_failed",
+                duration_ms=(time.perf_counter() - start) * 1000,
+            )
         # 1) Validate
         report = self.validator.validate(code)
         validation_passed = report.passed()

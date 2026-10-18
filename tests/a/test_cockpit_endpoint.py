@@ -200,6 +200,6 @@ class TestEndToEnd:
 # 6. router 已注册
 # ================================================================
 def test_cockpit_router_registered(app_client: TestClient) -> None:
-    routes = {getattr(r, "path", "") for r in app_client.app.routes}
+    routes = set(app_client.app.openapi()["paths"])
     cockpit_routes = [p for p in routes if "/cockpit/" in p]
     assert cockpit_routes, "cockpit router not registered"

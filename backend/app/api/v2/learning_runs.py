@@ -190,7 +190,7 @@ async def stream_learning_run(http_request: Request, request: LearningRunRequest
             yield event("run.started", {"run_id": record.run_id,
                                         "session_id": record.request.session_id,
                                         "idempotent_replay": True})
-            if record.status in {"completed", "rejected"}:
+            if record.status in {"completed", "partially_completed", "rejected"}:
                 yield event("run.completed", {"run_id": record.run_id, "status": record.status,
                                               **record.result})
             elif record.status == "awaiting_approval":

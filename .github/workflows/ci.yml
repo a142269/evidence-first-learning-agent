@@ -12,6 +12,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  frontend:
+    name: Frontend typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
   dependency-security:
     name: Dependency vulnerability scan
     runs-on: ubuntu-latest
@@ -97,6 +114,16 @@ jobs:
           python -m alembic upgrade head
           python -m alembic downgrade base
 
+      # Parse every shipped Compose recipe (no daemon needed). Templates are
+      # copied to their documented names because env_file requires them.
+      - name: Validate Compose configurations
+        run: |
+          cp .env.example .env
+          cp .env.enterprise.example .env.enterprise
+          docker compose -f docker-compose.yml config > /dev/null
+          docker compose --env-file .env.enterprise -f docker-compose.yml -f docker-compose.enterprise.yml config > /dev/null
+          docker compose --env-file .env.production.example -f docker-compose.production.yml config > /dev/null
+
       - name: Pytest (portable V2 contract suite)
         env:
           DATABASE_URL: "sqlite:///./build/ci_tests.db"
@@ -105,6 +132,9 @@ jobs:
           python -c "from backend.app.core.database import init_db; init_db()"
           pytest \
             tests/a/test_v1_production_access.py \
+            tests/a/test_static_and_ws_safety.py \
+            tests/a/test_startup_log_redaction.py \
+            tests/a/test_checkpoint_lifecycle.py \
             tests/a/test_v2_access.py \
             tests/a/test_v2_auth_throttle.py \
             tests/a/test_v2_eval_cost_guard.py \
@@ -113,7 +143,17 @@ jobs:
             tests/a/test_v2_model_usage.py \
             tests/a/test_learning_graph_safety.py \
             tests/a/test_learning_package.py \
+            tests/a/test_learning_package_retry_guidance.py \
+            tests/a/test_learning_package_partial.py \
+            tests/a/test_structured_output_robustness.py \
             tests/a/test_learning_package_evaluator.py \
+            tests/a/test_claim_support.py \
+            tests/a/test_ablation_dataset.py \
+            tests/a/test_ablation_report.py \
+            tests/a/test_ablation_runner.py \
+            tests/a/test_ablation_collect.py \
+            tests/a/test_ablation_review_packets.py \
+            tests/a/test_campus_assets.py \
             tests/a/test_learning_package_collection.py \
             tests/a/test_learning_run_reconciliation.py \
             tests/a/test_learning_runs_v2.py \
@@ -129,6 +169,15 @@ jobs:
             tests/a/test_auth_restart.py \
             tests/a/test_deployment_policy.py \
             --no-cov --benchmark-disable -q
+
+      - name: Core learning package coverage gate
+        env:
+          DATABASE_URL: "sqlite:///./build/ci_tests.db"
+          A3_OFFLINE_DEMO: "true"
+        run: |
+          pytest -o addopts= tests/a/test_learning_package.py tests/a/test_learning_package_partial.py tests/a/test_structured_output_robustness.py tests/a/test_learning_package_collection.py tests/a/test_claim_support.py \
+            --benchmark-disable --cov=backend.app.agent_runtime.learning_package \
+            --cov=backend.app.evaluation.claim_support --cov-report=term --cov-fail-under=80 -q
 
       # 6/24 新增：性能压测（CI 模式只跑 5 并发 × 30 请求，避免占资源）
       - name: Load test smoke (light)
@@ -216,12 +265,16 @@ jobs:
             tests/a/test_v2_auth_throttle.py \
             tests/a/test_postgres_api_recovery.py \
             tests/a/test_learning_package.py \
+            tests/a/test_learning_package_partial.py \
+            tests/a/test_structured_output_robustness.py \
             tests/a/test_learning_package_evaluator.py \
             tests/a/test_learning_package_collection.py \
             tests/a/test_conversation_memory_v2.py \
             tests/a/test_learning_checkpoint_postgres.py \
+            tests/a/test_learning_package_partial_postgres.py \
             tests/a/test_deployment_policy.py \
             tests/a/test_v1_production_access.py \
+            tests/a/test_static_and_ws_safety.py \
             tests/a/test_enterprise_retriever.py \
             tests/a/test_knowledge_ingest_enterprise.py \
             tests/a/test_v2_unfinished_resume.py \

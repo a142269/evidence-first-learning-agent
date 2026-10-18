@@ -1,0 +1,69 @@
+{
+  "case_count": 24,
+  "configuration": [
+    "deepseek-flash",
+    "6e0273073d8bc3cf49e043b1529bae856d6e9016a011f44bc0d4266ac8860833",
+    8192,
+    null
+  ],
+  "arms": {
+    "single": {
+      "run_count": 24,
+      "case_count": 24,
+      "task_success_rate": 0.9583333333333334,
+      "quality_pass_rate": null,
+      "human_reviewed_completed": 0,
+      "mean_model_calls": 1.0,
+      "mean_cost_cny": null,
+      "mean_invalid_tool_calls": null,
+      "p50_latency_ms": 5803.275,
+      "p95_latency_ms": 7197.86,
+      "reviewer_revision_success_rate": null,
+      "facts_supported_rate": null,
+      "exercise_answers_correct_rate": null,
+      "goal_covered_rate": null,
+      "difficulty_progression_rate": null,
+      "profile_fit_rate": null
+    },
+    "without_reviewer": {
+      "run_count": 24,
+      "case_count": 24,
+      "task_success_rate": 0.5416666666666666,
+      "quality_pass_rate": null,
+      "human_reviewed_completed": 0,
+      "mean_model_calls": 3.5833333333333335,
+      "mean_cost_cny": null,
+      "mean_invalid_tool_calls": null,
+      "p50_latency_ms": 15912.39,
+      "p95_latency_ms": 24540.31,
+      "reviewer_revision_success_rate": null,
+      "facts_supported_rate": null,
+      "exercise_answers_correct_rate": null,
+      "goal_covered_rate": null,
+      "difficulty_progression_rate": null,
+      "profile_fit_rate": null
+    },
+    "full": {
+      "run_count": 24,
+      "case_count": 24,
+      "task_success_rate": 0.5416666666666666,
+      "quality_pass_rate": null,
+      "human_reviewed_completed": 0,
+      "mean_model_calls": 4.958333333333333,
+      "mean_cost_cny": null,
+      "mean_invalid_tool_calls": null,
+      "p50_latency_ms": 21411.525,
+      "p95_latency_ms": 35351.53,
+      "reviewer_revision_success_rate": 0.16666666666666666,
+      "reviewer_rejected_count": 6,
+      "facts_supported_rate": null,
+      "exercise_answers_correct_rate": null,
+      "goal_covered_rate": null,
+      "difficulty_progression_rate": null,
+      "profile_fit_rate": null
+    }
+  },
+  "quality_denominator": "all cases; failed runs count as failures",
+  "split": "all",
+  "evaluation_mode": "offline_record_summary"
+}

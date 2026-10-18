@@ -40,6 +40,7 @@ class LearningState(TypedDict, total=False):
     history: list[dict[str, str]]
     memory_run_ids: list[str]
     budget: dict[str, Any]
+    partial_completion: dict[str, Any]
 
 
 class EvidenceFirstGraph:
@@ -273,6 +274,9 @@ class EvidenceFirstGraph:
                 "draft_answer": state.get("answer", ""),
                 "citations": citations,
             }
+        if state.get("partial_completion"):
+            # Teachers must see that only reviewed parts are under review.
+            payload["partial_completion"] = state["partial_completion"]
         # Explicit injection also supports local Python 3.10; the framework
         # automatically propagates this context on Python 3.11+.
         with set_config_context(config) as context:

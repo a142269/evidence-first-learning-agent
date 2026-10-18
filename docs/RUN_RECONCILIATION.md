@@ -15,6 +15,7 @@ Authorization: Bearer <教师登录令牌>
 | --- | --- |
 | Run 为 `failed` / `interrupted`，检查点停在有效的人审中断 | 修复为 `awaiting_approval`；学生仍看不到草稿和引用 |
 | Run 为 `failed` / `interrupted`，检查点已正常结束 | 修复为 `completed` 或 `rejected`；沿用已保存的审核决定 |
+| Run 为 `failed` / `interrupted`，检查点已正常结束且只交付了已审核部分 | 修复为 `partially_completed`；沿用 `partial_completion`，未交付内容不会恢复，也不会被升级为 `completed` |
 | Run 为 `running` / `reviewing` 且租约已过期 | 原子标记 interrupted，再检查稳定检查点，不重新执行节点 |
 | Run 为 `running` / `reviewing` 且租约有效，或其他不可修复状态 | 409 `run_not_reconcilable`，不抢占执行权 |
 | 检查点缺失、节点报错、仍有非审核节点待执行 | 409 `checkpoint_not_settled`，不重放任务 |
@@ -25,7 +26,7 @@ Authorization: Bearer <教师登录令牌>
 
 身份与课程权限复用现有授权逻辑，仅 teacher/admin 可操作。普通学生即使拥有该任务也不能修复。生产模式按账号查询课程授权；开发模式可保留环境变量白名单，见 [登录与课程授权](AUTH_AND_COURSE_ACCESS.md)。
 
-修复只读取检查点，不执行 Graph 节点，不再次调用模型、检索或工具。学习包通过审核时保留分项引用；人工替换学习包答案时清除旧结构化内容与引用；拒绝时不交付待审内容。要求人审的任务不会因为修复绕过审核。
+修复只读取检查点，不执行 Graph 节点，不再次调用模型、检索或工具。学习包通过审核时保留分项引用；人工替换学习包答案时清除旧结构化内容与引用；拒绝时不交付待审内容。要求人审的任务不会因为修复绕过审核。部分成功任务沿用 `partial_completion`，只恢复已审核并已交付的内容；未交付的练习或题目文本不保留在稳定状态中，也不会被补造。修复后的 `partially_completed` 只表示“已交付部分经过审核”，不表示未交付内容已被验证，也不等于完整 `completed`。
 
 Run 状态更新使用带原状态条件的 SQL 更新，和 `run.reconciled` 审计记录在同一事务提交；并发请求只有一次能够成功。查询事件接口可看到修复事件，但仍按既有白名单过滤事件数据。修复期间不重新写入检索日志，原检索日志若已丢失，不会据此补造。
 
@@ -41,6 +42,8 @@ python -m ruff check backend/app/agent_runtime/learning_graph.py backend/app/age
 ```
 
 本机 Python 和离线依赖路径见实施记录；结果位于 `output/reconcile-20261013/pytest-final.xml`，不提交。测试使用 SQLite、内存 Checkpointer 与模拟模型，Ruff F/E9 通过。CI 已加入新测试，未执行远端 CI。本批无前端改动，没有重新构建。
+
+2026-10-18 新增 `partially_completed` 交付链路的修复回归：结果写入失败后由教师修复为部分完成、部分结果不能升级为完整完成、待审部分结果仍保持草稿隔离、未交付题目文本不进入持久化状态。测试位于 `tests/a/test_learning_package_partial.py`，本地结果与运行命令见 [优化状态（2026-10-18）](OPTIMIZATION_STATUS_2026-10-18.md)。
 
 ## 执行租约与真实 PostgreSQL 验证（2026-10-13/14）
 

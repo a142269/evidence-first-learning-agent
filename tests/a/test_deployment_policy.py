@@ -25,7 +25,14 @@ def test_complete_production_config_passes():
 
 
 @pytest.mark.parametrize("change", [{"A3_CORS_ORIGINS": "*"}, {"V2_AUTH_REQUIRED": "false"},
-    {"A3_OFFLINE_DEMO": "1"}, {"OPENAI_API_KEY": ""}, {"DATABASE_URL": "postgresql://u:123456@db/app"}])
+    {"A3_OFFLINE_DEMO": "1"}, {"OPENAI_API_KEY": ""},
+    {"OPENAI_API_KEY": "REPLACE_WITH_MODEL_KEY"},
+    {"A3_CORS_ORIGINS": "http://app.test"},
+    {"A3_CORS_ORIGINS": "https://REPLACE_WITH_YOUR_HTTPS_DOMAIN"},
+    {"DATABASE_URL": "postgresql://u:123456@db/app"},
+    {"DATABASE_URL": "postgresql://u:short@db/app"},
+    {"DATABASE_URL": "postgresql://u:REPLACE_WITH_STRONG_PASSWORD@db/app"},
+    {"DATABASE_URL": "postgresql://u:change-me-local@db/app"}])
 def test_insecure_production_config_is_rejected(change):
     with pytest.raises(RuntimeError):
         validate_deployment({**valid(), **change})
@@ -37,6 +44,24 @@ def test_production_disables_implicit_demo_accounts(monkeypatch):
     monkeypatch.setattr(auth, "_load_persisted_account", lambda *_: None)
     monkeypatch.setattr(auth, "_REGISTERED_ACCOUNTS", {})
     assert auth._find_account(auth.DEFAULT_ACCOUNTS["student"].account) is None
+
+
+def test_production_env_template_fails_closed_until_filled():
+    """The shipped production template must not pass validation with placeholders."""
+    from pathlib import Path
+    from dotenv import dotenv_values
+
+    template = Path(__file__).resolve().parents[2] / ".env.production.example"
+    values = {key: value for key, value in dotenv_values(template).items() if value is not None}
+    database_url = (f"postgresql://{values['POSTGRES_USER']}:{values['POSTGRES_PASSWORD']}"
+                    f"@postgres:5432/{values['POSTGRES_DB']}")
+    env = {**values, "APP_ENV": "production", "A3_OFFLINE_DEMO": "0",
+           "V2_AUTH_REQUIRED": "true", "DATABASE_URL": database_url}
+    with pytest.raises(RuntimeError) as exc:
+        validate_deployment(env)
+    message = str(exc.value)
+    assert "DATABASE_URL" in message and "OPENAI_API_KEY" in message
+    assert "REPLACE_WITH" not in message
 
 
 @pytest.mark.asyncio
