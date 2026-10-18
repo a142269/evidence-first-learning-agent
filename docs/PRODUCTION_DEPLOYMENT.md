@@ -61,12 +61,13 @@ docker compose --env-file .env.production -f docker-compose.production.yml \
 
 ## 6. 验证清单
 
-- [ ] `docker compose ... config` 退出码 0，且输出里没有占位凭据。
-- [ ] 后端容器 `/healthz` 返回 200；`docker compose ps` 全部 healthy。
-- [ ] `GET /docs` 与 `/openapi.json` 返回 404；匿名 `GET /metrics` 返回 401。
-- [ ] 生产模式下匿名访问 `/api/v1/resources/list` 返回 401；学生 token 访问其他用户资源被拒绝。
-- [ ] `alembic current` 为 head；PG 扩展 `vector` 存在。
-- [ ] 教师审核、运行恢复与 SSE 在真实 PostgreSQL 下完成一次人工走查（尚未在本机验证）。
+- [x] 2026-10-18 应用层生产边界冒烟（真实隔离 PostgreSQL/Redis）：`validate_deployment` 通过；`/healthz` 200；`/docs`、`/redoc`、`/openapi.json`、`/docs/oauth2-redirect` 404；匿名 `/metrics` 401；教师登录/`auth/me` 200；`/metrics` 教师 200；V1 白名单外 403；未授权课程 V2 403。
+- [x] 生产环境 uvicorn 完整进程启动约 18s，`/healthz` 200（Windows 本机 checkpointer 不可用属平台限制，Linux 目标不受影响）。
+- [x] `docker compose ... config` 三套配方退出码 0，且输出里没有占位凭据。
+- [ ] 生产 Compose 全栈 `up --build`（受“勿自行下载依赖/镜像”约束，未在本机执行）。
+- [ ] 后端容器 `/healthz` 200；`docker compose ps` 全部 healthy。
+- [ ] `alembic current` 为 head；PG 扩展 `vector` 存在（隔离容器已单独验证迁移往返与 vector）。
+- [ ] 教师审核、运行恢复与 SSE 在真实 PostgreSQL 下完成一次人工走查（隔离容器测试已覆盖部分完成恢复，但非部署环境）。
 - [ ] 备份/恢复与 TLS 由部署方负责；本仓库不包含备份编排。
 
 ## 7. 尚未完成 / 限制

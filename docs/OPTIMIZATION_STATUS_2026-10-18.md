@@ -112,6 +112,15 @@
   - 新增 `tests/a/test_learning_package_partial_postgres.py` + helper：部分完成学习包在**真实 PostgreSQL 检查点**上跨进程 suspend/resume，教师审核后仍保持 `partially_completed`、仅交付 2 道练习且不重跑模型/检索，**1 passed**（已加入 CI enterprise 合同任务）。
 - 这验证了真实数据库与检查点路径，但不等于生产全栈验收：未启动 `docker-compose.production.yml` 全栈，未验证 TLS/反向代理/Phoenix/备份，未在真实部署环境执行迁移窗口。
 
+### 最终交付与远端 CI（2026-10-18 第五批）
+
+- **生产边界运行时冒烟（真实 PG/Redis，隔离一次性容器）**：以 `APP_ENV=production` 在应用层验证：`validate_deployment` 通过；`/healthz` 200；`/docs`、`/docs/oauth2-redirect`、`/redoc`、`/openapi.json` 404；匿名 `/metrics` 401、`/api/v1/resources/list` 401、V2 流式 401；教师登录 200、`/auth/me` 200、`/metrics` 200、教师访问未白名单 V1 403、未授权课程 V2 403；教师账号由 `scripts/manage_access` 创建并授予数据库课程。
+- **完整应用进程启动**：生产环境 uvicorn 进程约 **18s** 完成启动，`/healthz` 返回 200（此前 PowerShell HTTP 探针误导为未就绪）。Windows 上 LangGraph PostgreSQL checkpointer 因事件循环类型不可用（只影响 Windows 本机；Linux 目标/CI 不受影响），冒烟中未启用 V2 checkpointer 强校验。
+- **提交与推送**：此前未提交的三轮优化成果已合并为提交 `e39e4c2`，并为 CI 修复追加提交；`main` 已推送到 `origin/main`。
+- **远端 GitHub Actions**：[CI run #17](https://github.com/a142269/evidence-first-learning-agent/actions/runs/39114689528) **全部通过**：Frontend typecheck/build、Dependency vulnerability scan、Lint/Migrate/Test（含 Secret scan、Ruff、Mypy、Alembic、Compose 解析、pytest、覆盖率门禁、轻量压测）、Enterprise PostgreSQL/Redis contract（真实 PG/Redis 服务容器）。
+- **CI 修复过程**：gitleaks 曾因合成测试夹具（`partial-idempotency-key-0001`）误报而阻断流水线；已重命名为带 `test` 的合成值，并将 CI 改为固定版本的 dockerized gitleaks（只输出 file:line/rule 注解、不输出匹配值），补充 pytest 失败测试名注解与 Compose 解析步骤；诊断用临时分支 `ci/gitleaks-report` 已删除。
+- **仍未验证/未完成（发布门）**：未执行 `docker-compose.production.yml` 全栈 `up --build`（用户约束禁止自行下载/构建依赖与镜像）；TLS/反向代理、Phoenix、备份、迁移窗口仍未验证；nightly 的 Linux 锁任务需在远端手动触发/等待运行。
+
 ### 生产边界与部署配方（2026-10-18 第三批）
 
 - **F5 已修复**：生产模式下 `/docs`、`/redoc`、`/openapi.json` 返回 404；根路径 `/metrics`、`/metrics/*` 需要教师/管理员会话（匿名 401、学生 403），开发模式不变。
@@ -119,7 +128,7 @@
 - `validate_deployment` 加强：数据库口令需 ≥12 字符且不得含 `change-me/changeme/replace/example/placeholder`；模型凭据与 CORS 来源同样拒绝占位标记（含 `REPLACE_WITH`/`your-domain`/`change-me`）；`/docs/`、`/docs/*`（含 `oauth2-redirect`）在 production 下一律 404。模板在启动时会失败关闭（有测试覆盖），填充后的 https 来源可通过。
 - 新增 [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)：生产边界、启动命令、通过 `scripts/manage_access` 创建教师/授权课程、验证清单与未验证限制。README 增加链接。
 - CI 质量任务新增 Compose 配置解析步骤（demo、demo+enterprise、production 三套）；本地 `docker compose config` 三套均通过（demo/enterprise 需先按文档复制 `.env`/`.env.enterprise`）。
-- **仍未验证/未完成**：真实 Docker 引擎启动、迁移往返、真实 PostgreSQL/Redis 集成、TLS/备份/监控、Phoenix 镜像仍为 `latest`（正式部署前应固定）。
+- **仍未验证/未完成**：生产 Compose 全栈 `up --build`（受用户“勿自行下载依赖/镜像”约束）、TLS/备份/监控、Phoenix 镜像仍为 `latest`（正式部署前应固定）。数据库迁移往返、真实 PostgreSQL/Redis 集成与部分完成恢复已完成（见第四批与第五批）。
 - **F8–F10（第三方许可/来源）部分完成**：独立审计生成根目录 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)（机器清单，非法律意见），覆盖 151 个 Python 组件、95 个 Web npm 组件、285 个桌面 npm 组件、126 个受跟踪媒体/打包文件；5 个 UNKNOWN 许可（均未安装的 Python 组件，未猜测）；`docs/03-开源参考与协议.md` 已链接完整清单。**仍需人工补齐**：`frontend/dist` 与桌面包无 LICENSE/NOTICE 文本；`frontend/public/integrated-map` 下的 React 构建无源码/来源；30 个陈旧 React bundle 无来源；125 个媒体文件无来源证明；psycopg 家族/edge-tts 为 LGPL，`imageio-ffmpeg` 捆绑 GPL FFmpeg 7.1，桌面分发前需人工许可审查；`docs/03` 仅覆盖部分直接依赖。
 
 ## 四、本轮变更文件
@@ -132,16 +141,19 @@
 
 第三批其他修改：`.gitignore`（允许提交 `.env.production.example`）、`backend/app/core/deployment_policy.py`、`backend/app/main.py`、`tests/a/test_static_and_ws_safety.py`、`tests/a/test_deployment_policy.py`、`README.md`、`docs/03-开源参考与协议.md`（链接完整第三方清单）、`.github/workflows/ci.yml`。
 
+第五批（提交与远端 CI 修复）：`.gitleaks.toml`（新增）、`.github/workflows/ci.yml`（dockerized gitleaks、pytest 失败注解、Compose 解析）、`tests/a/test_learning_package_partial.py`（合成 idempotency 夹具重命名）、`tests/a/test_static_and_ws_safety.py`（Linux 平台兼容）、`tests/a/test_learning_package_partial_postgres.py` 与 helper（新增）、`docs/OPTIMIZATION_STATUS_2026-10-18.md`、`docs/PRODUCTION_DEPLOYMENT.md`。以上前四批内容已随提交 `e39e4c2` 进入 `origin/main`；后续 CI 修复提交为独立的 `ci:` 系列提交。
+
 磁盘上的 `frontend/node_modules`、`frontend/dist`、`.coverage`、`htmlcov`、`output/` 均为被忽略的本地产物，未加入提交范围。
 
 ## 五、剩余事项（建议下一步）
 
-1. **真实人工评测（优先事项 4）**：两位独立评审完成留出集盲评与逐 claim 审查，必要时第三人裁决；程序不证明人的身份或评分独立性。
-2. **真实部署验证（发布门）**：生产 Compose 全栈 `up`/镜像构建、TLS/反向代理、Phoenix、备份与迁移窗口仍需在目标部署环境验证；隔离容器上的 PostgreSQL/Redis 集成与部分完成恢复已完成（见第四批），但不等于生产验收。
-3. **远端 CI**：本地工作流已加入新测试、Compose 解析与 Linux 锁任务，但未 commit/push，GitHub Actions 未验证。
-4. **Linux 锁文件**：复核 nightly 生成的 artifact 后提交 `requirements.lock.linux.txt`，并验证安装。
-5. **真实模型独立任务验证**：在未使用过的新任务上复测 v2.8，并单独验证部分交付分支；如实记录失败、调用数、延迟与可得用量，不虚构账单或人工评分。
-6. **交付材料**：第三方 NOTICE 已生成机器清单，仍需补齐许可文本/素材来源、真实演示视频、Release 与部署说明复核。
+1. **真实人工评测（优先事项 4）**：两位独立评审完成留出集盲评与逐 claim 审查，必要时第三人裁决；程序不证明人的身份或评分独立性。**这是当前唯一必须由人完成的关键项。**
+2. **生产全栈验收**：在目标环境执行 `docker-compose.production.yml` 的 `up --build`、TLS/反向代理、Phoenix、备份与迁移窗口；本机已用隔离容器完成应用层生产边界冒烟、真实 PG/Redis 集成与迁移往返，但**不等于**生产全栈验收（且用户约束禁止本地构建/下载镜像）。
+3. **Linux 锁文件**：nightly 的 `linux-lockfile` 任务需要手动触发并等待一次远端运行（push 触发的 CI 不含 nightly）；复核 artifact 后提交 `requirements.lock.linux.txt` 并验证安装。
+4. **真实模型独立任务验证**：在未使用过的新任务上复测 v2.8，并单独验证部分交付分支（练习失败/删题）；如实记录失败、调用数、延迟与可用 tokens，不虚构账单或人工评分。
+5. **许可与素材（F8–F10）**：`THIRD_PARTY_NOTICES.md` 已提供机器清单；仍需人工补齐 `frontend/dist` 与桌面包的 LICENSE/NOTICE、integrated-map React 构建源码/来源、125 个媒体文件来源，并完成 GPL/LGPL 分发审查。
+6. **交付材料**：真实演示视频、Release、部署说明复核（PRODUCTION_DEPLOYMENT.md 已提供部署说明，真实部署验证待做）。
+7. **已完成的交付项**：三轮优化已提交并推送；远端 CI run #17 全绿（见上）；隔离容器上的 PostgreSQL/Redis 集成、迁移往返与部分完成恢复已验证；心跳抖动测试已修复。
 7. **提交前复核**：按 `output/baseline-audit-20261018/report.md` 的提交前建议，区分三轮改动与此前未提交成果，确认不包含 `output/` 原始资料或任何密钥。
 
 ## 六、约束遵守情况
