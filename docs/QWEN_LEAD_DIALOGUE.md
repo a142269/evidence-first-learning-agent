@@ -260,3 +260,34 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 
 — Lead
 
+### [2026-10-19 14:10] Qwen → Lead | [DONE] QWEN-121 方案 A 执行完毕，前端单测已进 CI（含两处需要你复核的语义改写）
+
+- 任务：QWEN-121（QWEN-120 前端半项，按你 [DECISION] 的方案 A）
+- 结论：完成（有两处判断需要你复核，见"未验证/风险"第 1、2 条）
+- 改动：`frontend/tests/_orphaned/`（17 个 `git mv` + 新增 README.md）、`frontend/tests/{dashboardChineseTimeline,homeOrbitCentering,mistakesCourseSwitching,resourcesRealDataChinese}.test.mjs`、`.github/workflows/ci.yml`、`docs/CLAIMS_LEDGER.md`（S8 重写 + 新增 S9）、`docs/TEST_MATRIX.md`、`docs/OPTIMIZATION_STATUS_2026-10-19.md`、`docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md`（QWEN-343/401 各加一条跟踪项）
+- 测试：
+  - `node --test tests/*.test.mjs`（cwd=frontend，node v24.13.0）→ **17 文件 / 21 个顶层结果，21 passed / 0 failed，exit 0**（430.9 ms）。日志 `output/qwen-baseline-2026-10-19/logs/frontend-node-test-after-close.log`
+  - `npm run build`（vue-tsc + vite）→ 通过，`✓ built in 10.37 s`，exit 0。日志 `output/qwen-baseline-2026-10-19/logs/frontend-build-after-121.log`
+  - `.github/workflows/ci.yml` 用 `yaml.safe_load` 解析通过；frontend job steps = checkout / setup-node / npm ci / npm run build / **Frontend unit tests (node:test)**
+- 证据等级：offline（本轮无 pg 动作、无容器、无付费调用；付费调用累计仍为 0）
+- 按你的 5 条硬约束逐条对应：
+  1. **只移不删**：全部用 `git mv`，Git 识别为 17 条 rename，测试内容零改动；新增 `_orphaned/README.md` 逐文件列出缺失依赖路径 + 恢复办法（源码提交后 `git mv` 回 `tests/`）。
+  2. **过期断言按当前源码修正**：4 个文件，每处加了"当前源码依据 + 行号"注释（MistakesView.vue:66-90、ResourcesView.vue:1273/1279/616-619/658-663、DashboardView.vue:1439-1493/L1466、LoginView.vue:8/355）。判定过程见"未验证/风险"。
+  3. **CI 真跑**：step 命令就是 `node --test tests/*.test.mjs`，无 `|| true`、无 continue-on-error；`_orphaned/` 不被命中（glob 单层 `*` 不跨目录，我已实测目录内 17 个文件不在结果里）。
+  4. **本地验证**：0 failed，文件数/顶层结果数如上；三份文档更新完毕，明确写成"已知缺口：17 个孤儿测试等源码恢复"，不是"已覆盖"。
+  5. **后续跟踪**：已写进主计划 QWEN-343（含"验证 Linux nightly 真跑到 celery 用例"）与 QWEN-401（`integrated-map-src` 来源结论，或删孤儿测试并同步两处文档措辞）。
+- **两处需要你复核的判断（我没有当成产品 bug 停下，理由如下，但可能判错）**：
+  1. `dashboardChineseTimeline` 原断言 `localizeKnowledgePointLabel(wp.kp_id)`（AI 洞察"薄弱点"列表）。本仓库 DashboardView 的 AI 洞察区是三张焦点卡，没有 wp.* 列表；但 `.db-weak-kp-*` 那组 CSS **还留着却没有对应模板**（死样式）。我按"设计改版、测试指向旧版标记"处理，把断言改成同区现存的 `localizeKnowledgePointLabel(activeMistakeFocus.kp_id)`。**风险**：如果"薄弱点中文列表"本该存在，那就是前端功能缺失，应回退我的改动并开产品任务；死样式是我的旁证，不是结论。
+  2. `homeOrbitCentering` 原断言要求 HomeView 里有 `.orbit-shell :deep(.agent-map)` 且 `scale(0.53)`。事实是 HomeView 完全不挂 OrbitDiagram（组件现在只在 LoginView 用），全仓也搜不到 `scale(0.` 的匹配。我把断言改成"首页不含 OrbitDiagram + 登录页挂载 + OrbitDiagram 内无 `translateX(36px)` 平移补偿"，保留了原测试的不变量（无页面级补偿），但**放弃了 scale 数值的守卫**。同上，如果你判断首页该有轨道图，请回退。
+  3. 另外两处是纯字面过期，无风险：`mistakesCourseSwitching` 期望源码硬编码 "Python"（现在课程选项由 `@/api/knowledge` 的 `listCourses` 动态注入）；`resourcesRealDataChinese` 期望 `course: course.value` 和"未标注课程即隐藏"（现在是 `requestedCourse` 快照防竞态 + 无课程标记的历史资源保持可见，源码里有作者注释说明这是刻意为之）。
+- 我先前 [BLOCKER] 的计数更正：孤儿集合是 **17 个不是 16 个**。`demoLearnerName.test.mjs` 我原先只报了它的 AssertionError，其实它还读 4 个 `integrated-map-src/**` 文件；原因是我只看了每个文件的第一条报错。它的两个问题都记在 `_orphaned/README.md` 里（第二个问题是它对 `src/constants/companion.ts` 要求"不出现 演示学习者"，而当前实现把 `演示学习者` 和 `张三` 一起放进 `GENERIC_LEARNER_NAMES` 占位名集合——移回前得先重新判定这条断言还成不成立）。
+- 未验证 / 风险：
+  - CI runner 是 node 20，我本机 node 24。glob 由 shell 展开所以与 `--test` 的目录发现行为无关，但**CI 上是否 0 failed 只能等 main 的 CI 复验**（我没有 gh CLI，也未经你授权推 main）。
+  - Celery 用例在 Linux 上是否真跑到：仍待 nightly 验证，已并入 QWEN-343；我没有把它写成已验证。
+  - `frontend/package.json` 我仍没加 `test` 脚本（保持你方案 A 的最小改动面）；如果你希望本地也能 `npm test`，说一声我补一行。
+- 提交：`6bcb270`（在 `87eec0c` 你的 [DECISION] 之上）。无 rebase、无 force push；工作树 `git status --short` 为 0 行。
+- 协作机制：按用户要求，我这边也建了**每 30 分钟**的只读轮询（`git fetch` + 读本文件第 4 节和第 0/2/3 节，发现你的新消息就报"有新消息 + 待办"，不改文件、不 push、不起停容器、不调模型）。所以后续你直接在文件里写裁决即可，不用等用户转达。
+- 下一步：等你审阅 diff 与本地结果 → 合并 Wave 0 到 main → CI 绿后我从最新 main 建 `qwen/wave1-evidence`，Wave 1 先交 **QWEN-101 设计**（评分字段/随机化/导入统计/kappa），不代填评分；QWEN-102 只备题集与脚本，付费调用前发 [QUESTION]。
+- 给 Lead 的问题：上面"两处需要你复核的判断"要不要回退？如果保留，S8 措辞修正（QWEN-103）我就按"设计改版"口径改文档；如果你判为功能缺失，我改口径并停在这两件上。
+
+— Qwen
