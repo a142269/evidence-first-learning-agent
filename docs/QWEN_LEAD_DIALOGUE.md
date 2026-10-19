@@ -447,3 +447,75 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
   2. QWEN-101 是否可以按此验收？验收通过后我把 QWEN-102 的 `[PLAN]` 发出并按 15:35 授权直接执行。
 
 — Qwen
+
+### [2026-10-19 16:14] Qwen → Lead | [PLAN] QWEN-102 有界真实模型采集计划（第三个课程无正文，先给处置；PG 路径已 0 调用实测可行）
+
+**先说必须先说的仓库事实（0 云端调用实测）**
+
+`evals/curricula/` 名义上有 3 门课，但正文只有 2 门：
+
+- `knowledge_base/artificial_intelligence/chapters/` = 20 个 md；`python_programming/chapters/` = 18 个 md；**`computer_work/` 只有 `course.yaml`（display_name 计算机网络、description 为空），`chapters/` 目录不存在，正文 md = 0 个**。
+- 真实路径下 `LearningRuntime.retrieve("TCP 三次握手的过程是什么", "computer_work")` → **0 命中**（离线：`LLM_PROVIDER=none`、`A3_OFFLINE_DEMO=true`、embedding key 置空，enterprise 检索器按 `DATABASE_URL.startswith("postgresql")` 自动关闭；命令与输出我留在 `output/qwen-wave1-2026-10-19/`）。
+- 结论：**"3 课程 × 4 题"这个原始口径在本仓库无法如实执行**，我不会为第三课程编造正文或编造任务。
+
+**处置（本轮采用）**：QWEN-102 的 12 题 = **3 道 AI + 9 道 Python**，全部落在有正文的课程上；`evals/independent_tasks_v1.jsonl` 与最终报告都带固定 limitations 一句："第三课程 `computer_work` 无正文素材，本轮未覆盖；3 课程×4 的原口径不可执行"。若要把计算机网络变成可测课程，需要独立的"写正文 → 审核 → 摄取"任务（另计授权与预算）。**不需要**为它花 2 次探测调用——0 调用的离线证据已经足够，我把证据留在了产物目录而不是消耗预算。
+
+**12 题集（已提交，`evals/independent_tasks_v1.jsonl`，12 行 / dev 6 + holdout 6）**
+
+题面全部是我自己写的学习者口吻问题（不含任何语料原文复制），每题 `expected_sources` 指向一个**尚未被现有两套数据集使用**的章节，保证与 `ablation_tasks_v1.jsonl`/`learning_package_cases_v1.jsonl`（现有 24 条 100% 是 `artificial_intelligence`，覆盖 17 个 AI 章节）零重叠：
+
+- AI（3 个未用章节）：`11_mcp_protocol`、`12_ai_project_practice`、`19_nlp_basics`
+- Python（18 章全新，取前 9 章）：`00_python_overview` … `08_inheritance_polymorphism`
+- 限制如实写明：本轮一次性生成，**没有基于 dev 调参**，所以 dev/holdout 的区分只是给后续留位；等样本 12 题，也**不等于** QWEN-101 统计里的"item"口径。
+
+**检索后端：按你的口径优先 PG+pgvector，可行性已用 0 调用实测**
+
+- 一次性容器（我自有、只用环回、无密码 `POSTGRES_HOST_AUTH_METHOD=trust`，不属于任何人的既有容器）：`docker run -d --name qwen102-pg -p 127.0.0.1:15432:5432 ... pgvector/pgvector:pg16` → 就绪；`DATABASE_URL=postgresql+psycopg://eval@127.0.0.1:15432/eval python -m alembic upgrade head` → 迁移跑完，**public 下 32 张表**，`pg_extension` 里 **`vector` 存在**。
+- 摄取必须限定语料域，否则超预算（同一 `backfill_curated_markdown` 分块器实测，chunk_size=1200/overlap=160，batch=20）：
+  - 现有脚本 `rglob("*.md")` 的全课程口径 = AI 31 doc / **187 chunk / 31 次请求**，Python 64 doc / **271 chunk / 64 次请求** → 合计 **458 chunk、95 次请求**，**双双超过你给的 ≤300 块 / ≤30 请求**。
+  - 所以我用 `KNOWLEDGE_BASE_PATH` 环境变量（`config.py` 原生支持，**不改任何代码**）把语料指到一个只含选定 12 章的镜像 `output/qwen-wave1-2026-10-19/qwen102-corpus/`（相对路径布局与真仓库一致，`expected_sources` 仍然对得上）。
+  - 镜像实测：**12 doc / 87 chunk / 12 次 embedding 请求 / upper_input_bytes=225,089**；`--dry-run --summary-only` 两次（AI=3、Python=9）planned 一致，**0 云端调用**。
+  - 同一镜像下 legacy 检索实测（0 调用）：Python 查询 5 命中、AI 查询 3 命中，命中均落在选定章节 → PG 打开后是 pgvector+FTS+legacy 的 RRF 融合。
+- **本轮限制（会写进报告）**：检索证据域是 12 章镜像，不是全课程语料。原因就是上面的预算数字，我不会把它说成生产等价。
+
+**预期调用数（口径歧义我按算术对齐了，见问题 1）**
+
+| 项 | 预期 | 依据 |
+| --- | --- | --- |
+| 外部运行（生成） | **1 冒烟 + 12 = 13 次**，每次只跑 `full` 一臂 | 你 15:35 的 "1 冒烟 + 12×1" |
+| 重试 | 每任务 ≤2，只在传输/契约失败时人工触发；**13 + 12×2 = 37** 正好等于你写的生成上限 | 我据此判断"≤37"是**运行级**口径，不是内部 HTTP 调用级 |
+| 单次运行内部模型调用 | `full` 臂 ≤ **8**（`graph.MAX_MODEL_CALLS=8`，Planner+Tutor+Practice+Reviewer=4，Reviewer 拒绝后最多 +3）；13 次运行合计预期 **52–91 次内部调用** | `backend/app/evaluation/ablation_runner.py:32` |
+| embedding 请求 | 摄取 12 + 查询 13（1 冒烟 + 12 案例各 1 次检索）= **25 ≤ 30**；另留 ≤2 次 PG 检索自检 | 上面实测 + `retrieve()` 每次只 embed 一条查询 |
+| embedding 文本块 | 87（摄取）+ ~15（查询）≈ **102 ≤ 300** | 同上 |
+| token/费用 | token 从 `runs.jsonl` 的 `budget` 如实读出；**`cost_cny` 记 null/unknown**，因为我不设 `V2_LLM_*_CNY_PER_MILLION`（`usage_meter.py` 明确"不编造价格"），也没有账单价 | 缺数据即 unknown，不写 0 |
+
+**成本治理（一个我不会静默绕过的矛盾）**
+
+- `backfill_enterprise_corpus.py` 非 dry-run **强制**要求 `V2_EVAL_BUDGET_CNY` + `V2_EVAL_BUDGET_ID`，而 `eval_cost_guard` 需要 Redis 且必须给每百万 token 的**上界**费率，否则 fail-closed 报 `eval_budget_configuration_required`。
+- 我的做法：guard **只对摄取两次进程开启**（`qwen102-redis` 一次性容器 + `V2_EVAL_BUDGET_ID=qwen102-ingest-20261019`，`V2_EVAL_EMBED_CNY_PER_MILLION_UPPER=1.0`、上限 `V2_EVAL_BUDGET_CNY=1.00`）。按实测 225,089 字节，预留约 **0.23 CNY**，上限留了 4 倍余量且真超会硬停。
+- 生成阶段 guard 保持关闭（它是 opt-in），花费由**运行次数 ≤13 + 异常即停**控制。1.0 CNY/M 与生成阶段"不设价"都是为了**不假装我知道账单价**；上界数字只作预留用途，报告里会标"预留上界，非账单价、非计费结果"。
+
+**驱动改动（唯一一处代码改动，向后兼容，请你判是否接受）**
+
+- `scripts/collect_ablation.py` 增加 `--arm`（可重复，默认三臂不变）。因为脚本原本对每个案例固定跑 3 臂，**不改就必然 36 次外部运行、超授权**。改动 **+10/-2 行**：`ALL_ARMS` 常量 + `arms = tuple(dict.fromkeys(args.arm)) or ALL_ARMS` + 非法臂在**读取 provider 配置之前**就 `ValueError("invalid arms")`。
+- `tests/a/test_ablation_collect.py`：原有用例补 `arm=[]`，新增 2 例（单臂只落 `full` 行；非法臂在任何 provider 配置前被拒）→ **3 passed**，`ruff`（CI 口径 F821,F823,E9）通过。旧 `scripts/prepare_ablation_*` 三件套仍然零改动。
+- 若你更希望"新建一个独立脚本、完全不碰 collect_ablation.py"，说一声我就换；现在这版复用了它的 manifest/证据摘要/resume 校验，我不想复制一份弱化版。
+
+**输出与回滚**
+
+- 产物：`output/qwen102-smoke/`（1 运行）、`output/qwen102-main/{evidence.jsonl,runs.jsonl,manifest.json}`（逐行 fsync、`--resume` 三重校验）、脱敏汇总 `evals/results/independent-2026-10-19.md`（只写聚合数字与限制，不写原文回答、不写 key）。原始回答文本一律留在 gitignored `output/`。
+- 顺序：起 redis → 两次摄取（唯一 embedding 大头）→ PG 检索自检 ≤2 次 → 冒烟 1 运行并读实际 `model_calls`/token → 12 运行 → `scripts/summarize_ablation.py`。
+- 停止条件（任一命中立即停止并发 `[BLOCKER]`，只写错误类别 + HTTP 状态）：embedding 401/配额、guard 报 `eval_budget_exceeded`/`eval_budget_storage_unavailable`、冒烟单次内部调用 >8 或 token 明显异常、单任务重试已到 2 次仍失败、任何未预期的计费放大。
+- 回滚：**只删我自己的容器** `qwen102-pg`/`qwen102-redis`（`docker rm -f` 前会先 `docker ps` 确认名字，绝不碰 `echomind-*`、`a3-*`）；PG 是一次性库，不做备份不做迁移；`output/` 产物保留本地不外发。分支只推 `qwen/wave1-evidence`，不碰 main。
+
+**盲评衔接的限制（必须现在讲，别到 QWEN-103 才发现）**
+
+QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS_INCOMPLETE`）。所以本轮**单臂 `full` 的 12 条数据无法直接进人工盲评**，它只能给机器级证据（完成率、契约通过、模型调用数、延迟、token）。
+
+**给 Lead 的问题**
+1. "生成 ≤37" 我按 **13 运行 + 24 重试 = 运行级**理解（因此 12 题全跑）。如果你的本意是**内部 HTTP 调用 ≤37**，那 12 题放不下（预期 52–91），我会停在冒烟并把题数降到 4–5，请明确一句话。
+2. 人工盲评要不要做完整？两条路：**(A)** 本轮只出单臂机器级证据，盲评留到后续再申请 24 次运行（2 臂 × 12）补齐；**(B)** 现在就按三臂跑（36 运行 + 冒烟 = 39，**超出你 15:35 的授权**，需要你重新给上限）。我倾向 A：先用最少的钱验证链路与真实用量，再决定是否值得为盲评加钱。
+
+证据等级：`offline`（题集、容器、迁移、分块与检索的全部实测均 0 云端调用）；本轮执行后将新增 `cloud`（生成 + embedding 实际 usage）与 `remote`（PG/pgvector 检索），**不含 `human`**（真人盲评未发生）。收到你对上面两问的答复前我不发付费请求之外的任何新范围；若问题 1 你无异议，我按本计划先起 redis、做两次摄取、跑冒烟，再按实测 usage 继续 12 次运行，完成即 `[DONE]` 附真实计数。
+
+— Qwen

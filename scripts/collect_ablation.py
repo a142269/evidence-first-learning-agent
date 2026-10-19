@@ -23,7 +23,13 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
+ALL_ARMS = ("single", "without_reviewer", "full")
+
+
 async def collect(args):
+    arms = tuple(dict.fromkeys(args.arm)) or ALL_ARMS
+    if set(arms) - set(ALL_ARMS):
+        raise ValueError("invalid arms")
     from backend.app.core.config import get_config
     config = get_config().llm
     if config.provider != "openai_compatible" or not config.openai_api_key or not config.openai_model:
@@ -93,13 +99,13 @@ async def collect(args):
             key = (row["case_id"], row["arm"])
             expected_config = {"model": config.openai_model, "knowledge_snapshot": evidence_signature,
                                "max_output_tokens": 8192, "max_cost_cny": None}
-            if key in completed_keys or key[0] not in snapshots_by_case or key[1] not in ("single", "without_reviewer", "full") or row["config"] != expected_config or row.get("dataset_sha256") != dataset_signature or row["evidence_sha256"] != snapshots_by_case[key[0]][0]:
+            if key in completed_keys or key[0] not in snapshots_by_case or key[1] not in ALL_ARMS or row["config"] != expected_config or row.get("dataset_sha256") != dataset_signature or row["evidence_sha256"] != snapshots_by_case[key[0]][0]:
                 raise ValueError("invalid existing run")
             completed_keys.add(key)
     with progress_path.open("a", encoding="utf-8") as progress:
         for case in dataset:
             snapshot, evidence, retrieval_error = snapshots_by_case[case["id"]]
-            for arm in ("single", "without_reviewer", "full"):
+            for arm in arms:
                 if (case["id"], arm) in completed_keys:
                     continue
                 result = await run_arm(runtime, case, evidence, arm) if not retrieval_error else {
@@ -128,6 +134,8 @@ def main():
     parser.add_argument("--cases", type=Path, default=ROOT / "evals/ablation_tasks_v1.jsonl")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--case-id", action="append", default=[])
+    parser.add_argument("--arm", action="append", choices=ALL_ARMS, default=[],
+                        help="Collect only the selected arm(s); defaults to all three")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     if sys.platform == "win32":

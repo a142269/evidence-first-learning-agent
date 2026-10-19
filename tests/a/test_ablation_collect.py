@@ -31,7 +31,7 @@ async def test_resume_preserves_results_and_retrieval_failures(tmp_path, monkeyp
     monkeypatch.setattr(config_module, "get_config", lambda: SimpleNamespace(llm=SimpleNamespace(provider="openai_compatible", openai_api_key="test", openai_model="m")))
     monkeypatch.setattr(collect_ablation, "LearningRuntime", Runtime)
     monkeypatch.setattr(collect_ablation, "run_arm", run_arm)
-    args = SimpleNamespace(cases=cases, case_id=[], output_dir=tmp_path / "output" / "run", resume=False)
+    args = SimpleNamespace(cases=cases, case_id=[], arm=[], output_dir=tmp_path / "output" / "run", resume=False)
     await collect_ablation.collect(args)
     rows = [json.loads(line) for line in (args.output_dir / "runs.jsonl").read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 6
@@ -40,3 +40,46 @@ async def test_resume_preserves_results_and_retrieval_failures(tmp_path, monkeyp
     args.resume = True
     await collect_ablation.collect(args)
     assert calls == before
+
+
+@pytest.mark.asyncio
+async def test_arm_selection_limits_paid_runs(tmp_path, monkeypatch):
+    monkeypatch.setattr(collect_ablation, "ROOT", tmp_path)
+    runner = tmp_path / "backend/app/evaluation/ablation_runner.py"
+    runner.parent.mkdir(parents=True)
+    runner.write_text("runner", encoding="utf-8")
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text('\n'.join(json.dumps({"id": id, "question": id, "course_id": "c"}) for id in ("a", "b")), encoding="utf-8")
+    arms_used = []
+
+    class Runtime:
+        def retrieve(self, question, course):
+            return [{"chunk_id": "c", "source": "s", "content": "evidence"}]
+
+    async def run_arm(runtime, case, evidence, arm):
+        arms_used.append((case["id"], arm))
+        return {"completed": True, "budget": {}, "latency_ms": 1, "model_calls": 1}
+
+    monkeypatch.setattr(config_module, "get_config", lambda: SimpleNamespace(llm=SimpleNamespace(provider="openai_compatible", openai_api_key="test", openai_model="m")))
+    monkeypatch.setattr(collect_ablation, "LearningRuntime", Runtime)
+    monkeypatch.setattr(collect_ablation, "run_arm", run_arm)
+    args = SimpleNamespace(cases=cases, case_id=[], arm=["full"], output_dir=tmp_path / "output" / "run", resume=False)
+    await collect_ablation.collect(args)
+    assert arms_used == [("a", "full"), ("b", "full")]
+    rows = [json.loads(line) for line in (args.output_dir / "runs.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [row["arm"] for row in rows] == ["full", "full"]
+
+
+@pytest.mark.asyncio
+async def test_unknown_arm_is_rejected_before_any_paid_call(tmp_path, monkeypatch):
+    monkeypatch.setattr(collect_ablation, "ROOT", tmp_path)
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text(json.dumps({"id": "a", "question": "a", "course_id": "c"}), encoding="utf-8")
+
+    def fail(*args, **kwargs):
+        raise AssertionError("no provider may be configured for an invalid arm")
+
+    monkeypatch.setattr(config_module, "get_config", fail)
+    args = SimpleNamespace(cases=cases, case_id=[], arm=["reviewer"], output_dir=tmp_path / "output" / "run", resume=False)
+    with pytest.raises(ValueError, match="invalid arms"):
+        await collect_ablation.collect(args)
