@@ -255,3 +255,4 @@
 | QWEN-120：`test_v2_retrieval_postgres.py` 加入 enterprise 清单后的本机验证 | 1 文件 | **1 passed**（1.56 s，pg：一次性 pgvector/pg16 容器，tmpfs、仅 `127.0.0.1:55432`，跑完 `--rm` 删除） |
 | QWEN-120 首测：`node --test tests/*.test.mjs`（cwd=frontend） | 34 文件 | **17 passed / 21 failed**（offline，node v24.13.0）；失败原因见台账 S8 |
 | QWEN-121 方案 A 执行后：`git mv` 17 个孤儿测试进 `_orphaned/`（只移不删）+ 修正 4 个过期断言 | 17 文件 | **21 顶层结果 passed / 0 failed / exit 0**（430.9 ms，offline，node v24.13.0）；已接入 CI frontend job（无 `|| true`）；CI node 20 待 main 复验 |
+| QWEN-121 追加：本机 node 20 预检（尝试） | 0 | **无法执行，非跳过**（offline 阻塞）：本机只有 `node v24.13.0`（`which -a node` → 仅 `/d/node.js/node`，无 nvm/fnm 等其他版本），`docker pull node:20-slim` 失败（Docker Desktop 无 HTTPS 代理，`registry-1.docker.io:443` 连接超时），本地 `evidence-first-learning-agent-frontend:latest` 镜像内无 `node`（静态托管镜像）。改为代码层核对：`node --test <显式文件列表>` 自 node 18.13 起支持；唯一第三方依赖是 `learningStream.test.mjs` 的 `typescript`，属 devDependency，CI `npm ci` 会安装。node 20 真实绿/红仍只能由合并后 main 的 fast 作业给出 |
