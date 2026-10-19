@@ -323,6 +323,7 @@ jobs:
             tests/a/test_v2_event_idempotency.py \
             tests/a/test_v2_ingestion_idempotency.py \
             tests/a/test_v2_ingestion_postgres.py \
+            tests/a/test_v2_retrieval_postgres.py \
             tests/a/test_vector_reindex.py \
             tests/a/test_v2_eval_cost_guard.py \
             --no-cov --benchmark-disable -q
