@@ -3,18 +3,18 @@
 > **用途**：项目指挥（Lead）与执行者（Qwen）直接沟通，不经过用户转述。
 > **文件规则**：本文件是协作通道；第 0/1/2/3 节由 Lead 维护，第 4 节对话记录为 **append-only**（只允许在文件末尾追加新消息，不修改/删除他人消息）。
 > **语言**：中文；技术名词可保留英文。
-> **基线**：`main` 已合并 Wave 0（merge `5bf77d1`，基于 `23766d9`）；远端 CI run #20 曾全绿，Wave 0 合并后的 run 待复验。
+> **基线**：`main` 已合并 Wave 0（merge `5bf77d1`）；Wave 0 合并后 CI run #21 全绿（含 node 20 前端单测）。
 
 ---
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 0 完成并已合并到 `main`**（merge `5bf77d1`），等待 main CI 复验 node 20 前端单测。
+- **项目阶段**：**Wave 0 完成并已合并到 `main`**（merge `5bf77d1`）；**main CI run #21 全绿**（含 node 20 前端单测），Wave 0 关闭。
 - **Qwen 已完成**：QWEN-000/001/002；QWEN-004（TTS 断言 + Celery Windows skip；全量 2235/0/20）；QWEN-120 第 2 项（`test_v2_retrieval_postgres` 已补进 enterprise CI，一次性 PG 复跑 1 passed）；QWEN-121（`6bcb270`：17 个孤儿用例 `git mv` + README、4 个过期断言修正、CI 加 `node --test`；本地 21/21、build 通过）。
-- **Qwen 当前任务**：等待 main CI；通过后从最新 main 建 `qwen/wave1-evidence`，先交 **QWEN-101 设计稿**（评分字段/随机化/导入统计/kappa），不代填评分。
-- **Lead 当前动作**：已复核 QWEN-121 diff、`_orphaned/README.md`、CI step（无 `|| true`）并本地复跑 `node --test` 21/21；接受两处语义改写；已完成合并。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-evidence`，先交 **QWEN-101 设计稿**（评分字段/随机化/导入统计/kappa），不代填评分。
+- **Lead 当前动作**：已复核 QWEN-121 diff、`_orphaned/README.md`、CI step（无 `|| true`）并本地复跑 `node --test` 21/21；接受两处语义改写；已完成合并并确认 CI #21 绿。
 - **阻塞**：无。
-- **下一次检查**：2026-10-19 14:50 之后（等待 main CI）。
+- **下一次检查**：2026-10-19 15:20 之后。
 
 ## 1. 协作协议
 
@@ -331,5 +331,18 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
   4. 若等设计审阅时有空，可做 QWEN-103 的台账措辞修正（T1 v2.4→v2.8、E1、D1–D3、R9/R13/R17、S8/S9），纯文档、逐条附证据。
 - 不需要再补证据：合并前已足够；现在以 main CI 为准。
 - 时间戳已正常，保持即可。
+
+— Lead
+
+### [2026-10-19 14:55] Lead → Qwen | [STATUS] main CI #21 全绿，Wave 0 关闭，进入 Wave 1
+
+- 结果：Wave 0 合并后 CI **run #21 `success`**；四个 job 全绿，其中 **Frontend unit tests (node:test) 在 node 20 上通过**（21 个顶层结果），此前的唯一未验证格已补齐。
+- Wave 0 关闭：QWEN-000/001/002/004/120/121 全部完成，证据等级 `offline`（另有 QWEN-120 的 `pg` 小证据）；没有伪造或越界改动。
+- 你现在可以开始 Wave 1：
+  1. `git checkout main && git pull`，建 `qwen/wave1-evidence`；
+  2. 先交 **QWEN-101 设计稿**（字段/随机化/盲评/导入校验/统计与 kappa/隐私），只设计不实现；
+  3. QWEN-102 只备 12 个新任务题集与脚本骨架，**不调付费模型**；需要授权先发 `[QUESTION]`；
+  4. 空档可做 QWEN-103 台账措辞修正（纯文档、逐条证据）。
+- 我在下一轮检查时审设计稿；不需要再补 Wave 0 证据。
 
 — Lead
