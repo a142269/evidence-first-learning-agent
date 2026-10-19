@@ -2,13 +2,14 @@
 
 > 编写：Qwen · 日期：2026-10-19 · 任务：QWEN-002（Wave 0）· 基线：`main@23766d9`
 > 依据：`.github/workflows/ci.yml`、`.github/workflows/nightly.yml` 实测解析 + 全量清单。
-> 本轮实测：共 **189** 个 Python 测试文件（`tests/a` 124〔含 `tests/a/benchmarks/` 1〕、`tests/b` 42、`tests/integration` 9、`tests/regression` 5、`tests/benchmarks` 4、`tests/` 根 5）。
+> 本轮实测：共 **191** 个 Python 测试文件（`tests/a` 126〔含 `tests/a/benchmarks/` 1〕、`tests/b` 42、`tests/integration` 9、`tests/regression` 5、`tests/benchmarks` 4、`tests/` 根 5）。
+> 计数更新：QWEN-101 新增 2 个 `tests/a` 文件（`test_human_agreement_statistics.py`、`test_human_eval_toolkit.py`），189 → **191**（原 189 为 Wave 0 基线，见 §6）。
 
 ## 1. 分层定义
 
 | 层 | 运行位置 | 集合 | 门槛/预算 | 目的 |
 |---|---|---|---|---|
-| **fast** | 每次 push main / PR（CI `quality` job） | 37 个便携 V2 契约文件（下表 `F` 列） | job 超时 20 分钟；本轮实测 58.5 s（369 passed / 1 skipped） | 主线契约回归：权限、学习包、部分完成、结构化输出、评测器、租约/幂等 |
+| **fast** | 每次 push main / PR（CI `quality` job） | 39 个便携 V2 契约文件（下表 `F` 列；QWEN-101 补入 2 个人工评测文件，Wave 0 基线为 37） | job 超时 20 分钟；Wave 0 基线 58.5 s（369 passed / 1 skipped），QWEN-101 后本机等价复跑 54.9 s（396 passed / 1 skipped） | 主线契约回归：权限、学习包、部分完成、结构化输出、评测器、租约/幂等、人工盲评工具包 |
 | **contract-pg** | CI `enterprise-contract` job（PG16+pgvector / Redis7 服务容器） | 38 个文件（`E` 列，QWEN-120 补入 `test_v2_retrieval_postgres.py`；首轮统计为 37）+ MCP 协议 1（`M` 列，独立步骤） | job 超时 20 分钟；历史实测 173.6 s（353 passed） | 真实数据库/中间件合同：跨进程恢复、迁移、认证、检索、摄取 |
 | **nightly** | 每日 19:20 UTC + 手动 dispatch（`offline` job） | **全量** `pytest tests/`；需外部依赖的用例按设计自动 skip | job 超时 60 分钟；产出核心覆盖率 `build/coverage.xml` | 发现 fast/contract 未覆盖的 V1/算法/演示资产回归 |
 | **nightly-lock** | 同上 workflow（`linux-lockfile` job） | 学习包核心 3 文件 | 按哈希安装 `requirements.lock.linux.txt` 后运行 | Linux 锁可安装性冒烟 |
@@ -16,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（189）
+## 2. Python 测试文件矩阵（191）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -67,6 +68,8 @@
 | tests/a/test_golden_set_evaluator.py | F | E |  | ✓ |  |
 | tests/a/test_golden_set_runner.py | F | E |  | ✓ |  |
 | tests/a/test_golden_set_v2.py | F | E |  | ✓ |  |
+| tests/a/test_human_agreement_statistics.py | F |  |  | ✓ | QWEN-101 人工一致性统计（κ/Wilson/bootstrap），纯 stdlib、毫秒级 |
+| tests/a/test_human_eval_toolkit.py | F |  |  | ✓ | QWEN-101 `scripts/human_eval/` 五个入口的端到端门禁，fixtures 全合成、不落真实题面 |
 | tests/a/test_hyde_rrf.py |  |  |  | ✓ |  |
 | tests/a/test_ingestion_staging.py |  |  |  | ✓ |  |
 | tests/a/test_intent_classifier.py |  |  |  | ✓ |  |
@@ -258,3 +261,6 @@
 | QWEN-121 追加：本机 node 20 预检（尝试） | 0 | **无法执行，非跳过**（offline 阻塞）：本机只有 `node v24.13.0`（`which -a node` → 仅 `/d/node.js/node`，无 nvm/fnm 等其他版本），`docker pull node:20-slim` 失败（Docker Desktop 无 HTTPS 代理，`registry-1.docker.io:443` 连接超时），本地 `evidence-first-learning-agent-frontend:latest` 镜像内无 `node`（静态托管镜像）。改为代码层核对：`node --test <显式文件列表>` 自 node 18.13 起支持；唯一第三方依赖是 `learningStream.test.mjs` 的 `typescript`，属 devDependency，CI `npm ci` 会安装。node 20 真实绿/红仍只能由合并后 main 的 fast 作业给出——**已补齐，见下一行** |
 | Wave 0 合并后远端 CI（main run **#21**） | 4 个 job | Lead 2026-10-19 14:55 报告 **success**，含 `Frontend unit tests (node:test)` 在 **node 20** 上 21 个顶层结果通过。**证据等级 `remote`，非本机复核**：本机无 `gh` CLI，Docker Hub 不可达，无法自建 node 20 环境；此行只转述远端结论 |
 | Wave 0 数字自检（合并前复核） | 16 项复现命令 | 逐项重跑台账/矩阵/状态文档引用的数字：2235-0-20/612.61s、2-2234-19/650.31s、369-1/58.54s、110/92.44%、CI 清单 37/38/5、Python 189（5+123+1+42+9+5+4）、前端 17+17、node:test 21/0 exit 0、pg 1 passed、README L56、T1/E1/D1/D2 行引用、`BaseAgent` 子类 16、路由装饰器 187、Linux 锁 144 包、素材 30+2 —— **全部一致**；唯一修正为口径精确化：S9"14 个空目录"→ 14 个目录 / 12 个叶子空目录 / 0 个文件。明细见 `OPTIMIZATION_STATUS_2026-10-19.md` §六 |
+| QWEN-101 新工具包定向测试（`test_human_agreement_statistics.py` + `test_human_eval_toolkit.py`） | 2 文件 / 27 用例 | **27 passed / 0 failed**（0.76 s，offline；`--basetemp output/qwen-wave1-2026-10-19/*`、合成 fixtures、无模型调用） |
+| QWEN-101 后 fast 清单本机等价复跑 | 39 文件 | **396 passed / 1 skipped / 0 failed**（54.90 s，offline；独立 SQLite `output/qwen-wave1-2026-10-19/ci_fast.db`；skip 仍是 `test_auth_restart.py`）；对 Wave 0 的 369/1：+27 全来自新增两文件，无既有用例转红 |
+| QWEN-101 静态检查 | `backend/app/evaluation/human_agreement.py` + `scripts/human_eval/` | `mypy --config-file mypy.ini backend/app/evaluation/human_agreement.py` **0 error**；`ruff check --select F821,F823,E9`（CI 同口径）通过；覆盖率门禁清单**未扩**（Lead 裁决 6，仍 5 文件） |

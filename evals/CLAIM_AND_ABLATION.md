@@ -50,6 +50,8 @@ python scripts/evaluate_claim_support.py output/claim-reviews.json --output outp
 
 填写两份评分后，执行 `python scripts/prepare_ablation_adjudication.py --run-dir output/<运行目录>`，生成 `adjudication-packet.json`，仅包含有分歧的盲评条目、分歧指标、证据和空评分，不显示方案名称或前两位评审的判断。第三位独立评审在其中填写五项 `scores`，未知填 null。执行同一合并命令并增加 `--adjudications adjudication-packet.json --adjudicator <第三人匿名标识>`，生成新的 `adjudicated-runs.jsonl`，再用汇总脚本读取该文件。程序只用裁决解决两位评审都已评分但意见不同的指标；缺失评分不能由裁决补造。`review_disagreement_count` 保留每组出现过分歧的任务数。
 
+上述脚本之外，`scripts/human_eval/`（五个入口：`prepare_packets`、`validate_packets`、`import_reviews`、`agreement_report`、`export_summary`，一律 `python -m scripts.human_eval.<入口> --run-dir output/<运行目录>`）提供同一流程的加固版：两位评审各得一份**独立随机题序**的包（盲 id 命名空间 `a-NNN`/`b-NNN`，题序与包内容摘要登记在 manifest 里可复核）、导入前逐项校验防篡改与防泄题、逐 rubric 计算 Cohen's κ 及 `po` 的 Wilson 区间与 κ 的 item 级 bootstrap 区间、导出脱敏摘要。统计与校验为纯 stdlib 实现（`backend/app/evaluation/human_agreement.py`），角色、命令、错误口径与验收计量见 `docs/HUMAN_EVAL_PROTOCOL.md`。工具在任何路径都不产生评分，也不认证评审身份；两套脚本产出的材料不可混用。
+
 比较单 Agent、Planner＋Tutor＋Practice（无 Reviewer）和完整工作流；固定模型版本、知识库快照、任务、评分标准、最大 token/费用与超时。预先记录任务顺序、运行次数、参数、运行失败、实际 token、每次请求单价及价格日期。缺失用量或账单数据记录为 unknown，不能当作零成本。对照组要真正执行不同流程，不能通过修改标签模拟。
 
 现有 `learning_package_cases_v1.jsonl` 的 24 条包含预期拒绝、待审和需要模型或检索桩的故障场景；它不是 24 条可直接提交给真实模型的普通生成题。`ablation_tasks_v1.jsonl` 提供另行拟定的 24 条学习任务（开发集和留出集各 12 条）；这是未经人工审核及预跑的数据集，不能视为已有实验结果。安全和故障测试仍单独执行。固定 12 条留出任务由至少两名评审独立盲评，记录分歧并裁决；评估事实支撑、练习正确性、目标覆盖、难度递进和画像适配。

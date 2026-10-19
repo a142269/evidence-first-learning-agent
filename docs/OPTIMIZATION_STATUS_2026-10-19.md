@@ -141,3 +141,19 @@ Wave 1 队列（Lead 指定顺序）：**QWEN-101 设计稿**（只设计不实�
 - 设计稿引用逐条自验后更正了 4 处行号（子代理转述的 `test_ablation_review_packets.py:37/38-44`、`prepare_ablation_review.py:58-60`、`ci.yml:172-210` → 实测 `:35`、`:36-42`、`:63`、`:172-209`）。
 - 新发现的仓库级隐患（记为整改候选，本任务不顺手改）：`.gitignore` 里没有 `reports/`，而 `scripts/evaluate_learning_package.py:26` 默认输出恰在 `ROOT/reports/`，`evals/LEARNING_PACKAGE_EVAL.md:94` 却要求人工审查材料只放本地 `output/reports` —— 三者矛盾，按默认命令运行会把人评材料放进可提交目录。
 - 等 Lead 裁决 6 点（设计稿 §10）后才进入实现。
+
+## 九、Wave 1 · QWEN-101 实现交付（2026-10-19 15:46，Lead 六项裁决后）
+
+| 项 | 结论 | 证据等级 |
+|---|---|---|
+| 落点（裁决 1） | 数学与校验 = `backend/app/evaluation/human_agreement.py`（纯 stdlib、被 mypy 覆盖、**0 error**）；CLI 薄壳 = `scripts/human_eval/` 五入口 + 共享模块 `common.py`（非入口、无 `main`） | offline |
+| 兼容（裁决 2） | 新包默认每评审独立置换；旧三脚本 `scripts/prepare_ablation_*` **零改动**，`test_ablation_review_packets.py` 仍在 fast 清单并通过；历史材料 `output/ablation-full-20261017` 不重算、不混用（协议 §11） | offline |
+| κ 口径（裁决 3） | 逐 rubric 二值 Cohen's κ + `po`/`pe`/`prevalence`/`bias`；`n=0` → `null`+`no_common_items`，`pe==1` → `null`+`degenerate_marginals`，未定义从不写 0 | offline |
+| 依赖（裁决 4） | 无 `scipy`：Wilson（z=1.96）+ item 级 seeded bootstrap（B=2000，percentile 2.5/97.5），seed 写入报告 `randomness` | offline |
+| "20 题"（裁决 5） | item 级写死进协议 §9；同时说明 36 个 item 仍只对应 12 道独立任务，`limitations` 恒定携带 | offline |
+| 覆盖率门禁（裁决 6） | **未扩**：`.github/workflows/ci.yml` 只把 2 个新测试追加进 fast 清单（37 → 39 文件），80% 门禁仍是 5 文件 | offline |
+| 协议 | 新增 [HUMAN_EVAL_PROTOCOL.md](HUMAN_EVAL_PROTOCOL.md)：角色、六步流程与命令、材料可见性、随机化与 `permutation_sha256`/`frozen_packet` 审计、null 规则、裁决语义、统计公式、验收口径、隐私、历史材料处置、错误码表、"工具不能证明的事" | offline |
+| 测试 | `tests/a/test_human_agreement_statistics.py`（18）+ `tests/a/test_human_eval_toolkit.py`（9）= **27 passed / 0 failed**（0.76 s）；fast 清单本机等价复跑 **396 passed / 1 skipped / 0 failed**（54.90 s，独立 SQLite + 新 `--basetemp`）；`ruff --select F821,F823,E9` 通过 | offline |
+| 与设计稿的偏差（需 Lead 复核） | ① `COVERAGE_INCOMPLETE` 收紧为"非对称留空即拒"，对称留空才允许并减少 `n_m`（设计稿 §5 与 §6 两处表述冲突，取严）；② 多一个共享模块 `common.py`；③ `import_reviews` 对派生产物采用"内容一致即放行、不同即 `PACKET_TAMPERED`"的幂等语义，最终产物一律 `open("x")`。三条均写在协议 §14 | offline |
+| 未验证 | 真人 2 名 + 裁决人 1 名的实际执行（**工具永不代填**）；远端 CI 39 文件清单需合并后由 main run 复验（本机为等价复跑） | — |
+

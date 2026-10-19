@@ -59,7 +59,7 @@
 | E4 | retry-development-20261017.md | v2.5 6/12 → v2.6 9/12 | 有证据 | cloud | 已自我声明"探索性、各跑一次、不能归因"。 | 保持 |
 | E5 | structured-output-20261018.md | v2.8 dev 12/12、holdout 12/12；44/43 次调用；输出 25,384/25,286 tokens；费用未知；6 次截断均重试恢复 | 有证据 | cloud | 局限（单次、捆绑改动、留出集非全新、不证质量）已写明；费用未写 0 ✓。 | 保持；"新独立任务真模型验证"仍属 QWEN-102（需付费授权） |
 | E6 | qa-golden-v2-summary.json / learning-package-v1-summary.json | 脱敏汇总 | 有证据 | cloud（转录） | 与 README 数字逐项一致；`limitations` 字段诚实（逐例原始记录未公开、契约≠质量、人审 0%）。 | 保持 |
-| E7 | 双人盲评/裁决工具（scripts/prepare_ablation_*） | "已实现工具，评分待真人" | 有证据（工具）+ 待人工（评分） | offline / human | 工具测试 `test_ablation_review_packets.py` 今日重跑通过；无任何文档宣称评分已完成。 | 评分执行需真人 2 名（QWEN-101 交付工具与协议） |
+| E7 | 双人盲评/裁决工具（`scripts/prepare_ablation_*` **新增** `scripts/human_eval/` 五入口 + `backend/app/evaluation/human_agreement.py`） | "已实现工具，评分待真人" | 有证据（两套工具）+ 待人工（评分） | offline | 旧工具测试 `test_ablation_review_packets.py` 与 QWEN-101 新测试 `test_human_agreement_statistics.py`/`test_human_eval_toolkit.py`（27 用例）均本机通过；协议见 `docs/HUMAN_EVAL_PROTOCOL.md`；**无任何文档宣称评分已完成**，新包生成时 `scores` 恒为 `null`。旧材料（2026-10-17）A/B 同序、26 item 全为 `null`，只作历史观察、不重算不混用 | 评分执行需真人 2 名 + 分歧时第 3 名；"20 题"按 item 级口径（Lead 裁决 5） |
 
 ## 3. docs/V2_TEN_MODULE_IMPLEMENTATION.md（自称"描述当前代码"）
 
