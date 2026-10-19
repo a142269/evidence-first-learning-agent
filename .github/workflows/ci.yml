@@ -28,6 +28,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+      # 前端 node:test 单元（tests/*.test.mjs）；失败即红，不做 || true 兜底。
+      # _orphaned/ 下的用例依赖本仓库未提交的源码，glob 单层 * 不会命中它们。
+      - name: Frontend unit tests (node:test)
+        run: node --test tests/*.test.mjs
 
   dependency-security:
     name: Dependency vulnerability scan
@@ -323,6 +327,7 @@ jobs:
             tests/a/test_v2_event_idempotency.py \
             tests/a/test_v2_ingestion_idempotency.py \
             tests/a/test_v2_ingestion_postgres.py \
+            tests/a/test_v2_retrieval_postgres.py \
             tests/a/test_vector_reindex.py \
             tests/a/test_v2_eval_cost_guard.py \
             --no-cov --benchmark-disable -q

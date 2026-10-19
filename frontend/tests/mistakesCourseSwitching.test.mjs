@@ -12,9 +12,21 @@ assert.match(apiSource, /getMistakesHeatmap\(userId: string, course = ""\)/, "�
 assert.match(apiSource, /listMistakes\(userId: string, category = "", limit = 50, course = ""\)/, "错题列表 API 应支持课程参数");
 assert.match(apiSource, /getMistakeInsights\(userId: string, course = ""\)/, "AI 诊断 API 应支持课程参数");
 
-for (const course of ["全部课程", "人工智能", "Python"]) {
-  assert.ok(viewSource.includes(course), `课程切换器缺少选项：${course}`);
-}
+// 当前源码依据：frontend/src/views/MistakesView.vue:66-68 静态兜底只有
+// "全部课程 / 人工智能导论"，MistakesView.vue:90 再用后端 listCourses 结果动态填充
+// COURSE_OPTIONS，因此源码里不再出现硬编码的 "Python" 选项字符串。
+assert.match(viewSource, /\{ value: "", label: "全部课程" \}/, "课程切换器应提供全部课程兜底选项");
+assert.match(viewSource, /\{ value: "artificial_intelligence", label: "人工智能导论" \}/, "课程切换器应有课程兜底选项");
+assert.match(
+  viewSource,
+  /COURSE_OPTIONS\.value = \[\{ value: "", label: "全部课程" \}, \.\.\.options\];/,
+  "其余课程（含 Python）应由后端课程列表动态注入",
+);
+assert.match(
+  viewSource,
+  /await import\("@\/api\/knowledge"\)/,
+  "课程选项应来自后端课程接口（frontend/src/api/knowledge.ts listCourses）",
+);
 assert.match(viewSource, /class="mk-course-switcher"/, "错题本标题区应提供课程切换器");
 assert.match(viewSource, /const activeCourse = ref/, "错题本应维护页面级课程范围");
 assert.match(viewSource, /router\.replace\([\s\S]*course/, "切换课程后应同步 URL 查询参数");

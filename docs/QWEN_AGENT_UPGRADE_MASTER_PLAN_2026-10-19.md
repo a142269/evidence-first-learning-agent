@@ -2,6 +2,7 @@
 
 > 编写：项目指挥（Lead） · 日期：2026-10-19 · 基线：`main@1ba64fa`（工作区干净，远端 CI run #19 全绿）
 > 执行者：Qwen（本项目唯一主执行者）
+> **协作通道**：`docs/QWEN_LEAD_DIALOGUE.md`（Lead 与 Qwen 直接对话，append-only；Qwen 在此汇报/提问）
 > 必读：`docs/OPTIMIZATION_HANDOFF_2026-10-18.md`、`docs/OPTIMIZATION_STATUS_2026-10-18.md`、
 > `docs/V2_TEN_MODULE_IMPLEMENTATION.md`、`README.md`（定位与“不宣称”边界）
 >
@@ -511,7 +512,7 @@ git status --short; git diff --check; git diff --stat
 | QWEN-333 | UI 聚焦与 legacy 标注：V2 默认入口；V1/实验页面开关/标签；演示路径 | P2 | — | 2d | 导航/开关；文档 |
 | QWEN-341 | 指标与告警：Run 成功率/延迟/错误/工具/队列/成本指标；Prometheus+告警规则草案 | P1 | QWEN-301 | 3d | `/metrics` 指标测试；告警 YAML；文档 |
 | QWEN-342 | trace/日志关联：run_id/execution_id/trace_id 贯穿 SSE/工具/审计 | P2 | QWEN-341 | 2d | 关联测试；排障文档 |
-| QWEN-343 | 测试分层进 nightly：把 `tests/b`/integration/regression 分批加入 nightly；fast CI 保持 <20min | P1 | QWEN-002 | 3d | nightly 绿；耗时记录；明确 skip 原因 |
+| QWEN-343 | 测试分层进 nightly：把 `tests/b`/integration/regression 分批加入 nightly；fast CI 保持 <20min；**新增（QWEN-121 收口）**：验证 Linux nightly 真跑到 `tests/a/test_celery_worker_process.py`（Windows 侧已条件 skip），并给 `frontend/tests/_orphaned/` 17 个孤儿测试给出结论（恢复源码则移回，否则正式处置） | P1 | QWEN-002 | 3d | nightly 绿；耗时记录；明确 skip 原因；孤儿测试有处置结论 |
 
 **Wave 3 出口**：可扩缩容、可观测、可测试的工程底座；安全边界有红队与矩阵。
 
@@ -519,7 +520,7 @@ git status --short; git diff --check; git diff --stat
 
 | ID | 任务 | 优先级 | 依赖 | 估时 | 验收 |
 |---|---|---|---|---|---|
-| QWEN-401 | 许可/素材闭环：准备 dist NOTICE、integrated-map 来源、125 媒体清单、GPL/LGPL 审查包；**法务结论由人签署** | P1 | QWEN-003 | 3d | 清单/文件齐全；文档标注“待人工审查” |
+| QWEN-401 | 许可/素材闭环：准备 dist NOTICE、integrated-map 来源、125 媒体清单、GPL/LGPL 审查包；**新增（QWEN-121 收口）**：给出 `frontend/integrated-map-src` 来源结论——取得可提交源码则把 `frontend/tests/_orphaned/` 16 个依赖它的测试移回 `frontend/tests/`，否则正式删除并同步文档（`docs/TripleU平台全功能思维导图.md` L550/L1231、`docs/10-学术与工程创新对照表.md` L490-491）；法务结论由人签署 | P1 | QWEN-003 | 3d | 清单/文件齐全；文档标注"待人工审查"；孤儿测试有来源结论 |
 | QWEN-402 | Release 材料：版本号/CHANGELOG、演示视频脚本与录制清单、5 分钟演示路径、README 截图更新 | P1 | QWEN-333 | 3d | Release 草稿；视频/截图 artifact |
 | QWEN-403 | 生产 Runbook：TLS/域名/备份/迁移窗口/监控模板；本机演练记录；不宣称公网已验证 | P1 | QWEN-341 | 3d | Runbook + 演练日志；未验证项清单 |
 | QWEN-404 | 独立复核：请未参与开发的 agent/人按文档复跑关键证据；记录差异与修正 | **P0** | 全部 | 2d | 复核报告；差异关闭或标注 |

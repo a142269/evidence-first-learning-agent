@@ -184,9 +184,9 @@ class TestGenerateTTS:
         r = client.post("/api/v1/artifacts/generate/tts", json=body)
         assert r.status_code == 200
         data = r.json()
-        # 即使讯飞 API 失败也会降级到 mock
+        # 无讯飞凭据时 edge-tts 是合法降级，再往后才到 mock
         assert data["filepath"]
-        assert data["method"] in ("xunfei", "mock", "cache")
+        assert data["method"] in ("xunfei", "edge-tts", "mock", "cache")
 
     def test_voices_list(self, client: TestClient):
         r = client.get("/api/v1/artifacts/tts/voices")

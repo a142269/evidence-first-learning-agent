@@ -198,6 +198,7 @@ docs/                         # 架构、权限、恢复与演示文档
 - [企业架构实现指南](docs/ENTERPRISE_ARCHITECTURE_GUIDE.md)
 - [V2 十模块实现说明](docs/V2_TEN_MODULE_IMPLEMENTATION.md)
 - [Agent 十模块完备性评估与 Qwen 优化主计划（2026-10-19）](docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md)
+- [Qwen ↔ Lead 协作对话（共享文件）](docs/QWEN_LEAD_DIALOGUE.md)
 - [学习包设计与使用](docs/LEARNING_PACKAGE_GUIDE.md)
 - [持久化认证与课程权限](docs/AUTH_AND_COURSE_ACCESS.md)
 - [运行状态修复与断线恢复](docs/RUN_RECONCILIATION.md)
