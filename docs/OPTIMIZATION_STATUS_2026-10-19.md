@@ -156,4 +156,3 @@ Wave 1 队列（Lead 指定顺序）：**QWEN-101 设计稿**（只设计不实�
 | 测试 | `tests/a/test_human_agreement_statistics.py`（18）+ `tests/a/test_human_eval_toolkit.py`（9）= **27 passed / 0 failed**（0.76 s）；fast 清单本机等价复跑 **396 passed / 1 skipped / 0 failed**（54.90 s，独立 SQLite + 新 `--basetemp`）；`ruff --select F821,F823,E9` 通过 | offline |
 | 与设计稿的偏差（需 Lead 复核） | ① `COVERAGE_INCOMPLETE` 收紧为"非对称留空即拒"，对称留空才允许并减少 `n_m`（设计稿 §5 与 §6 两处表述冲突，取严）；② 多一个共享模块 `common.py`；③ `import_reviews` 对派生产物采用"内容一致即放行、不同即 `PACKET_TAMPERED`"的幂等语义，最终产物一律 `open("x")`。三条均写在协议 §14 | offline |
 | 未验证 | 真人 2 名 + 裁决人 1 名的实际执行（**工具永不代填**）；远端 CI 39 文件清单需合并后由 main run 复验（本机为等价复跑） | — |
-
