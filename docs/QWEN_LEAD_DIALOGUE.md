@@ -154,3 +154,28 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 
 — Lead
 
+### [2026-10-19 15:10] Qwen → Lead | [HELLO] 收到审阅，认领 QWEN-004 / QWEN-120
+
+- 任务：QWEN-004、QWEN-120
+- 结论：认领
+- 改动：本文件（append-only，新增本条）
+- 测试：无（本条为认领与答疑，未改代码）
+- 证据等级：offline
+- 未验证 / 风险：无
+- 下一步：先做 QWEN-004 两处收口修复 + 全量复跑，再做 QWEN-120 CI 收口；分别提交并追加 [DONE]。
+
+**回答你的 4 个问题**
+
+1. **运行环境/版本复核**：Windows 10 内部版 10.0.26200 / x64；Python 3.12.15（conda 环境 `evidence-agent-py312`）；Node v24.13.0、npm 11.6.2；Docker 29.8.2 可用（本轮 Wave 0 未起容器）；Shell 是 Git Bash，**不是 PowerShell**，所以我只用 bash 语法跑命令；前端 `npm run build`（vue-tsc + vite）可执行且已通过。注意三个 Windows 沙箱环境限制（已记录在 `docs/OPTIMIZATION_STATUS_2026-10-19.md`）：mypy 需要 `PYTHONUTF8=1` 才能读 `mypy.ini`；vite 构建需把 `TEMP/TMP` 指到工作区内，否则 AppData 临时目录清理被拒；测试必须显式 `--basetemp`。
+2. **单次可执行时长/粒度**：单轮可连续跑约 1～2 小时（含 10 分钟级全量 pytest，实测 650 s）。期望粒度是**一个 QWEN-xxx 任务一轮**，任务内不打断；跨 Wave 或需要决策时先来文件问。全量套件耗时较长，我会放后台跑并等结果，不用你等。
+3. **付费调用**：是，必须先在 [QUESTION] 里申请并等确认，未确认一律不调用。Wave 0 付费调用数 = 0；后续每个任务会照实记录调用数/输入输出 token/延迟（费用未知写 unknown）。
+4. **审阅节奏**：建议**收口/关键任务按任务审，其余按 Wave 审**。具体：QWEN-004/120（本轮，改 CI 与测试期望）→ 请你按任务审；QWEN-101/102/103（Wave 1）→ **先设计再实现**，设计交你评审后再动代码，这与你的要求一致。若你更希望每任务都审，我照办，只是回消息频率会高一些。
+
+**两点确认（不扩大范围）**
+
+- QWEN-004 我只改测试：TTS 允许值加 `edge-tts`（产品代码 `tts_xunfei.py` 的 Level 2.5 降级返回值），Celery 进程测试在 Windows 且缺 `pywintypes` 时条件 skip。**不安装 pywin32**，不改产品行为。
+- QWEN-120 只做前端单测进 fast + 核对 `test_v2_retrieval_postgres.py` 是否漏在 enterprise 清单；nightly 扩容留给 QWEN-343。
+
+**给你的一个提示（不需要现在决定）**：`frontend/package.json` 目前没有 `test` 脚本，`frontend/tests/*.mjs` 是 `node:test` 用例。我打算在 CI 用 `node --test tests/` 直接跑，不加 npm 脚本以免改动前端打包链；如果你希望统一走 `npm test`，回消息时说一声，我再调整。
+
+— Qwen
