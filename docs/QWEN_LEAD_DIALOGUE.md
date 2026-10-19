@@ -12,7 +12,7 @@
 - **项目阶段**：**Wave 0 完成并已合并到 `main`**（merge `5bf77d1`）；**main CI run #21 全绿**（含 node 20 前端单测），Wave 0 关闭。
 - **Qwen 已完成**：QWEN-000/001/002；QWEN-004（TTS 断言 + Celery Windows skip；全量 2235/0/20）；QWEN-120 第 2 项（`test_v2_retrieval_postgres` 已补进 enterprise CI，一次性 PG 复跑 1 passed）；QWEN-121（`6bcb270`：17 个孤儿用例 `git mv` + README、4 个过期断言修正、CI 加 `node --test`；本地 21/21、build 通过）。
 - **Qwen 当前任务**：从最新 main 建 `qwen/wave1-evidence`，先交 **QWEN-101 设计稿**（评分字段/随机化/导入统计/kappa），不代填评分；QWEN-102 已获授权，可按上限执行。
-- **模型 API（已就绪）**：用户授权使用其原有 API；已从原项目配置最小化复制到仓库根 `.env`（gitignored，不含旧数据库/APP_ENV），provider=`openai_compatible`、base=`api.deepseek.com`、key 已配置（长度已核对，不打印）；QWEN-102 按 §3 第 4 条上限执行。
+- **模型 API（已就绪）**：用户确认原先只用 **DeepSeek + 向量模型**。本地 `.env` 只保留 `OPENAI_*`（DeepSeek）、`EMBEDDING_MODEL=bge-base-zh-v1.5`、LLM 参数与 `A3_OFFLINE_DEMO=0`；**已移除 SPARK 旧凭据**（原项目里是 TTS/OCR 遗留，Qwen 验证不需要）。实测 `provider=openai_compatible`、`model=deepseek-flash`、`embedding_cloud_available=False`（没有 cloud embedding 端点），因此 QWEN-102 用 **DeepSeek 生成 + SQLite/legacy RAG 回退**，不调用 embedding API。
 - **Lead 当前动作**：已复核 QWEN-121 diff、`_orphaned/README.md`、CI step（无 `|| true`）并本地复跑 `node --test` 21/21；接受两处语义改写；已完成合并并确认 CI #21 绿。
 - **阻塞**：无。
 - **下一次检查**：2026-10-19 15:20 之后。
@@ -61,7 +61,7 @@
 1. **主线是 V2 学习包**；V1 只做 `depends_on` 二选一、安全、文档一致性，不重写。
 2. **不补通用 Agent 能力**：浏览器、Shell、任意文件写入、通用代码执行、Tree-of-Thought、无限自主循环都不做。
 3. **人工评分必须真人完成**；Qwen 只交付工具、协议、统计脚本，不代填。
-4. **模型调用（2026-10-19 用户授权更新）**：只使用用户原有 API 配置——本地仓库根 `.env`（已从原项目最小化复制：`OPENAI_BASE_URL/API_KEY/MODEL` + `SPARK_*`/`EMBEDDING_MODEL`；gitignored，**不得提交、上传、打印**）。当前 `provider=openai_compatible`、base=`api.deepseek.com`、`A3_OFFLINE_DEMO=0`。**不新建/不切换供应商**。QWEN-102 授权上限：**1 次单例冒烟 + 12 个新任务 × 1 次生成**（每任务最多 2 次重试，总调用 ≤ 37）；每次记录调用数/输入输出 token/延迟，费用未知写 `unknown`；超出上限、配置不可用或出现异常计费迹象时立即停止并报告。其他任务默认 offline/stub；跑离线测试时显式设 `A3_OFFLINE_DEMO=true`，不得误触真实调用。
+4. **模型调用（2026-10-19 用户授权更新）**：只使用用户原有 API 配置——本地仓库根 `.env` 仅保留 DeepSeek（`OPENAI_BASE_URL/API_KEY/MODEL`）、`EMBEDDING_MODEL=bge-base-zh-v1.5`、LLM 参数与 `A3_OFFLINE_DEMO=0`；**已移除 SPARK 旧凭据，且没有 cloud embedding 凭据**。**不调用 embedding API**；检索走 SQLite/legacy RAG 回退（`embedding_cloud_available=False`，不能声称 pgvector 企业检索已验证）。`provider=openai_compatible`、base=`api.deepseek.com`。**不新建/不切换供应商**。QWEN-102 授权上限：**1 次单例冒烟 + 12 个新任务 × 1 次生成**（每任务最多 2 次重试，总调用 ≤ 37）；每次记录调用数/输入输出 token/延迟，费用未知写 `unknown`；超出上限、配置不可用或出现异常计费迹象时立即停止并报告。其他任务默认 offline/stub；跑离线测试时显式设 `A3_OFFLINE_DEMO=true`，不得误触真实调用。
 5. **测试隔离**：独立 `--basetemp output/<dir>/base`、隔离 SQLite、一次性容器；不碰主数据库。
 6. **证据等级**：所有汇报必须标 `offline / pg / cloud / human / prod`；未验证不得写成已验证。
 7. **提交**：小步提交、分支隔离、提交信息含证据；Wave 结束 CI 绿后由 Lead 确认合并。
@@ -357,5 +357,18 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 - 硬约束：不得 `git add/commit/push` `.env`；不得 `cat`/打印/复制密钥到日志；离线测试显式 `A3_OFFLINE_DEMO=true`；生产 Compose 不使用该 `.env`。
 - 顺序：QWEN-101 设计稿仍优先；QWEN-102 可并行或随后；QWEN-103 空档做。
 - 若调用失败（401/余额/模型名/超时）：立即 `[BLOCKER]`，只贴错误类别与 HTTP 状态，不贴 key。
+
+— Lead
+
+### [2026-10-19 15:20] Lead → Qwen | [CORRECTION] 原配置只有 DeepSeek + 向量模型；.env 已精简
+
+- 用户澄清：原项目只用了 **DeepSeek（LLM）+ `bge-base-zh-v1.5`（向量模型）**，没有 Spark 等其它 LLM。我上一条里复制 `SPARK_*` 是**过度复制**（旧 `.env` 里是 TTS/OCR 遗留），已从当前 `.env` 移除。
+- 现在 `.env` 只含：`OPENAI_BASE_URL/API_KEY/MODEL`、`LLM_TEMPERATURE/MAX_TOKENS/TIMEOUT`、`EMBEDDING_MODEL=bge-base-zh-v1.5`、`LLM_PROVIDER=openai_compatible`、`A3_OFFLINE_DEMO=0`。验证：`provider=openai_compatible`、`model=deepseek-flash`；**`embedding_cloud_available=False`**——旧 `.env` 没有 `EMBEDDING_BASE_URL/API_KEY`，当前代码的云端 embedding 不可用。
+- 因此 QWEN-102 的执行口径：
+  1. **生成**用 DeepSeek（`cloud` 证据）；
+  2. **检索**走 **SQLite + legacy RAG 回退**（`offline` 证据），**不调用 embedding API**，也不得声称 pgvector 企业检索已验证；
+  3. 如果某个任务必须依赖企业 pgvector/云端 embedding：标为 `skipped: embedding_unavailable`，不要调用/猜测；
+  4. 其余上限不变（1 冒烟 + 12×1，重试≤2，总≤37），先 `[PLAN]` 再执行，费用未知写 `unknown`。
+- `.env` 仍为 gitignored；不得提交/打印；离线测试显式 `A3_OFFLINE_DEMO=true`。
 
 — Lead

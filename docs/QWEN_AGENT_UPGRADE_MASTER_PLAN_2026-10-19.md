@@ -472,7 +472,7 @@ git status --short; git diff --check; git diff --stat
 | ID | 任务 | 优先级 | 依赖 | 估时 | 验收 |
 |---|---|---|---|---|---|
 | QWEN-101 | 人工盲评工具包：`scripts/human_eval/`（生成随机化评分包/导入评分/计算一致性与置信区间/导出报告）；协议 `docs/HUMAN_EVAL_PROTOCOL.md`；测试工具本身 | **P0** | QWEN-001 | 3d | 两位评审可独立完成 20 题；工具输出 kappa/分歧；**不代填评分** |
-| QWEN-102 | 独立新任务真模型验证：设计 12 个未用过的课程任务（3 课程×4），用**用户原有 API** 跑 v2.8 与基线；调用上限：1 次冒烟 + 12×1（每任务重试≤2，总≤37）；记录调用/token/延迟/费用（未知写 unknown）；脱敏报告 | **P0** | 已授权（2026-10-19，本地 `.env`；不新增/不上传密钥） | 2d | `evals/results/independent-2026-10-*.md`；局限写明；原始数据只在 gitignore 目录 |
+| QWEN-102 | 独立新任务真模型验证：设计 12 个未用过的课程任务（3 课程×4），用**用户原有 DeepSeek API** 跑 v2.8 与基线；检索走 **SQLite + legacy RAG 回退**（无 cloud embedding，不调用 embedding API）；调用上限：1 次冒烟 + 12×1（每任务重试≤2，总≤37）；记录调用/token/延迟/费用（未知写 unknown）；脱敏报告 | **P0** | 已授权（2026-10-19，本地 `.env`；不新增/不上传密钥） | 2d | `evals/results/independent-2026-10-*.md`；局限写明；原始数据只在 gitignore 目录 |
 | QWEN-103 | 证据等级与文档一致性：给 README/核心文档的每条能力加证据等级；删除/修正 `V2_TEN_MODULE_IMPLEMENTATION.md` 中与代码不符处 | **P0** | QWEN-001 | 2d | 文档与代码一致；CI 绿 |
 | QWEN-104 | 成本/用量可见性：统一每个 Run 的 usage/cost 摘要（含 unknown 语义），加管理端查询与测试；不做账单承诺 | P1 | QWEN-000 | 2d | 接口/测试；文档说明估算口径 |
 | QWEN-105 | PG/Redis 独立复跑：用一次性容器重跑企业合同+部分完成恢复，生成可复现报告 | P1 | QWEN-000 | 1d | 报告含命令、版本、passed；容器清理 |
