@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 0 完成并已合并到 `main`**（merge `5bf77d1`）；**main CI run #21 全绿**（含 node 20 前端单测），Wave 0 关闭。
-- **Qwen 已完成**：QWEN-000/001/002；QWEN-004（TTS 断言 + Celery Windows skip；全量 2235/0/20）；QWEN-120 第 2 项（`test_v2_retrieval_postgres` 已补进 enterprise CI，一次性 PG 复跑 1 passed）；QWEN-121（`6bcb270`：17 个孤儿用例 `git mv` + README、4 个过期断言修正、CI 加 `node --test`；本地 21/21、build 通过）。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-evidence`，先交 **QWEN-101 设计稿**（评分字段/随机化/导入统计/kappa），不代填评分；QWEN-102 已获授权，可按上限执行。
-- **模型 API（已就绪）**：已找到原项目 `.env.enterprise` 中配置的 **`qwen3.7-text-embedding-flash`**（阿里云 MaaS 兼容端点，1024 维）并合并进本地 `.env`：DeepSeek（`OPENAI_*`）+ Qwen embedding（`EMBEDDING_*`）+ LLM 参数 + `A3_OFFLINE_DEMO=0`；已移除 SPARK 旧凭据。实测 `provider=openai_compatible`、`llm_model=deepseek-flash`、`embedding_model=qwen3.7-text-embedding-flash`、`embedding_available=True`。QWEN-102 可按 §3 第 4 条上限使用两套模型。
-- **Lead 当前动作**：已复核 QWEN-121 diff、`_orphaned/README.md`、CI step（无 `|| true`）并本地复跑 `node --test` 21/21；接受两处语义改写；已完成合并并确认 CI #21 绿。
-- **阻塞**：无。
-- **下一次检查**：2026-10-19 15:20 之后。
+- **项目阶段**：Wave 1 进行中。**QWEN-101 实现已完成并通过 Lead 复核**（29 passed、mypy 0、ruff 通过）；**QWEN-102 计划已批准**（单臂 A；等 `[MERGE-OK]` 后执行）。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试（`4170373`/`e23f139`）；QWEN-102 题集/计划（`f291e25`）。
+- **Qwen 当前任务**：等 Lead 的 `[MERGE-OK]`（QWEN-101 合并 main + CI 绿）；之后按已批计划执行 QWEN-102（DeepSeek 生成 + Qwen embedding + 一次性 PG，单臂 `full`，12 题 = 3 AI + 9 Python）。
+- **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**（MaaS 兼容端点，1024 维）；`embedding_available=True`；不得提交/打印/上传。
+- **Lead 当前动作**：复核 QWEN-101 diff/测试；批准 QWEN-102 计划；正在合并 QWEN-101 到 main 并等待 CI。
+- **阻塞**：无（等待 CI）。
+- **下一次检查**：2026-10-19 16:50 之后。
 
 ## 1. 协作协议
 
@@ -51,8 +51,9 @@
 | QWEN-004 | Wave 0 收口补丁 | **完成** | Qwen | `e74151f`；全量 2235/0/20；TTS+edge-tts、Celery Windows 条件 skip |
 | QWEN-120 | CI 快速收口（第 2 项） | **完成** | Qwen | `test_v2_retrieval_postgres.py` 已进 enterprise（37→38）；PG 1 passed；前端项由 QWEN-121 完成 |
 | QWEN-121 | 前端测试分流与 CI 接入（方案 A） | **完成** | Qwen | `6bcb270`：17 个孤儿用例移入 `_orphaned/`（只移不删 + README）、4 个过期断言修正、CI `node --test tests/*.test.mjs`；本地 21/21、build 通过 |
-| QWEN-101 | 人工盲评工具包 | 未开始 | — | P0；Lead 提供协议评审 |
-| QWEN-102 | 独立新任务真模型验证 | 未开始 | — | P0；需用户付费授权 |
+| QWEN-101 | 人工盲评工具包 | **完成（待合并）** | Qwen | `4170373`+`e23f139`；Lead 复跑 29 passed、mypy 0、ruff 通过；工具/协议就绪，真人评分仍待发生 |
+| QWEN-102 | 独立新任务真模型验证 | **计划已批，等 MERGE-OK** | Qwen | `f291e25`：12 题（3 AI+9 Python）、单臂 `full`、PG+Qwen embedding、预算/停止条件已写；`computer_work` 无正文的处置已接受 |
+| QWEN-103 | 台账措辞修正 | 未开始 | — | Wave 1；QWEN-101 合并后在 main 上做 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -78,6 +79,9 @@
 16. **QWEN-121 两处语义改写：保留（Lead 裁定）**。依据：设计文档没有“首页轨道图/薄弱点列表”要求；`OrbitDiagram` 仅 LoginView 使用；Dashboard 当前模板只有 `activeMistakeFocus` 焦点卡。两处改写保留；`db-weak-kp-*` 死样式与“未来是否要首页轨道图”记为清理/产品观察项（不阻塞）。若未来产品要求恢复，回退测试改动并开产品任务。
 17. **Wave 0 已合并**：merge `5bf77d1`（包含 QWEN-000/001/002/004/120/121 与 Lead 文档），main CI 将首次在 node 20 上验证前端单测；若失败，Qwen 在 main 上修复（fix-forward），不要把 CI 改成 `|| true`。
 18. **`frontend/package.json` 的 `test` 脚本**：本轮不加；CI 使用 shell 展开 `tests/*.test.mjs` 即可。以后如要统一本地命令再加，不阻塞。
+19. **QWEN-101 验收通过**：Lead 独立复跑 `test_human_agreement_statistics.py` + `test_human_eval_toolkit.py` + 旧 `test_ablation_review_packets.py` → **29 passed**；`mypy` 0、`ruff` 通过。三处收紧全部接受：非对称留空即 `COVERAGE_INCOMPLETE`；多出的 `common.py` 共享模块；派生文件"内容一致即放行、最终产物拒覆盖"的幂等语义。
+20. **QWEN-102 计划批准（单臂 A）**：生成上限按 **运行级** 理解（1 冒烟 + 12 运行 + 每任务≤2 重试 = 13–37 次外部运行；内部模型调用按实际记录，预期 52–91）；**不做双盲三臂**，本轮只出单臂 `full` 的机器级证据，盲评留到后续另批预算。题集按 **3 AI + 9 Python**（`computer_work` 无正文，不编造，报告写明限制）；检索用 12 章镜像 + 一次性 PG + Qwen embedding（嵌入请求 ≤30/块 ≤300）；`--arm` 的 +10/-2 改动与新增测试接受；成本 guard 的 1 CNY 预留上界接受（报告标"上界非账单"）。
+21. **付费调用门槛**：QWEN-101 合并到 main 且 **main CI 绿**后，Lead 发 `[MERGE-OK]`；Qwen 在此之前不得发起真实生成/embedding 调用（可做本地准备）。收到 `[MERGE-OK]` 后按计划先 `[START]`（容器名/步骤/预期调用），再执行，完成 `[DONE]` 附实际 usage。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -519,3 +523,33 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 证据等级：`offline`（题集、容器、迁移、分块与检索的全部实测均 0 云端调用）；本轮执行后将新增 `cloud`（生成 + embedding 实际 usage）与 `remote`（PG/pgvector 检索），**不含 `human`**（真人盲评未发生）。收到你对上面两问的答复前我不发付费请求之外的任何新范围；若问题 1 你无异议，我按本计划先起 redis、做两次摄取、跑冒烟，再按实测 usage 继续 12 次运行，完成即 `[DONE]` 附真实计数。
 
 — Qwen
+
+### [2026-10-19 16:20] Lead → Qwen | [DECISION] QWEN-101 验收通过；QWEN-102 按 A 执行（先等 MERGE-OK）
+
+**QWEN-101：验收通过。**
+
+- 我已独立复跑：`test_human_agreement_statistics.py` + `test_human_eval_toolkit.py` + 旧 `test_ablation_review_packets.py` → **29 passed**；`mypy` 单文件 0 error；`ruff` 通过。
+- 三处收紧**全部接受**：① 非对称留空即 `COVERAGE_INCOMPLETE`（严格版更安全，避免分母悄悄变小）；② `common.py` 共享模块（避免五份 CLI 重复校验）；③ "派生文件内容一致放行、最终产物拒覆盖"的幂等语义。
+- 旧三脚本零改动、历史材料不混用、`reports/` 隐患归 QWEN-103/401：均按你的处置。
+- **真人评分仍未发生**，`human` 证据为 0；这是工具交付，不是评测结果。
+
+**QWEN-102：计划批准，按 A 执行。**
+
+1. **"≤37" 按运行级**：13 次外部运行（1 冒烟 + 12） + 每任务≤2 重试 = 13–37；内部模型调用按实际记录（预期 52–91），token/延迟照实报。你的理解正确。
+2. **人工盲评选 A**：本轮只跑单臂 `full`，出机器级证据（完成率/契约/调用数/延迟/token）；双盲三臂留到后续另批预算。明确写"单臂数据不能直接进 QWEN-101 盲评"。
+3. **题集 3 AI + 9 Python** 接受；`computer_work` 无正文的处置接受（不编造，报告固定 limitations）。
+4. **检索路径**接受：12 章镜像 + 一次性 PG + Qwen embedding；87 chunks/12 摄取请求，总嵌入请求 ≤30、块 ≤300；报告写"镜像域，非全课程语料"。
+5. **`--arm` 改动**接受（+10/-2、单臂测试、非法臂在 provider 配置前拒绝）；旧 `prepare_ablation_*` 保持不动。
+6. **成本 guard**接受：Redis 一次性容器 + 1 CNY 预留上界，报告标"上界非账单/非账单价"；生成阶段靠运行次数与停止条件控制。
+7. 容器只用 `qwen102-pg` / `qwen102-redis` 自有名字；回滚只删自己的容器；不碰 `echomind-*`/`a3-*`。
+
+**合并与开工顺序**
+
+- 我现在把 `qwen/wave1-evidence`（QWEN-101 实现 + QWEN-102 计划/题集）合并到 `main` 并跑 CI。
+- **在我发出 `[MERGE-OK]` 之前，不要发起任何真实生成/embedding 调用**；可以先做本地准备（读配置、确认容器名）。
+- 收到 `[MERGE-OK]` 后：先发 `[START]`（最终容器名、步骤、预期运行/嵌入调用数），再按计划执行；完成 `[DONE]` 附实际 usage（生成运行数、内部调用数、输入输出 token、嵌入请求/块、延迟、费用 unknown）。
+- 合并后 QWEN-103 在 main 上做，不要与 QWEN-102 分支混改。
+- 仍不得提交/打印 `.env`；不得把 key 写进日志/报告；离线测试显式 `A3_OFFLINE_DEMO=true`。
+
+— Lead
+
