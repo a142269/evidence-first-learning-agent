@@ -179,3 +179,48 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 **给你的一个提示（不需要现在决定）**：`frontend/package.json` 目前没有 `test` 脚本，`frontend/tests/*.mjs` 是 `node:test` 用例。我打算在 CI 用 `node --test tests/` 直接跑，不加 npm 脚本以免改动前端打包链；如果你希望统一走 `npm test`，回消息时说一声，我再调整。
 
 — Qwen
+### [2026-10-19 16:20] Qwen → Lead | [DONE] QWEN-004 Wave 0 收口补丁完成（Windows 全量 0 failed）
+
+- 任务：QWEN-004
+- 结论：完成
+- 改动：`tests/integration/test_artifacts_api.py`、`tests/a/test_celery_worker_process.py`、`docs/OPTIMIZATION_STATUS_2026-10-19.md`、`docs/CLAIMS_LEDGER.md`、`docs/TEST_MATRIX.md`
+- 测试：
+  - 定向：`pytest tests/integration/test_artifacts_api.py tests/a/test_celery_worker_process.py -o addopts= --benchmark-disable -q -rs -p sandbox_tmpdir_shim --basetemp output/qwen-baseline-2026-10-19/base-close2`（isolated SQLite `close1.db`，`A3_OFFLINE_DEMO=true`、`LLM_PROVIDER=none`，Windows）→ **24 passed / 1 skipped / 0 failed**（58.37 s）
+  - 全量：`pytest tests/ -o addopts= --benchmark-disable -q -rs -p sandbox_tmpdir_shim --basetemp output/qwen-baseline-2026-10-19/base-full-close`（独立 SQLite `close-full.db` + `init_db`）→ **2235 passed / 0 failed / 20 skipped**（612.61 s）。对首轮 2234/2/19：+1 passed（TTS）、+1 skipped（Celery 由 failed 转条件 skip），总数 2255 不变
+  - 静态：`ruff check tests/ --select F821,F823,E9` 通过；改动文件 `F,E9` 通过
+- 证据等级：offline（无 pg/cloud/human/prod 动作；付费调用 0 次）
+- 具体改法：
+  1. TTS 断言 → `assert data["method"] in ("xunfei", "edge-tts", "mock", "cache")`。`edge-tts` 是 `backend/app/services/multimodal/tts_xunfei.py:721` Level 2.5 降级的返回值；该路由不传 `prefer_natural`，所以没把 `edge-tts-natural` 加进允许值。产品代码零改动。
+  2. Celery：模块级 `pytestmark = pytest.mark.skipif(sys.platform == "win32" and importlib.util.find_spec("pywintypes") is None, ...)`，原因写明"kombu filesystem broker requires pywin32 on Windows; the Linux nightly full suite covers this contract"。**未安装 pywin32**，未动共享环境。顺带核实：该文件不在 quality/enterprise 清单，只由 nightly 全量覆盖，所以文案没写成"Linux CI"以免不准确。
+- 未验证 / 风险：
+  - Linux 上该 Celery 用例是否真的跑到，我只能靠静态推断（`sys.platform` 守卫），本机无法验证 → 需要一次 nightly 远端首跑证据（矩阵缺口 §5.1，我这边没有 gh CLI 触发权限）。
+  - 定向复跑第一次因为我把 `DATABASE_URL` 指向未初始化的一次性 SQLite，`TestMetrics::test_summary_endpoint` 报 `no such table: agent_runs`；执行 `init_db()` 后同一组 24 passed。属我的准备遗漏，不是产品回归，已如实写进状态文档 §六。
+  - 全量日志里 Celery 的 skip 文案是修改前的版本（先跑后补限定句），提交后又单独复跑该文件确认 1 skipped、文案一致，同样记录在 §六。
+- 提交：`e74151f`（测试 + CI）、`7acf3f1`（文档/台账/矩阵），基线 `f851dbc`（我的 [HELLO] 认领条）。无 rebase、无 force push，工作树干净。
+- 下一步：见下一条 [BLOCKER]（QWEN-120 前端半项）。收口两件按你裁决后，我等你的 Wave 0 合并确认，再从最新 main 建 `qwen/wave1-evidence`。
+- 给 Lead 的问题：全量复跑的数字（2235/0/20）现在比我收口前你审过的 README/台账旧值更新，README 正文的对应行是否随 QWEN-103 一起改（我按台账建议没动 README 正文）？
+
+### [2026-10-19 16:25] Qwen → Lead | [BLOCKER] QWEN-120 前端半项被仓库缺失源码挡住，需你裁决
+
+- 任务：QWEN-120
+- 结论：部分完成（第 2 项已做，第 1 项阻塞 >30 分钟，按协议上报）
+- 改动：`.github/workflows/ci.yml`、`docs/TEST_MATRIX.md`、`docs/CLAIMS_LEDGER.md`（新增 S8）
+- 测试：
+  - `tests/a/test_v2_retrieval_postgres.py` **确实漏配**，已补进 enterprise 清单（37 → 38 文件）。本机一次性容器验证：`docker run --rm -p 127.0.0.1:55432:5432 --tmpfs //var//lib//postgresql//data pgvector/pgvector:pg16` + `CREATE EXTENSION vector` + `TEST_V2_POSTGRES_URL=...` → **1 passed**（1.56 s，Alembic upgrade head 全链、1024 维向量、Embedding 用桩、无付费调用）。容器已 `docker stop`（`--rm` 自动删除），未挂业务卷，未触碰你现有 `triple-u-v2-eval-*` 等容器。
+  - 前端：`node --test tests/*.test.mjs`（cwd=frontend，node v24.13.0）→ **17 passed / 21 failed**（38 个顶层结果，34 个文件）。日志 `output/qwen-baseline-2026-10-19/logs/frontend-node-test.log`。
+- 证据等级：pg（第一项）、offline（第二项）
+- 阻塞原因（三类，全是仓库现状，不是我改坏的）：
+  1. **15 个文件依赖 `frontend/integrated-map-src/`，本仓库没有这棵树**：`git ls-files frontend/integrated-map-src` 无结果，也没有 `.gitmodules`。报错是 `ENOENT .../integrated-map-src/src/views/LabView.jsx`、`ERR_MODULE_NOT_FOUND .../src/api/platformApi.js` 等（11 个 `lab*` + `platformApiBase` + `playgroundCourseApi` + `playgroundCourses` + `demoLearnerAvatar`）。
+  2. **`routerRoutes.test.mjs` 读取不存在的 `frontend/src/views/CockpitView.vue`**（该视图未提交，后端 cockpit API 存在）。
+  3. **5 个文件对现有 Vue 源码的正则断言过期**：`dashboardChineseTimeline`（期望 `localizeKnowledgePointLabel(wp.kp_id)`）、`demoLearnerName`、`homeOrbitCentering`（期望 `.orbit-shell :deep(.agent-map)` 的 `scale(0.53)`）、`mistakesCourseSwitching`（期望课程切换器含 Python）、`resourcesRealDataChinese`（期望 `course: course.value`）。
+  另外 `frontend/package.json` 没有 `npm test` 脚本；`node --test tests/`（目录形式）在 node 24 会被当模块加载并报 `MODULE_NOT_FOUND`，必须用 glob 形式。
+- 为什么我没有直接接 CI：按你的要求"失败要真实暴露，不 `|| true`"。现在接入 = fast job 立刻 21 红，Wave 0 出口也就黄了。同样，我也不能只把 17 个绿的白名单进 CI——那等于用清单掩盖 21 个已知失败，属于伪造覆盖，我不做。
+- 请你在三个方案里裁决（我按你选的执行，不扩范围）：
+  - **A. 隔离（我建议，最小风险）**：把 16 个依赖缺失源码/缺失视图的测试移到 `frontend/tests/_orphaned/`（保留文件与历史，不删），把 5 个过期断言改成对当前源码的正确期望或一并隔离；然后 CI fast 加 `node --test "tests/*.test.mjs"`（真实失败，无 `|| true`）。代价：动了测试文件位置，属删除性动作，需你明确授权。
+  - **B. 补源**：确认 `integrated-map-src` 是否本该提交（或作为子模块/独立包）。若在别的仓库/另一工作树，需要用户给来源；这些测试和文档（台账 S8 引用的 `docs/TripleU平台全功能思维导图.md` L550/L1231）就能自证。代价：Wave 0 不能收口，取决于外部输入。
+  - **C. 本轮不动前端 CI**：QWEN-120 只算完成第 2 项，前端进 fast 转成 Wave 1/3 的独立任务（我建议编号 QWEN-121 或并入 QWEN-343），并把 S8 作为文档一致性项走 QWEN-103。代价：缺口继续存在，但至少台账里是显式记录而不是沉默。
+- 未验证 / 风险：CI 里 node 版本是 20，我本机是 24；`node --test` 的 glob 行为在 20 上我没法本地验证，若采纳 A/C，我建议 CI 用 `node --test tests/*.test.mjs` 让 shell 展开，避免版本差异。
+- 下一步：等你对 A/B/C 的裁决；期间我不开工 QWEN-101（Wave 1 需先出设计给你审）。
+- 给 Lead 的问题：Wave 0 是否允许在 QWEN-120 前端半项未闭环的情况下先合并（即你 §REVIEW 的"收口完成后合并"按 QWEN-004 + QWEN-120 第 2 项达成来计算）？
+
+— Qwen
