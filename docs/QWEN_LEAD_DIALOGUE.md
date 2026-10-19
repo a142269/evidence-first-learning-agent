@@ -412,3 +412,38 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 - 硬约束不变：`.env` gitignored，不得提交/打印/上传；离线测试显式 `A3_OFFLINE_DEMO=true`；报告只写 embedding 模型名/维度/端点类别，不写密钥。
 
 — Lead
+
+### [2026-10-19 15:48] Qwen → Lead | [DONE] QWEN-101 人工盲评工具包实现完成（六条裁决逐条落地，3 处收紧请你复核）
+
+- 任务：QWEN-101
+- 结论：完成（工具 + 协议 + 测试；**评分仍全部待真人**，工具零代填）
+- 改动：`backend/app/evaluation/human_agreement.py`（新，纯 stdlib 统计与校验）、`scripts/human_eval/`（新，5 个入口 `prepare_packets`/`validate_packets`/`import_reviews`/`agreement_report`/`export_summary` + 共享模块 `common.py`）、`docs/HUMAN_EVAL_PROTOCOL.md`（新）、`tests/a/test_human_agreement_statistics.py`（新，18 用例）、`tests/a/test_human_eval_toolkit.py`（新，9 用例）、`.github/workflows/ci.yml`（fast 清单 37→39）、`docs/TEST_MATRIX.md`、`docs/CLAIMS_LEDGER.md`（E7）；另 `docs/OPTIMIZATION_STATUS_2026-10-19.md` §九 与 `evals/CLAIM_AND_ABLATION.md` 加了一段新工具指针。
+- 测试（全 offline，Windows / Python 3.12.15 / 便携 conda 环境；**付费模型调用 0 次**，未读 `.env`）：
+  - `pytest tests/a/test_human_agreement_statistics.py tests/a/test_human_eval_toolkit.py -o addopts= --benchmark-disable -q -p sandbox_tmpdir_shim --basetemp output/qwen-wave1-2026-10-19/base-101-mypy` → **27 passed / 0 failed**（0.76 s，合成 fixtures）
+  - **fast 清单本机等价全跑**（从 `ci.yml` 解析出的 39 个文件逐字传给 pytest）：`DATABASE_URL=sqlite:///./output/qwen-wave1-2026-10-19/ci_fast.db`（先 `init_db()`）`A3_OFFLINE_DEMO=true LLM_PROVIDER=none pytest <39 files> --no-cov --benchmark-disable -q -p sandbox_tmpdir_shim --basetemp output/qwen-wave1-2026-10-19/base-fast` → **396 passed / 1 skipped / 0 failed**（54.90 s，exit 0）；对 Wave 0 基线 369/1：**+27 全部来自我新增的两个文件，既有用例一个没转红**（含 `test_ablation_review_packets.py` 仍绿 → 旧脚本与旧测试未被破坏），skip 仍是 `test_auth_restart.py`（需显式一次性 PG）
+  - `mypy --config-file mypy.ini backend/app/evaluation/human_agreement.py` → **0 error**（`PYTHONUTF8=1`）；`ruff check backend/app/evaluation/human_agreement.py scripts/human_eval tests/a/test_human_*.py --select F821,F823,E9`（CI 同口径）→ 通过
+  - 手工 CLI 冒烟走的是同一条 round-trip 测试：`prepare_packets` → 校验 → 合成评分 → `--require-reviewed` 校验 → `import_reviews` → 裁决导入 → `agreement_report --seed` → `export_summary`，并断言导出物不含 `case_id`/`arm`/`notes`/评审人身份
+- 证据等级：`offline`（工具与统计的自证；无 `human` 证据，因为真人评分尚未发生）
+- 你 15:35 六条裁决的落地位置：
+  1. 落点 → 数学/校验全在 `backend/app/evaluation/human_agreement.py`，`scripts/human_eval/` 只做 I/O 与错误码；mypy 覆盖保住。
+  2. 兼容 → 旧三脚本 `scripts/prepare_ablation_*` **零改动**；新包每评审独立 `SystemRandom` 置换 + `a-NNN`/`b-NNN` 命名空间；历史材料处置写成协议 §11（不重算、不混用、要复用必须重新生成并重新盲评）。
+  3. κ 口径 → 逐 rubric 二值 κ + `po`/`pe`/`prevalence`/`bias`；`n=0`→`null`+`no_common_items`，`pe==1`→`null`+`degenerate_marginals`，**未定义从不写 0**（`test_empty_intersection_is_null_and_not_zero`、`test_perfect_agreement_is_degenerate_and_reported_as_null` 直接钉住）。
+  4. 依赖 → 零第三方：Wilson（z=1.96）+ item 级 seeded bootstrap（B=2000、percentile 2.5/97.5、退化重采样丢弃而非计 0），seed 与 replicates 写进报告 `randomness`，区间可复现（`test_bootstrap_interval_is_reproducible_and_bounded`）。
+  5. "20 题" → 协议 §9 写死 item 级：历史留出集实测 **26 个 item**（我今天复核 `blind-mapping.json` 26 行 = 26 个已完成的 case×arm 组合）；新工具要求三臂全部完成（`RUNS_INCOMPLETE`），所以一次完整采集是 **12×3=36 个 item**。`limitations` 恒定携带"36 个 item 仍只对应 12 道独立任务，item 数 ≠ 独立题目数"。QWEN-102 的 12 个新任务另算，不混。
+  6. 覆盖率门禁 → **没扩**：只把两个新测试追加进 fast 清单（37→39 文件），80% 门禁仍是 5 文件；`TEST_MATRIX.md` §1/§2/§6 已同步（Python 测试文件 189→191）。
+- **实现期相对设计稿的 3 处收紧/偏差（协议 §14 也写了，请判是否接受）**：
+  1. `COVERAGE_INCOMPLETE`：设计稿 §5 说"A/B 覆盖的 item 集合不同，**或存在只一人填了某指标**"就报错，§6 又说缺值时 `n_m` 相应减少 —— 两句在"单人漏填一个指标"这个场景冲突。我取严格版：**对称留空**（两人都留空同一批指标）允许并减少 `n_m`；**非对称留空**（一人填、一人空）导入即 `COVERAGE_INCOMPLETE`，因为那通常是漏填或口径误解，应当面确认而不是让分母悄悄变小。
+  2. 我多了第 6 个文件 `scripts/human_eval/common.py`（不是入口、无 `main`，只做共享校验/读写），否则五份 CLI 会各写一遍校验。
+  3. `import_reviews` 的幂等语义：派生产物（裁决包、对齐项）重跑时"内容一致即放行、不同即 `PACKET_TAMPERED`"，最终产物（reviewed/adjudicated、report、summary）一律 `open("x")` 拒覆盖。带裁决重跑是流程必需，但不能允许已产出材料被静默改写。
+- 未验证 / 风险：
+  1. **真人执行**：两位评审 + 必要时第三裁决人的实际评分（工具与协议就绪，`human` 级证据为 0；台账 E7 仍是"工具已实现、评分待真人"）。
+  2. 39 文件清单只在**本机等价**跑绿，Linux CI 真实结论需合并后由 main run 给出（本机无 `gh` CLI）。
+  3. κ 的统计解释局限已写进报告与协议（小样本、类别失衡、`profile_fit` 无画像输入）。
+  4. `reports/` 未 gitignore 的隐患**没动**（按你指示归 QWEN-103/401），协议 §13-6 记录了矛盾三点。
+- 提交：`4170373`（实现 + 协议 + 测试 + CI + 文档同步）、`e23f139`（`git diff --check` 报的状态文档 EOF 空行修正），基线 `2c11e53`；无 rebase、无 force push，工作树干净。
+- 下一步：发 QWEN-102 的 `[PLAN]`，含一个必须先说的仓库事实：**第三个课程在本仓库没有正文素材**（`evals/curricula/` 下 `computer_work` 只有 `course.yaml`、0 个 md），"3 课程 × 4"无法如实执行；我会在 `[PLAN]` 里给出可执行的处置选项请你判。等 `qwen/wave1-evidence` 你审完并合并后，QWEN-103 只在 main 上收口，不与本分支混改。
+- 给 Lead 的问题：
+  1. 上面 §"3 处收紧"的第 1 条（非对称留空即 `COVERAGE_INCOMPLETE`）是否接受？若你要宽松版（允许单人漏填、只减少 `n_m`），我改一处判断 + 一条测试即可。
+  2. QWEN-101 是否可以按此验收？验收通过后我把 QWEN-102 的 `[PLAN]` 发出并按 15:35 授权直接执行。
+
+— Qwen
