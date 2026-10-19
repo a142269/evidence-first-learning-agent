@@ -9,7 +9,7 @@
 
 | 层 | 运行位置 | 集合 | 门槛/预算 | 目的 |
 |---|---|---|---|---|
-| **fast** | 每次 push main / PR（CI `quality` job） | 39 个便携 V2 契约文件（下表 `F` 列；QWEN-101 补入 2 个人工评测文件，Wave 0 基线为 37） | job 超时 20 分钟；Wave 0 基线 58.5 s（369 passed / 1 skipped），QWEN-101 后本机等价复跑 54.9 s（396 passed / 1 skipped） | 主线契约回归：权限、学习包、部分完成、结构化输出、评测器、租约/幂等、人工盲评工具包 |
+| **fast** | 每次 push main / PR（CI `quality` job） | 39 个便携 V2 契约文件（下表 `F` 列；QWEN-101 补入 2 个人工评测文件，Wave 0 基线为 37） | job 超时 20 分钟；Wave 0 基线 58.5 s（369 passed / 1 skipped），QWEN-101 后本机等价复跑 54.9 s（396 passed / 1 skipped），QWEN-102 采集器 `--arm` 改动后 55.0 s（398 passed / 1 skipped） | 主线契约回归：权限、学习包、部分完成、结构化输出、评测器、租约/幂等、人工盲评工具包 |
 | **contract-pg** | CI `enterprise-contract` job（PG16+pgvector / Redis7 服务容器） | 38 个文件（`E` 列，QWEN-120 补入 `test_v2_retrieval_postgres.py`；首轮统计为 37）+ MCP 协议 1（`M` 列，独立步骤） | job 超时 20 分钟；历史实测 173.6 s（353 passed） | 真实数据库/中间件合同：跨进程恢复、迁移、认证、检索、摄取 |
 | **nightly** | 每日 19:20 UTC + 手动 dispatch（`offline` job） | **全量** `pytest tests/`；需外部依赖的用例按设计自动 skip | job 超时 60 分钟；产出核心覆盖率 `build/coverage.xml` | 发现 fast/contract 未覆盖的 V1/算法/演示资产回归 |
 | **nightly-lock** | 同上 workflow（`linux-lockfile` job） | 学习包核心 3 文件 | 按哈希安装 `requirements.lock.linux.txt` 后运行 | Linux 锁可安装性冒烟 |
@@ -263,4 +263,5 @@
 | Wave 0 数字自检（合并前复核） | 16 项复现命令 | 逐项重跑台账/矩阵/状态文档引用的数字：2235-0-20/612.61s、2-2234-19/650.31s、369-1/58.54s、110/92.44%、CI 清单 37/38/5、Python 189（5+123+1+42+9+5+4）、前端 17+17、node:test 21/0 exit 0、pg 1 passed、README L56、T1/E1/D1/D2 行引用、`BaseAgent` 子类 16、路由装饰器 187、Linux 锁 144 包、素材 30+2 —— **全部一致**；唯一修正为口径精确化：S9"14 个空目录"→ 14 个目录 / 12 个叶子空目录 / 0 个文件。明细见 `OPTIMIZATION_STATUS_2026-10-19.md` §六 |
 | QWEN-101 新工具包定向测试（`test_human_agreement_statistics.py` + `test_human_eval_toolkit.py`） | 2 文件 / 27 用例 | **27 passed / 0 failed**（0.76 s，offline；`--basetemp output/qwen-wave1-2026-10-19/*`、合成 fixtures、无模型调用） |
 | QWEN-101 后 fast 清单本机等价复跑 | 39 文件 | **396 passed / 1 skipped / 0 failed**（54.90 s，offline；独立 SQLite `output/qwen-wave1-2026-10-19/ci_fast.db`；skip 仍是 `test_auth_restart.py`）；对 Wave 0 的 369/1：+27 全来自新增两文件，无既有用例转红 |
+| QWEN-102 采集器 `--arm` 改动后复跑 | 39 文件 | **398 passed / 1 skipped / 0 failed**（55.04 s，offline；同一 SQLite `output/qwen-wave1-2026-10-19/ci_fast.db`；`--basetemp output/qwen-wave1-2026-10-19/base-fast102`）；+2 来自 `tests/a/test_ablation_collect.py` 新增的单臂选择与非法臂前置校验两例，既有用例（含 `test_v2_retrieval_postgres.py` 之外的便携子集）无一转红 |
 | QWEN-101 静态检查 | `backend/app/evaluation/human_agreement.py` + `scripts/human_eval/` | `mypy --config-file mypy.ini backend/app/evaluation/human_agreement.py` **0 error**；`ruff check --select F821,F823,E9`（CI 同口径）通过；覆盖率门禁清单**未扩**（Lead 裁决 6，仍 5 文件） |

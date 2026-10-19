@@ -56,6 +56,8 @@ python scripts/evaluate_claim_support.py output/claim-reviews.json --output outp
 
 现有 `learning_package_cases_v1.jsonl` 的 24 条包含预期拒绝、待审和需要模型或检索桩的故障场景；它不是 24 条可直接提交给真实模型的普通生成题。`ablation_tasks_v1.jsonl` 提供另行拟定的 24 条学习任务（开发集和留出集各 12 条）；这是未经人工审核及预跑的数据集，不能视为已有实验结果。安全和故障测试仍单独执行。固定 12 条留出任务由至少两名评审独立盲评，记录分歧并裁决；评估事实支撑、练习正确性、目标覆盖、难度递进和画像适配。
 
+`evals/independent_tasks_v1.jsonl` 是 QWEN-102 新建的 12 道题（开发集与留出集各 6 条），全部指向上述两套数据集未使用过的章节，以免与既有 24 条的证据域重叠；仓库只有两门课有正文素材，第三门课程 `computer_work` 的 `knowledge_base/` 目录下正文为 0 个 Markdown 文件（真实路径检索 0 命中，离线测得），因此"每门课 4 题"的口径不可执行，本集实际为 `artificial_intelligence` 3 题加 `python_programming` 9 题，且未为缺失课程编写任何替身内容。`scripts/collect_ablation.py` 的 `--arm`（默认三臂，可重复）用于在授权运行次数内只采指定对照组；只采单臂时 `scripts/human_eval/prepare_packets.py` 会因缺臂返回 `RUNS_INCOMPLETE`，单臂数据不能直接进入人工盲评。本轮 12 题的机器级结果与限制见 `evals/results/independent-2026-10-19.md`，质量五项指标因未评审而保留为空。
+
 报告应按组列出任务成功率、质量通过率、事实支撑率、练习答案正确率、目标覆盖率、Reviewer 修订成功率、平均模型调用数、P50/P95 延迟、单任务费用和无效工具调用数，并注明分母和缺失项。无 Reviewer 的修订成功率应标记不适用，不能计为零。公开报告必须先脱敏并核对模型密钥；未经实际实验和人工评分不得填写结果或推断优劣。
 
 `scripts/summarize_ablation.py` 可汇总已有记录。输入 JSONL 每行包括 `case_id`、`arm`（`single`、`without_reviewer`、`full`）、`completed`、`evidence_sha256`、`config`（`model`、`knowledge_snapshot`、`max_output_tokens`、`max_cost_cny`）、`latency_ms`、`model_calls`、`cost_cny`、`invalid_tool_calls`、`reviews`。未知数值用 null；每位 review 含 `reviewer` 和五个字段 `facts_supported`、`exercise_answers_correct`、`goal_covered`、`difficulty_progression`、`profile_fit`，各值为布尔值或 null。每组缺案例、对应评分缺失或分歧未裁决时，相关指标为 null；失败案例计入任务和质量的分母。Reviewer 修订成功率以 Reviewer 首次拒绝的运行数为分母；没有拒绝案例时为 null。本汇总器不验证评审独立性，也不计算逐 claim 支撑率。

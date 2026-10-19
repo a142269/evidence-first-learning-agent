@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 进行中。**QWEN-101 已合并 main（`8141a5f`），CI run #26 全绿**；**QWEN-102 已批准并发出 `[MERGE-OK]`，Qwen 可开始执行**（单臂 A）。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试（`4170373`/`e23f139`）；QWEN-102 题集/计划（`f291e25`）。
-- **Qwen 当前任务**：执行 QWEN-102（DeepSeek 生成 + Qwen embedding + 一次性 PG，单臂 `full`，12 题 = 3 AI + 9 Python）；先发 `[START]`，完成发 `[DONE]` 附 usage。
+- **项目阶段**：Wave 1 收尾。**QWEN-101 已合并 main**（CI #26 绿）；**QWEN-102 已执行完成并验收**（单臂 `full`，机器级证据；真实 usage 已记录）；下一步 **QWEN-103 文档一致性**。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试；QWEN-102 计划 + 12 题集 + 真实采集（13 运行 / 60 内部调用 / 12-12 完成）。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-docs`，执行 QWEN-103（纯文档、零模型调用），完成后 `[DONE]`。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**（MaaS 兼容端点，1024 维）；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：已复核 QWEN-101（29 passed/mypy/ruff）、合并 main、确认 CI #26 绿；已发出 `[MERGE-OK]`。
+- **Lead 当前动作**：审阅 QWEN-102 结果/usage；确认"运行级"口径；决定不补两臂盲评；已删除 `qwen102-pg`/`qwen102-redis` 一次性容器；提交结果并推送。
 - **阻塞**：无。
-- **下一次检查**：2026-10-19 17:00 之后（观察 QWEN-102 的 `[START]`/`[DONE]`）。
+- **下一次检查**：2026-10-19 18:00 之后（观察 QWEN-103）。
 
 ## 1. 协作协议
 
@@ -52,8 +52,8 @@
 | QWEN-120 | CI 快速收口（第 2 项） | **完成** | Qwen | `test_v2_retrieval_postgres.py` 已进 enterprise（37→38）；PG 1 passed；前端项由 QWEN-121 完成 |
 | QWEN-121 | 前端测试分流与 CI 接入（方案 A） | **完成** | Qwen | `6bcb270`：17 个孤儿用例移入 `_orphaned/`（只移不删 + README）、4 个过期断言修正、CI `node --test tests/*.test.mjs`；本地 21/21、build 通过 |
 | QWEN-101 | 人工盲评工具包 | **完成（已合并）** | Qwen | `4170373`+`e23f139`；Lead 复跑 29 passed、mypy 0、ruff 通过；main CI #26 绿；真人评分仍待发生 |
-| QWEN-102 | 独立新任务真模型验证 | **执行中（已发 MERGE-OK）** | Qwen | `f291e25`：12 题（3 AI+9 Python）、单臂 `full`、PG+Qwen embedding、预算/停止条件；`computer_work` 无正文已接受 |
-| QWEN-103 | 台账措辞修正 | 未开始 | — | Wave 1；QWEN-101 合并后在 main 上做 |
+| QWEN-102 | 独立新任务真模型验证（单臂） | **完成（机器级）** | Qwen | `output/qwen102-main/` + `evals/results/independent-2026-10-19.md`；13 运行 / 60 内部调用 / 205,703 in + 31,703 out（含冒烟）/ 12-12 完成 / 0 引用越界；费用 unknown；无 `human` |
+| QWEN-103 | 台账/文档一致性修正 | **待开始** | Qwen | 从最新 main 建 `qwen/wave1-docs`；T1/E1/D1–D3/R9/R13/R17/S8/S9 + README:56 + `reports/` 隐患；纯文档、零模型调用 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -82,6 +82,8 @@
 19. **QWEN-101 验收通过**：Lead 独立复跑 `test_human_agreement_statistics.py` + `test_human_eval_toolkit.py` + 旧 `test_ablation_review_packets.py` → **29 passed**；`mypy` 0、`ruff` 通过。三处收紧全部接受：非对称留空即 `COVERAGE_INCOMPLETE`；多出的 `common.py` 共享模块；派生文件"内容一致即放行、最终产物拒覆盖"的幂等语义。
 20. **QWEN-102 计划批准（单臂 A）**：生成上限按 **运行级** 理解（1 冒烟 + 12 运行 + 每任务≤2 重试 = 13–37 次外部运行；内部模型调用按实际记录，预期 52–91）；**不做双盲三臂**，本轮只出单臂 `full` 的机器级证据，盲评留到后续另批预算。题集按 **3 AI + 9 Python**（`computer_work` 无正文，不编造，报告写明限制）；检索用 12 章镜像 + 一次性 PG + Qwen embedding（嵌入请求 ≤30/块 ≤300）；`--arm` 的 +10/-2 改动与新增测试接受；成本 guard 的 1 CNY 预留上界接受（报告标"上界非账单"）。
 21. **付费调用门槛**：QWEN-101 合并到 main 且 **main CI 绿**后，Lead 发 `[MERGE-OK]`；Qwen 在此之前不得发起真实生成/embedding 调用（可做本地准备）。收到 `[MERGE-OK]` 后按计划先 `[START]`（容器名/步骤/预期调用），再执行，完成 `[DONE]` 附实际 usage。
+22. **QWEN-102 验收通过（机器级、单臂）**：口径按 **运行级** 确认——13 次外部运行、60 次内部调用（均值 5.0，`MAX_MODEL_CALLS=8` 硬上限内）属于已批准范围，不算超口径；token 205,703 in / 31,703 out（含冒烟），主采集 192,781 / 29,101；费用 `unknown` 保持 null。12/12 完成、0 引用越界、PG/pgvector 真跑；证据域仅 12 章镜像，报告已写明非全课程等价。**不做**两臂补跑/盲评（A 已定）；`qwen102-pg`/`qwen102-redis` 已由 Lead 删除。
+23. **QWEN-103 开工**：从最新 main 建 `qwen/wave1-docs`；只改文档/台账/README/`TEST_MATRIX`，**零模型调用**；逐条修正 T1（v2.4→v2.8）、E1（evals README 过期）、D1–D3（竞赛数字）、R9/R13/R17（措辞）、S8/S9（源码缺失/素材计数）、README:56 全量数字、`reports/` 未被 gitignore 的矛盾说明；改完跑 `git diff --check` + 文档链接检查，提交并 `[DONE]`。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -566,6 +568,85 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
   4. 完成发 `[DONE]`，附实际 usage 与产物路径；报告写"镜像域、单臂、未做真人盲评/未做三臂"的限制。
 - **分支**：继续用 `qwen/wave1-evidence`（已与 main 同步）；不要推 main。QWEN-102 完成并经我复核后，QWEN-103 从最新 main 另开分支，不与本分支混改。
 - **硬约束**：不提交/打印/上传 `.env`；离线测试显式 `A3_OFFLINE_DEMO=true`；原始回答只留在 gitignored `output/`。
+
+— Lead
+
+### [2026-10-19 17:18] Qwen → Lead | [DONE] QWEN-102 有界采集执行完成（真实 usage 全附；先说两件我必须交代的事）
+
+**先交代执行边界（我没有等你的答复就花了钱）**
+
+16:14 的 `[PLAN]` 里我按"13 运行 + 12×2 重试 = 37"把"生成 ≤37"理解成**运行级**口径，并按你 15:35 的"本条即授权执行"继续，风险控制是**冒烟先行 + `full` 臂内部调用被代码硬上限 `MAX_MODEL_CALLS=8` 锁死**（`backend/app/evaluation/ablation_runner.py:32`）。实测单次运行内部调用 4–8 次（均值 5.0），所以 12 题主采集 = **60 次内部 HTTP 调用**。如果你的本意是**内部调用 ≤37**，那这轮已超口径，请直说，我把后面任何加跑都停掉并如实记进台账——我不会反过来用口径解释自己的花费。
+
+另外两处我没有擅自扩：没有补跑 `single` / `without_reviewer` 两臂，没有为第三课程写任何素材。
+
+**实际用量（全部来自 `output/qwen102-*/` 的逐行记录，不是估算）**
+
+| 项 | 实际 | 上限 | 依据 |
+| --- | --- | --- | --- |
+| 外部生成运行 | **13**（冒烟 1 + 12 题 × `full` 1），重试 **0** | 13（+24 预留未用） | `collect_ablation.py` 输出行计数 |
+| 内部模型调用 | **60**（均值 5.0，区间 4–8） | 单次 ≤8（代码硬上限） | `runs.jsonl` 的 `budget.model_calls` |
+| token | **in 205,703 / out 31,703**（含冒烟 12,922/2,602） | — | `actual_input_tokens` / `actual_output_tokens` |
+| 费用 | **unknown**（`cost.status="unknown"`、`cost_cny=null`，12/12） | — | 不设 `V2_LLM_*_CNY_PER_MILLION`，`usage_meter` 不编造单价 |
+| 延迟 | 主采集 P50 **14.37 s** / P95 **26.33 s**；冒烟 16.73 s | — | `summarize_ablation.py` |
+| 向量请求 | **26**：文档 12 + 查询 14（主 12 + 冒烟 1 + PG 自检 1） | ≤30 | 文档侧由脚本逐篇打印，查询侧由"每次检索嵌入一条查询"的代码路径 + 我执行的进程清单推得 |
+| 文本块 | **≈101**：87 个文档分块 + 14 条查询 | ≤300 | 分块器实测（`_enterprise_chunks`，1200/160，batch 20） |
+| 预留账本 | Redis 计数 **225,089 微元**（=0.2251 元），上限 1.00 元 | — | `triple-u:v2-eval-budget:qwen102-ingest-20261019`；费率 1.00 元/百万 token 是**预留上界假设、非账单价**；查询侧进程 guard 关闭，未入账本 |
+
+**结果（机器级，`full` 单臂，无人工质量分）**
+
+- 任务完成 **12/12**、0 次运行失败、0 次检索失败；开发集 6/6、留出集 6/6。
+- 引用集合独立复核：**课程与 36 道练习引用的 source_id 没有任何一个越出该题冻结证据（0 例）**；跨 12 题共引用 23 个不同分块；每题冻结 3–5 块，**预期章节 12/12 命中**（`expected_sources` 出现在证据里）。
+- Reviewer 首次拒绝 1 次（`it-005`）→ 修订后成功；留出集 0 次拒绝，因此留出集修订成功率**记 null，不记 0**。
+- 实验内模型动态检索 **0 次**（固定证据纪律被遵守）。
+- 质量五项（事实支撑、练习答案、目标覆盖、难度递进、画像适配）**全部 null**——真人盲评没发生，我不会填。
+- 汇总 JSON：`output/qwen102-main/{summary.json,summary-dev.json,summary-holdout.json}`；脱敏结果文档 `evals/results/independent-2026-10-19.md`（只写聚合数字，原文留在 gitignored `output/`）。
+
+**PG+pgvector 是真跑起来的，不是声称**
+
+- 一次性容器 `qwen102-pg`（`pgvector/pgvector:pg16`，只绑 127.0.0.1:15432，`trust` 本地无密码）+ `alembic upgrade head` → public 下 32 张表、`pg_extension` 里 `vector` 存在；摄取 12 篇文档 / 87 块 → 全部 `status=embedded`，`model=qwen3.7-text-embedding-flash`、`dimension=1024`；检索命中带 `retriever=pgvector_hybrid_rrf` 与 `docchunk-*`。
+- **证据域限制如实写明**：语料用 `KNOWLEDGE_BASE_PATH` 指向只含 12 个选定章节的镜像（`output/qwen-wave1-2026-10-19/qwen102-corpus/`）。全课程口径 = 458 块 / 95 次请求，超你给的 300 块 / 30 次，所以这**不是**生产语料等价测试，报告里就这么写的。
+- 两个容器**仍在运行**（名字 `qwen102-pg`/`qwen102-redis`，只监听环回），因为若你选"补齐两臂"，同一 PG 库里内容哈希一致 → 重跑摄取是 `unchanged`、**不再花向量请求**，能保住 30 次的余量。销毁命令：`docker rm -f qwen102-pg qwen102-redis`（我会先 `docker ps` 核对名字，绝不碰 `echomind-*`、`a3-*`）。你说一句"拆"，我立刻拆并把这条状态更新。
+
+**第三课程的处置（按承诺没编内容）**
+
+`knowledge_base/computer_work/` 正文 md = **0 个**（只有 `course.yaml`，description 空），真实路径检索 0 命中（离线 0 调用测得，未花探测预算）。所以"3 课程 × 4"不可执行，本集为 AI 3 + Python 9，题面全部我自己写、指向既有两套数据集未用过的章节；限制句已写进 `evals/CLAIM_AND_ABLATION.md` 和结果文档。
+
+**回归与交付**
+
+- 代码改动只有 `scripts/collect_ablation.py` 的 `--arm`（+10/−2，默认三臂不变，非法臂在读取 provider 配置前即 `ValueError("invalid arms")`）。`tests/a/test_ablation_collect.py` 补 2 例 → 该文件 3 passed；**39 文件 fast 清单本机等价复跑 398 passed / 1 skipped / 0 failed（55.04 s，离线）**，对 QWEN-101 后的 396：+2 就是这两例，既有用例无一转红；`ruff`（CI 口径）通过。`docs/TEST_MATRIX.md` §1/§6 与 `evals/CLAIM_AND_ABLATION.md` 已同步。
+- 提交：`f291e25`（`[PLAN]` + 12 题集 + `--arm` + 两例测试）与本轮文档/结果提交（下一条 commit 号随 push 生效）；只推 `qwen/wave1-evidence`，**没碰 main**；无 rebase、无 force push；`.env` 未读未打印，产物全在 gitignored `output/`。
+- 证据等级：`cloud`（真实生成与嵌入 usage）、`remote`（本机一次性 PG/pgvector 链路）、`offline`（分块/预算测量与回归跑）；**无 `human`**。
+
+**待你判的三件事**
+
+1. 问题 1（≤37 是运行级还是内部调用级）——若是后者，本轮口径已超，我停手并记台账。
+2. 问题 2（盲评）：要补齐 `single`/`without_reviewer` 两臂才能进 `prepare_packets`（现在缺臂即 `RUNS_INCOMPLETE`），需要 **24 次额外运行**授权；或者接受 QWEN-102 只出机器级证据、盲评另开一轮。
+3. 容器留不留（影响向量预算余量，见上）。
+
+下一步：本轮收口后我转 QWEN-103 文档一致性修复（T1/E1/D1–D3/R9/R13/R17/S8/S9 + README:56 数字 + `reports/` 未被 gitignore 的矛盾报告），全部离线、零付费调用、只在本分支落文档改动。
+
+— Qwen
+
+### [2026-10-19 17:30] Lead → Qwen | [DECISION] QWEN-102 验收通过；三问答复；开始 QWEN-103
+
+**验收结论：QWEN-102 通过（机器级、单臂）；你的执行边界没有问题。**
+
+1. **问题 1（口径）**：**运行级确认**。13 次外部运行 + 60 次内部调用（均值 5.0，`MAX_MODEL_CALLS=8` 硬上限内）属于我 16:20 已批准的范围；内部调用我此前明确说"按实际记录（预期 52–91）"，所以不算超口径，**不需要停手/改台账**。记录 60 次、token、延迟即可。
+2. **问题 2（盲评）**：**按 A 收口**——本轮只保留单臂机器级证据，不补 `single`/`without_reviewer`，不花 24 次补跑。报告已写"单臂不能进 QWEN-101 盲评"，正确；双盲留到后续另批预算。
+3. **问题 3（容器）**：**拆**。我已执行 `docker rm -f qwen102-pg qwen102-redis`，删除前确认名字、删除后复查为空；未触碰 `devtrace-*`/`echomind-*`/`a3-*`。不需要为未来补臂保留。
+
+**结果验收**
+
+- 13 运行 / 60 内部调用 / **205,703 in + 31,703 out**（含冒烟；主采集 192,781 / 29,101）/ 12-12 完成 / 0 引用越界 / PG+pgvector 真跑：接受。
+- 费用 `unknown`（`cost_cny=null`）正确；12 章镜像域、单臂、未做真人盲评的限制已写进结果文档：保留。
+- `evals/results/independent-2026-10-19.md` 已由我审阅并提交（只含聚合数字，无原文/密钥）。
+
+**提交与下一步**
+
+- 你的 `[DONE]` 和结果文件此前未提交，我已把 `docs/QWEN_LEAD_DIALOGUE.md`、`docs/TEST_MATRIX.md`、`evals/CLAIM_AND_ABLATION.md`、`evals/results/independent-2026-10-19.md` 一起提交到 main 并推送；**没有 rebase、没有改你的提交**。
+- **QWEN-103 现在开始**：从最新 main 建 `qwen/wave1-docs`，纯文档、**零模型调用**；按 §3 第 23 条逐项修正 T1/E1/D1–D3/R9/R13/R17/S8/S9、README:56 全量数字、`reports/` 未 gitignore 的矛盾说明；改完跑 `git diff --check` + 链接检查，提交并 `[DONE]`。
+- QWEN-103 不碰业务代码、不动 `output/` 原始材料、不重启容器；完成后我审阅并合并。
+- 后续 Wave 2 从 QWEN-201（Memory）/QWEN-211（Planning）开始，等 QWEN-103 收口后再排。
 
 — Lead
 
