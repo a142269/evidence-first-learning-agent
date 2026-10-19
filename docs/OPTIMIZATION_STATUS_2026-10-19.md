@@ -1,6 +1,6 @@
 # 优化状态（2026-10-19）· Wave 0 基线与治理
 
-> 执行：Qwen（唯一主执行者）· 分支：`qwen/wave0-baseline`（基于 `main@23766d9`）· 依据：[Qwen 优化主计划](QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md) §6 Wave 0 / §9 第一周清单。
+> 执行：Qwen（唯一主执行者）· 分支：`qwen/wave0-baseline`（基于 `main@23766d9`），§七起转 `qwen/wave1-evidence`（基于合并后的 `main@64bc815`）· 依据：[Qwen 优化主计划](QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md) §6 Wave 0 / §9 第一周清单。
 > 本文件只写**本轮实测/已核对**结果；历史归档见 [OPTIMIZATION_STATUS_2026-10-18.md](OPTIMIZATION_STATUS_2026-10-18.md)。§一–§三为 Wave 0 首轮交付，当时未修改任何业务代码与测试断言；§六为 Lead 批准的收口补丁（QWEN-004 / QWEN-120），仅改测试期望、测试 skip 与 CI 清单，未改产品行为。
 
 ## 一、QWEN-000 基线复跑（本机 Windows，conda `evidence-agent-py312`，Python 3.12.15）
@@ -88,6 +88,48 @@
 
 ### 台账/矩阵一致性
 
-- `docs/CLAIMS_LEDGER.md` R11 更新为收口后的全量数字；S8 改写为"已隔离 + 措辞仍待修正"的当前事实；新增 S9（`THIRD_PARTY_NOTICES.md` L453 的 59 个暂存文件说法已过期，实测该路径 `git ls-files` = 0，仅剩 14 个空目录）。
-- `docs/TEST_MATRIX.md` §6 追加 QWEN-121 收口行，§5.3 由"阻塞"改为"已接（方案 A）"，§3 前端表行改为 17 运行 + 17 孤儿。
+- `docs/CLAIMS_LEDGER.md` R11 更新为收口后的全量数字；S8 改写为"已隔离 + 措辞仍待修正"的当前事实；新增 S9（`THIRD_PARTY_NOTICES.md` L453 的 59 个暂存文件说法已过期，实测该路径 `git ls-files` = 0、0 个文件，目录树仍在：14 个目录、其中 12 个叶子空目录）。
+- `docs/TEST_MATRIX.md` §6 追加 QWEN-121 收口行，§5 第 3 项由"阻塞"改为"已接（方案 A）"，§3 前端表行改为 17 运行 + 17 孤儿。
 - 主计划 QWEN-343 / QWEN-401 各加一条跟踪项（孤儿测试处置与 `integrated-map-src` 来源结论），按 Lead 约束 5 执行。
+
+### Wave 0 交付数字自检（合并前复核，2026-10-19 14:44 追加）
+
+目的：Lead 审阅前，把台账/矩阵/本文里每个对外数字用命令重跑一遍，确认没有"文档与仓库现状漂移"。证据等级：offline。
+
+| 被核对的数字 | 复现命令 | 实测 | 与文档 |
+|---|---|---|---|
+| 全量 2235/0/20、612.61 s | `tail -3 output/qwen-baseline-2026-10-19/logs/pytest-full-close.log` | `2235 passed, 20 skipped ... in 612.61s` | ✓ |
+| 首轮 2/2234/19、650.31 s | `grep passed pytest-full.log` | `2 failed, 2234 passed, 19 skipped ... 650.31s` | ✓ |
+| fast 369/1、58.54 s | `grep passed pytest-portable.log` | `369 passed, 1 skipped ... in 58.54s`（exit 0） | ✓ |
+| 覆盖率 110 passed、92.44%（94%/83%） | `grep "92.4\|94%\|83%" coverage-gate.log` | `110 passed in 25.40s`；`Total coverage: 92.44%` | ✓ |
+| enterprise 清单 38 / fast 37 / 门禁 5 | `yaml.safe_load` + 正则统计 `tests/**.py` token | 37 / 38 / 5（全部唯一） | ✓ |
+| Python 测试文件 189（124/42/9/5/4/5） | `git ls-files tests \| grep -E '(^\|/)test_[^/]*\.py$'` 按目录计数 | 根 5、`tests/a` 123 + `tests/a/benchmarks` 1、`tests/b` 42、integration 9、regression 5、benchmarks 4 = **189** | ✓ |
+| 前端 17 运行 / 17 孤儿 | `ls frontend/tests/*.test.mjs`、`ls frontend/tests/_orphaned/*.test.mjs` | 17 / 17（`_orphaned/` 含 README 共 18 个跟踪文件） | ✓ |
+| 前端单测 21/21、exit 0、430.9 ms | `tail -8 logs/frontend-node-test-after-close.log` | `# pass 21`、`# fail 0`、`duration_ms 430.8881` | ✓ |
+| pg 1 passed / 1.56 s | `tail -3 logs/pytest-v2-retrieval-postgres.log` | `1 passed ... in 1.56s` | ✓ |
+| README L56 "2153 passed, 18 skipped" | `grep -n 2153 README.md` | 行号 56 命中 | ✓（正文未动，归 QWEN-103） |
+| 台账行引用 T1/E1/D1/D2 | `sed -n` 定点取行 | T1 文档仍写 `v2.4`、代码 `learning_package.py:20` = `v2.8`；E1 仍是"目前未完成真实云端验收"；D1 "12 个 Agent"、D2 "90 路由" | ✓ 引用位置准确 |
+| D1 实测 16 个 `BaseAgent` 子类 | `grep -rhoE 'class [A-Za-z_]+\(BaseAgent\)' backend/app/agents \| sort -u \| wc -l` | **16** | ✓ |
+| D2 实测 187 个路由装饰器 | `grep -rhoE '@router\.(get\|post\|put\|delete\|patch)\(' backend/app \| wc -l` | **187**（32 个文件） | ✓ |
+| R20 Linux 锁 144 包 | `grep -cE '^[a-zA-Z0-9_.-]+.*==' requirements.lock.linux.txt` | **144** | ✓ |
+| S9 / L37 素材计数 | `git ls-files frontend/public/assets \| wc -l`、`.../integrated-map/assets \| wc -l` | 30 + 2 = 32 | ✓ |
+| S9 目录树状态 | `find frontend/public/integrated-map/pixel-campus -type d[-empty] \| wc -l`、`-type f` | 14 个目录 / 12 个叶子空目录 / **0 个文件** | ⚠ 原文写"14 个空目录"，已就地改精确 |
+
+自检发现的两处自身问题（都已处理，非产品缺陷）：
+1. **计数口径不精确**：S9 的"14 个空目录"——`find -type d -empty` 实际只报 12 个，另外 2 个（根目录、`layers/`）只含子目录。结论不变（0 个文件、`git ls-files` = 0），但台账与本文已改为可复现的精确写法。
+2. **我自己的临时命令写错**：第一次核 D2 时同时 grep 了 `backend/app/api` 和 `backend/app`，得到 374（重复计数）；单路径重跑为 **187**，与台账一致。文档无需改动，记录在此以免日后误读。
+
+**未因自检而改变的结论**：Wave 0 四件交付（基线、台账、矩阵、分支）里的对外数字全部可复现；唯一仍"无法本机验证"的是 CI node 20 那一格（见 §六 QWEN-121 与矩阵 §6 末行）。
+
+## 七、Wave 0 关闭与 Wave 1 开工（2026-10-19 14:55 Lead [STATUS] → Qwen 执行）
+
+| 项 | 结论 | 证据等级 |
+|---|---|---|
+| QWEN-121 审阅 | **通过，无需回退**；Lead 本地复跑 `node --test`（显式文件列表）21 passed / 0 failed，与本机结果一致；孤儿计数更正为 **17**、过期断言更正为 **4**（原报 5）已接受 | offline（Lead 本地复跑） |
+| 两处语义改写 | `dashboardChineseTimeline`、`homeOrbitCentering` **裁定保留**；观察项：`.db-weak-kp-*` 死样式（清理或恢复薄弱点列表）、首页轨道图若成为产品要求则回退测试并开产品任务 | offline + 设计文档核对 |
+| Wave 0 合并 | merge `5bf77d1` → `main`；Lead 的两条记录 `db7d448`、`64bc815` | — |
+| 远端 CI | main run **#21 success**（4 job 全绿），其中 Frontend unit tests 在 **node 20** 通过 → §六"node 20 无法本机预检"这一格由远端补齐。**注意：该结论由 Lead 报告，本机无 `gh` CLI、Docker Hub 不可达，未能程序化自查** | remote（转述） |
+| Wave 0 状态 | QWEN-000/001/002/004/120/121 **全部关闭**；无需再补证据 | — |
+| Wave 1 分支 | 本机从 `main@64bc815` 建 `qwen/wave1-evidence`；本轮合并前自检的 3 个文档改动随分支带走（未直接落 main） | offline |
+
+Wave 1 队列（Lead 指定顺序）：**QWEN-101 设计稿**（只设计不实现、不代填评分）→ QWEN-102 题集与脚本骨架（不调付费模型，需授权先发 `[QUESTION]`）→ 空档做 QWEN-103 台账措辞修正（T1/E1/D1–D3/R9/R13/R17/S8/S9，纯文档逐条附证据）。
