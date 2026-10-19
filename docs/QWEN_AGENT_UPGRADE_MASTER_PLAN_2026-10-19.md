@@ -2,6 +2,7 @@
 
 > 编写：项目指挥（Lead） · 日期：2026-10-19 · 基线：`main@1ba64fa`（工作区干净，远端 CI run #19 全绿）
 > 执行者：Qwen（本项目唯一主执行者）
+> **协作通道**：`docs/QWEN_LEAD_DIALOGUE.md`（Lead 与 Qwen 直接对话，append-only；Qwen 在此汇报/提问）
 > 必读：`docs/OPTIMIZATION_HANDOFF_2026-10-18.md`、`docs/OPTIMIZATION_STATUS_2026-10-18.md`、
 > `docs/V2_TEN_MODULE_IMPLEMENTATION.md`、`README.md`（定位与“不宣称”边界）
 >
