@@ -38,14 +38,14 @@ V1 调度器按优先级分组并行执行；`depends_on` 是未执行的兼容�
 | --- | --- | --- |
 | Evidence-first RAG | pgvector + PostgreSQL FTS + RRF + 来源级去重 | 76 条新版 Golden Set 中 74 条通过 |
 | Stateful Agent | LangGraph、PostgreSQL Checkpointer、SSE、执行租约 | 真实 PostgreSQL 恢复组合 15/15 |
-| Tutor → Practice 学习包 | 受限检索决策循环、逐项引用、Reviewer 一次返工 | 13 个在线契约场景 13/13 |
+| Tutor → Practice 学习包 | 受限检索决策循环、逐项引用、Reviewer 一次返工 | 真实后端采集的 13 条契约场景 13/13（离线回放评测结构/引用/预算，非内容质量） |
 | 生产权限边界 | 持久化令牌摘要、逐账号课程授权、V1 白名单 | SQLite / PostgreSQL 跨进程验证 |
 | 异步知识摄取 | Celery、Redis、版本化文档、分块与向量重建 | 幂等、重投和租约接管测试 |
 | 可观测与评测 | OpenTelemetry、Phoenix、预算守卫、数据集签名 | 可重放评测与用量审计 |
 
 ## 实测指标
 
-以下结果来自 2026-10-16 的隔离测试环境。在线模型成绩与本地契约测试分开统计。
+以下在线指标来自 2026-10-16 的隔离测试环境，在线模型成绩与本地契约测试分开统计；"本地离线测试"一行按标注日期与运行环境单独复跑。
 
 | 验证项 | 结果 |
 | --- | ---: |
@@ -53,9 +53,9 @@ V1 调度器按优先级分组并行执行；`depends_on` 是未执行的兼容�
 | 事实题 Hit@5 | **95.83%** |
 | 事实题 Recall@5 | **94.79%** |
 | 引用存在率 / 有效率 | **100% / 100%** |
-| 本地离线测试 | **2153 passed, 18 skipped** |
+| 本地离线测试（全量 `pytest tests/`） | **2263 passed / 1 failed / 20 skipped**（2026-10-19 QWEN-103 复跑，Windows + Python 3.12.15，679.38 s，191 个测试文件；唯一失败是 `tests/a/test_embedding_provider.py` 断言默认 `batch_size=10`，而本机 `.env` 配了 `20`，属宿主配置期望而非代码回归——Linux CI 无该 `.env` 时全绿。上一次收口复跑为 **2235 passed / 0 failed / 20 skipped**，612.61 s，189 文件，见 `docs/TEST_MATRIX.md` §6） |
 | PostgreSQL 专项测试 | **15 / 15** |
-| 学习包标准在线契约 | **13 / 13** |
+| 学习包标准在线契约 | **13 / 13**（真实后端采集后的离线回放契约评测；不含人工内容质量评分） |
 
 评测口径、阈值和限制见 [evals/README.md](evals/README.md) 与 [实施状态](docs/UPGRADE_IMPLEMENTATION_STATUS.md)。
 
@@ -203,7 +203,7 @@ docs/                         # 架构、权限、恢复与演示文档
 - [持久化认证与课程权限](docs/AUTH_AND_COURSE_ACCESS.md)
 - [运行状态修复与断线恢复](docs/RUN_RECONCILIATION.md)
 - [PostgreSQL 检查点验收](docs/POSTGRES_CHECKPOINT_ACCEPTANCE.md)
-- [生产部署与安全边界](docs/PRODUCTION_DEPLOYMENT.md)
+- [生产部署与安全边界](docs/PRODUCTION_DEPLOYMENT.md)（"企业级"仅指本机 Compose 全栈构建/启动与边界验收通过；公网 TLS、域名、备份与监控**未验证**）
 - [结构化输出诊断与复测（2026-10-18）](evals/results/structured-output-20261018.md)
 - [第三方许可与素材说明](THIRD_PARTY_NOTICES.md)
 - [5 分钟演示脚本](docs/DEMO_5_MINUTES.md)

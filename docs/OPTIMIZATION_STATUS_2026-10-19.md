@@ -156,3 +156,23 @@ Wave 1 队列（Lead 指定顺序）：**QWEN-101 设计稿**（只设计不实�
 | 测试 | `tests/a/test_human_agreement_statistics.py`（18）+ `tests/a/test_human_eval_toolkit.py`（9）= **27 passed / 0 failed**（0.76 s）；fast 清单本机等价复跑 **396 passed / 1 skipped / 0 failed**（54.90 s，独立 SQLite + 新 `--basetemp`）；`ruff --select F821,F823,E9` 通过 | offline |
 | 与设计稿的偏差（需 Lead 复核） | ① `COVERAGE_INCOMPLETE` 收紧为"非对称留空即拒"，对称留空才允许并减少 `n_m`（设计稿 §5 与 §6 两处表述冲突，取严）；② 多一个共享模块 `common.py`；③ `import_reviews` 对派生产物采用"内容一致即放行、不同即 `PACKET_TAMPERED`"的幂等语义，最终产物一律 `open("x")`。三条均写在协议 §14 | offline |
 | 未验证 | 真人 2 名 + 裁决人 1 名的实际执行（**工具永不代填**）；远端 CI 39 文件清单需合并后由 main run 复验（本机为等价复跑） | — |
+
+## 十、Wave 1 · QWEN-102 有界真实模型采集（2026-10-19 17:18 交付，17:30 Lead 验收）
+
+| 项 | 结论 | 证据等级 |
+| --- | --- | --- |
+| 运行预算 | 外部运行 **13**（冒烟 1 + 12 题单臂 `full`），重试 0；内部模型调用 **60**（均值 5.0，区间 4–8，受 `ablation_runner.py:32` 的 `MAX_MODEL_CALLS=8` 硬上限约束）；token **in 205,703 / out 31,703**；费用一律 `unknown`（不设单价环境变量，`usage_meter` 不编造价格） | cloud |
+| 嵌入预算 | 文档侧 12 次请求 / 87 分块（Redis 预留账本计数 225,089 微元，上限 1.00 元，费率为**预留上界假设**）；查询侧 14 次；合计 **26 ≤ 30**、文本块 **≈101 ≤ 300** | cloud |
+| 检索链路 | 一次性 `pgvector/pgvector:pg16` 容器 + `alembic upgrade head`（32 表、`vector` 扩展存在）；命中带 `retriever=pgvector_hybrid_rrf` 与 `docchunk-*`；容器用毕已拆除 | remote（本机一次性容器） |
+| 结果 | 12/12 完成、0 运行/检索失败、**引用 0 例越出冻结证据**、预期章节 12/12 命中、Reviewer 首拒 1 次修订成功（留出集 0 拒→分母为 0 记 null）；质量五项**全 null**（无真人盲评） | cloud + offline |
+| 限制 | 证据域为 12 章镜像（全课程口径 458 块 / 95 次请求超授权）；单臂数据不能进 QWEN-101 盲评（缺臂即 `RUNS_INCOMPLETE`）；`computer_work` 正文 0 章故"3 课程 × 4"不可执行、未编造替身内容 | offline |
+| 交付物 | `evals/independent_tasks_v1.jsonl`（12 题，dev/holdout 各 6）、`evals/results/independent-2026-10-19.md`、`scripts/collect_ablation.py --arm`（+10/−2，非法臂在读取 provider 配置前拒绝）、`tests/a/test_ablation_collect.py` +2 例 | offline |
+
+## 十一、Wave 1 · QWEN-103 文档一致性修正（2026-10-19，分支 `qwen/wave1-docs`，零模型调用）
+
+| 项 | 结论 | 证据等级 |
+| --- | --- | --- |
+| 逐条修正 | T1（v2.4→v2.8 + 工作流版本路径纠正）、E1（`evals/README.md` 过期状态句换成 2026-10-16 的 74/76 在线事实与仍未完成项）、D1–D3（16 Agent / 187 路由 / 7 类多模态产物，另附带刷新 37 表、38 章、2284 测试项）、R9/R13（13/13 加"离线回放契约、非内容质量"口径）、R11（README:56 换成最新复跑并加环境注记）、R17（"企业级"加公网未验证一句）、S8（三处 `integrated-map-src` 改为"源码不在本仓库，只有构建产物"）、S9（pixel-campus 去重已提交的实测计数） | offline |
+| 新登记发现 | ① `tests/a/test_embedding_provider.py` 未 monkeypatch `EMBEDDING_BATCH_SIZE`，在配有真实 `.env` 的宿主上必红（CI 无 `.env` 全绿）→ 修复属测试代码，请 Lead 派单；② `reports/` 未被 gitignore 与脚本默认输出、评测文档要求三点矛盾（当前尚未泄露：目录不存在、跟踪 0 文件），整改属代码/配置，归 QWEN-401/403 | offline |
+| 未动 | 日期型交接/归档文档正文（含 `OPTIMIZATION_HANDOFF_2026-10-18.md` 的 v2.6）保持历史原貌；D4–D7（自评与赛题口径、演示剧本待人工）不在 Lead §3-23 清单内，只在台账登记；业务代码、`.gitignore`、CI 清单零改动 | — |
+| 验证 | 全量 `pytest tests/` 复跑（191 文件，2263/1/20，679.38 s）+ `git diff --check` + 文档链接检查；明细见 [CLAIMS_LEDGER.md](CLAIMS_LEDGER.md) §8 与 [TEST_MATRIX.md](TEST_MATRIX.md) §6 | offline |

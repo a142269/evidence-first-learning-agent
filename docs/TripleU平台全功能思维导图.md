@@ -547,7 +547,7 @@ mindmap
 
 ### 3.11 桃园学宫 `/playground`
 
-代码主体：`frontend/integrated-map-src/src/views/LabView.jsx`，由 Vue 页面以 iframe 嵌入。
+代码主体（原 React 子应用）：`frontend/integrated-map-src/src/views/LabView.jsx`，由 Vue 页面以 iframe 嵌入。**注意：本仓库没有该源码树**（`git ls-files frontend/integrated-map-src` = 0 个文件，`git log --all` 亦无记录，无 `.gitmodules`），仓库里只有它的构建产物 `frontend/public/integrated-map/assets/`（2 个文件）与一个加载用 `index.html`；因此本页凡指向 `integrated-map-src/**` 的路径都是**产物对应不到的源码引用**，不得把构建产物说成"有源码"。来源结论归 QWEN-401，依赖该源码的 17 个前端测试已隔离在 `frontend/tests/_orphaned/`（见其 README）。
 
 - 全屏像素校园，提供退出到首页。
 - 课程切换，每门课程拥有独立场景、任务、挑战与本地进度。
@@ -1228,7 +1228,7 @@ mindmap
 - Web 公共组件：`frontend/src/components`，包括 AppShell、聊天、桌宠、帮助中心、新手引导、图表和资源卡片。
 - Web 接口适配：`frontend/src/api`。
 - Web 会话与角色状态：`frontend/src/composables`、`frontend/src/utils`、`frontend/src/constants`。
-- React 内嵌应用：`frontend/integrated-map-src/src`。
+- React 内嵌应用：`frontend/integrated-map-src/src`（**源码不在本仓库**，仅有构建产物 `frontend/public/integrated-map/assets/`；见 §3.11 的注记）。
 - 移动端：`mobile/src`。
 - 桌面端：`electron`、根目录 `main.js`。
 - 后端入口与路由：`backend/app/main.py`、`backend/app/api/router.py`、`backend/app/api/v1`。

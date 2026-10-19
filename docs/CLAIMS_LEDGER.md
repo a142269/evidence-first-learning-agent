@@ -130,3 +130,28 @@
 6. **不动**：所有诚实的历史归档（S 系列、E3–E6）与"未验证"标注——它们是本项目证据文化的资产。
 
 **Wave 0 首轮未修改任何被核对文档的正文**（修正动作属 Wave 1 QWEN-103，需配套 CI 验证）；收口补丁（QWEN-004 / QWEN-120）只改测试期望、测试 skip 与 CI 清单，未改产品行为，结果见 [OPTIMIZATION_STATUS_2026-10-19.md](OPTIMIZATION_STATUS_2026-10-19.md) §六。台账中所有"有证据"结论的复跑证据见 `output/qwen-baseline-2026-10-19/report.md`（本地，Git 忽略）。
+
+## 8. QWEN-103 修正登记（2026-10-19，分支 `qwen/wave1-docs`，纯文档、零模型调用）
+
+上方各行的"建议动作"列保留 Wave 0 的原始结论不回改；落地情况集中登记在本节。所有数字均为 2026-10-19 本机一手复跑（Windows + Git Bash + conda `evidence-agent-py312` / Python 3.12.15，离线 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`；付费模型调用 0 次）。
+
+| 条目 | 落点 | 修正内容 | 一手证据 |
+| --- | --- | --- | --- |
+| T1 | `docs/V2_TEN_MODULE_IMPLEMENTATION.md` §8 + 文首日期 | `learning-package-v2.4` → **v2.8**，并补 `WORKFLOW_VERSION=learning-workflows-v2.3` 的**正确路径**；文首更新时间改为 2026-10-19 并注明上一版 2026-10-15 | `learning_package.py:20`、`backend/app/api/v2/run_lifecycle.py:29`（台账原记 `run_lifecycle.py` 未带 `api/v2`，已纠正） |
+| E1 | `evals/README.md` 文首 | 删除"76 条集……目前未完成真实云端验收"过期句，改为"2026-10-16 两轮在线验收、第二轮 74/76 + Hit@5/Recall@5/引用率"，并列出**仍未完成**项（学习包 24 条完整在线质量评测、逐 claim 人审、真人盲评）；同时补入 QWEN-102 的 12 题单臂结果指针 | `evals/results/qa-golden-v2-summary.json`（`evaluation_mode=online`、74/76）、`evals/results/independent-2026-10-19.md` |
+| D1 | `docs/00-评委30秒导览.md` 一句话定位 + 统计表 | "12 个 Agent"→ **16 个 `BaseAgent` 子类**，并区分"演示主线 12 角色 / 其余为实验角色（critic、debate moderator、evaluator、safe_decline 等）" | `grep -rho "class \w*Agent(BaseAgent)" backend/app/agents/*.py \| sort` = 16（逐一列名核对） |
+| D2 | 同上 | "90 路由"→ **187** 个路由装饰器，注明为 V1+V2 全量、且 V2 对外另需身份与课程授权白名单 | `grep -rho "@router\.(get\|post\|put\|delete\|patch)" backend/app` = 187 |
+| D3 | 同上（对比表 + 统计表两处） | "真 6 种产物"→ **7 类产物模块**（新增 OCR、视频拼接；SVG 归为 Manim 占位输出），并标注"属 V1/实验能力，不计入 V2 学习包主线" | `ls backend/app/services/multimodal/` = `code_sandbox.py`、`manim/`、`mermaid/`+`mermaid_renderer.py`、`ocr/`、`pptx/`+`pptx_builder.py`、`tts_xunfei.py`、`video_xunfei.py` |
+| D1–D3 附带 | 同上统计表其余三行 | 数据库表 **15 → 37**；知识库章节 **24（AI 20 + Python 4）→ 38（AI 20 + Python 18）**，并注明 `computer_work` 已注册但正文 0 章；测试用例 **1186 → 2284 项**（2263 passed / 1 failed / 20 skipped）并附环境注记 | `models.py` `__tablename__` = 37；`ls knowledge_base/*/chapters/*.md` = 20 / 18；全量 `pytest tests/` 679.38 s（191 个测试文件） |
+| R9 / R13 | `README.md` 核心能力表 + 实测指标表 | "13 个在线契约场景 13/13"与"学习包标准在线契约 13/13"均加口径注记：**真实后端采集后的离线回放契约评测（结构/引用/预算），非内容质量、不含人工评分** | `evals/results/learning-package-v1-summary.json`（`evaluation_mode=offline_replay`、`human_review_coverage=0.0`） |
+| R11 | `README.md` 实测指标 | "本地离线测试 2153 passed, 18 skipped"→ 最新复跑 **2263 passed / 1 failed / 20 skipped**（2026-10-19，Windows + py3.12.15，679.38 s，191 文件），并在同一行说明唯一失败是宿主 `.env` 配置期望所致、Linux CI 无 `.env` 时全绿；保留上一轮 **2235 / 0 / 20**（189 文件，612.61 s）作对照 | `output/qwen103-2026-10-19/logs/pytest-full.log`（本地，Git 忽略）；失败用例 `tests/a/test_embedding_provider.py:39` 断言 `batch_size==10`，本机 `.env` 配 `20` |
+| R17 | `README.md` 生产部署链接处 | "企业级"加边界一句：仅指本机 Compose 全栈构建/启动与边界验收通过，**公网 TLS、域名、备份与监控未验证** | 台账 R17 原判（`prod` 仅=本机栈）；未新增任何公网宣称 |
+| S8 | `docs/TripleU平台全功能思维导图.md` §3.11 与"代码位置"节、`docs/10-学术与工程创新对照表.md` 工程位置节 | 三处指向 `frontend/integrated-map-src/**` 的表述统一加注：**该源码树不在本仓库**，只有构建产物 `frontend/public/integrated-map/assets/`（2 个文件），不得把产物说成有源码；来源结论归 QWEN-401，17 个孤儿测试隔离于 `frontend/tests/_orphaned/` | `git ls-files frontend/integrated-map-src` = 0；`git ls-files frontend/public/integrated-map/assets` = 2；无 `.gitmodules` |
+| S9 | `THIRD_PARTY_NOTICES.md` working-tree 段 + G9 行 | 原"59 个跟踪文件已删除未暂存 / 86 个文件修改（工作树脏）"改为**已提交**：该路径跟踪 0 文件、磁盘 0 文件、14 个目录（12 个空叶子目录，Git 不跟踪空目录故状态干净）；正版素材仍在 `frontend/public/pixel-campus/`（51 PNG + 8 `.gitkeep` = 59 跟踪文件）；素材溯源清点本身仍归 QWEN-401 | `git ls-files frontend/public/integrated-map/pixel-campus` = 0；`find` = 0 文件 / 14 目录 / 12 空叶子；`git ls-files frontend/public/pixel-campus` = 59 |
+| E1 附带 D6 | 台账 D6 指出 `docs/DEMO_5_MINUTES.md` 仍有过期"76 条待真实验收"句 | **本轮未改**（未在 Lead §3-23 清单内），登记为遗留项 | 待 Lead 单点确认后再动，避免顺手扩大改动面 |
+
+新增发现（本次复跑暴露，未修复、只登记）：
+
+1. **`tests/a/test_embedding_provider.py` 对宿主配置敏感**：用例 monkeypatch 了 `EMBEDDING_BASE_URL/KEY/MODEL/DIM`，却没 patch `EMBEDDING_BATCH_SIZE`，于是断言 `batch_size == 10` 读到本机 `.env` 的真实值 `20` 而失败。这是 Wave 0 全量 2235/0/20 之后**新出现**的红点，成因是 2026-10-19 15:20 前后把 Qwen embedding 配置合并进 `.env`（Lead 操作），属测试期望缺口而非产品回归；CI（无 `.env`）仍绿。修法是一行 `monkeypatch.delenv/setenv`，但那是测试代码改动，**超出 QWEN-103 的纯文档范围**，请 Lead 派单（建议归 QWEN-343 或 Wave 2 的测试隔离项）。
+2. **`reports/` 未被 gitignore 的三点矛盾**（已在 `evals/LEARNING_PACKAGE_EVAL.md` 正文登记）：脚本默认输出 `ROOT/reports/learning_package_offline_report.json`（`scripts/evaluate_learning_package.py:26`）× `.gitignore` 无 `reports/` × 文档要求"报告只放本地 `output/reports`"。当前 `reports/` 不存在、跟踪 0 文件，故尚未泄露；整改需改 `.gitignore` 或改脚本默认值，属代码/配置动作，归 QWEN-401/403。本轮只在文档里写清矛盾与临时规避（显式 `--output`）。
+3. **口径纪律**：日期型归档与交接文档（`docs/OPTIMIZATION_HANDOFF_2026-10-18.md` 仍写 v2.6）按"保留历史原貌"原则**不回改**，只在台账登记；本轮只刷新自称"描述当前代码"的文档。

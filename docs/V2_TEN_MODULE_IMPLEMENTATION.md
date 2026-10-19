@@ -1,6 +1,6 @@
 # Triple-U V2 课程学习 Agent：十模块实现详解
 
-更新时间：2026-10-15。本文描述**当前代码**，并将离线契约、真实 PostgreSQL、云端质量分别标注。图中的“Brain / Memory / Planning / Tool / Execution / Observation / Scheduler / Prompt / Guardrail / UI”只是分析框架，不意味着学习 Agent 已拥有代码执行、文件写入、浏览器操作、Tree-of-Thought 或通用自治能力。EchoMind 仅作为角色契约、只读工具、请求轨迹和评测闭环的参考；客服业务与技术栈没有迁移到本项目。
+更新时间：2026-10-19（QWEN-103 按当前代码复核版本号；上一版 2026-10-15）。本文描述**当前代码**，并将离线契约、真实 PostgreSQL、云端质量分别标注。图中的“Brain / Memory / Planning / Tool / Execution / Observation / Scheduler / Prompt / Guardrail / UI”只是分析框架，不意味着学习 Agent 已拥有代码执行、文件写入、浏览器操作、Tree-of-Thought 或通用自治能力。EchoMind 仅作为角色契约、只读工具、请求轨迹和评测闭环的参考；客服业务与技术栈没有迁移到本项目。
 
 V2 主线为 `POST /api/v2/learning-runs/stream`。服务端从 Bearer Session 解析账号与课程授权，创建独立 Run / thread，加载同用户同课程同会话最近三次**已完成**的回答，执行 LangGraph，保存节点审计与检查点，最后通过 SSE 交付。`mode=answer` 走证据优先问答；`mode=learning_package` 走固定 Tutor → Practice 两步学习包。关键入口：[路由](../backend/app/api/v2/learning_runs.py)、[生命周期](../backend/app/api/v2/run_lifecycle.py)、[基础图](../backend/app/agent_runtime/learning_graph.py)、[学习包图](../backend/app/agent_runtime/learning_package.py)。V1 仍用于旧页面及内置/离线 RAG 兼容；不能将 V1 离线能力算成 V2 在线质量。
 
@@ -55,7 +55,7 @@ V2 主线为 `POST /api/v2/learning-runs/stream`。服务端从 Bearer Session �
 
 ## 8. 提示词工程（Prompting）
 
-- **职责及输入输出**：各角色的 system prompt 明确输入为待分析数据、只返回 JSON Schema，不输出隐藏思维过程；`PROMPT_VERSION=learning-package-v2.4` 随代码保存，结构化请求同时启用服务商 JSON 输出模式。
+- **职责及输入输出**：各角色的 system prompt 明确输入为待分析数据、只返回 JSON Schema，不输出隐藏思维过程；`PROMPT_VERSION=learning-package-v2.8`（`backend/app/agent_runtime/learning_package.py:20`，2026-10-19 复核）随代码保存，工作流版本 `WORKFLOW_VERSION=learning-workflows-v2.3`（`backend/app/api/v2/run_lifecycle.py:29`）与之分开；结构化请求同时启用服务商 JSON 输出模式。
 - **顺序与代码**：[角色提示词及 Pydantic 契约](../backend/app/agent_runtime/learning_package.py) 动态加入问题、有限记忆、画像、计划和证据。输出先长度限制，再 JSON 解析及字段/依赖/来源校验；不能只靠提示词约束权限。
 - **持久化与故障**：模型版本、请求上限和 Run state 可追溯；提示词版本当前作为代码常量，尚无独立发布/回滚数据库。无效结构立即失败，不能把自由文本猜成计划。
 - **证据与边界**：[学习包契约测试](../tests/a/test_learning_package.py)。未实现跨模型 A/B 提示词实验或自动 prompt 优化。

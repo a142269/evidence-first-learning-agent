@@ -450,10 +450,13 @@ Additional evidence notes:
   Manim/Playwright are optional renderers (commented out of `requirements.txt`, absent from the
   lock); `edge-tts` calls Microsoft's online TTS service; LLM/embedding/image calls go to
   iFlytek/OpenAI-compatible APIs. No image/font/script CDN URLs were found in the shipped frontend.
-* **Working-tree state:** 59 tracked files under `frontend/public/integrated-map/pixel-campus/`
-  are deleted in the working tree but not staged (dedup in progress per
-  `docs/OPTIMIZATION_HANDOFF_2026-10-18.md`); provenance accounting must be re-run after that
-  change is committed.
+* **Working-tree state (re-checked 2026-10-19, QWEN-103):** the dedup described above is now
+  **committed**. Measured: `git ls-files frontend/public/integrated-map/pixel-campus` → **0** tracked
+  files, on-disk files → **0**, leaving 14 directories of which 12 are empty leaf directories
+  (Git does not track empty directories, so `git status` is clean for this path). The canonical
+  copies remain tracked at `frontend/public/pixel-campus/**` (51 PNG + 8 `.gitkeep` = 59 tracked
+  files). Provenance accounting for the surviving PNG family still has to be re-run and is owned by
+  QWEN-401; this bullet only records that the "deleted but unstaged" state no longer exists.
 
 ## 5. Attribution / notice gaps (F8–F10 evidence)
 
@@ -467,7 +470,7 @@ Additional evidence notes:
 | G6 | `docs/03-开源参考与协议.md` is a curated, incomplete and partly inaccurate dependency disclosure | Only **4 of 47** direct Python deps and **5 of 10** direct frontend deps are named; omits LangChain/LangGraph, OpenTelemetry, Celery/Redis, psycopg/pgvector, edge-tts, ant-design-vue, chart.js, vue-chartjs, katex, lucide-vue-next, Electron/docx; lists ChromaDB/sentence-transformers/bge/highlight.js/Mermaid which are not installed/bundled deps; last updated 2026-06-19 |
 | G7 | Copyleft / GPL exposure is undisclosed | `psycopg*` LGPL-3.0-only, `edge-tts` LGPL-3.0 (both collected into PyInstaller build); bundled FFmpeg 7.1 binary reports `--enable-gpl --enable-version3` (GPL build) inside `imageio-ffmpeg` |
 | G8 | No automated license/notice gate | `.github/workflows/ci.yml` has no license/NOTICE/SBOM check |
-| G9 | Asset dedup is mid-flight and uncommitted | 59 tracked deletions of integrated-map/pixel-campus copies; 86 modified tracked files overall (working tree dirty) |
+| G9 | Asset dedup mid-flight was the 2026-10-18 state; **re-checked 2026-10-19: the deletions are committed** and the working tree is clean, so the remaining gap is provenance, not staging | `git ls-files frontend/public/integrated-map/pixel-campus` = 0 tracked / 0 files on disk / 14 dirs (12 empty leaves); canonical 51 PNG still tracked under `frontend/public/pixel-campus/` |
 
 ## 6. Recommended actions before a public release
 

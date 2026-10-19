@@ -93,6 +93,8 @@ python scripts/evaluate_learning_package.py --predictions output/package/recorde
 `synthetic` 是默认值，表示测试桩/合成预测；`recorded` 仅表示用户声明这些数据来自已保存的运行，不能自动认证它是云端输出，也不会让离线回放变成新的在线验收。报告始终标记 `evaluation_mode=offline_replay`。
 固定留出集复核显式添加 `--split holdout`；仅验证数据文件不代表已运行留出集。报告、预测及审查表只存放本地 output/reports，不提交仓库。
 
+> **已知矛盾（2026-10-19 QWEN-103 实测，未在本任务修复）**：`scripts/evaluate_learning_package.py:26` 的 `--output` **默认值**恰好是仓库根下的 `reports/learning_package_offline_report.json`，而 `.gitignore` 里**没有** `reports/` 条目（只有第 57 行一条关于本地备份的注释提到 "diagnosis reports"）。因此按默认命令跑一次评测，人审材料就会落到**可提交目录**，与本句"只存放本地 `output/reports`"冲突。当前状态：`reports/` 目录尚不存在、`git ls-files reports` = 0，即泄露尚未发生，属预防性缺口。整改需要二选一——给 `.gitignore` 增加 `reports/`，或把脚本默认输出改到 `output/reports/`——两者都是代码/配置改动，**不在 QWEN-103 的纯文档范围内**，归 QWEN-401/403 处置；在此之前请显式传 `--output output/reports/<name>.json`。
+
 ## 指标口径
 
 - `contract_pass_rate`：预期行为的契约通过率。成功用例验证两步依赖、讲解、三道题、每项引用、实际引用并集、Reviewer 状态和上限预算；预期失败/待审/拒绝用例则验证相应事件、错误码及受保护内容隔离。正确拒绝也可算契约通过，不能称为“成功生成学习包”。
