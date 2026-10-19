@@ -10,11 +10,12 @@ import sys
 import pytest
 
 # kombu 的 filesystem:// broker 在 Windows 上需要 pywin32 的 pywintypes；
-# 共享测试环境不安装 pywin32，因此这里条件跳过，Linux CI 与 nightly 继续覆盖本契约。
+# 共享测试环境不安装 pywin32，因此这里条件跳过。本文件不在 fast / enterprise 清单，
+# 由 Linux nightly 的全量 `pytest tests/` 继续覆盖本契约。
 needs_pywintypes = sys.platform == "win32" and importlib.util.find_spec("pywintypes") is None
 pytestmark = pytest.mark.skipif(
     needs_pywintypes,
-    reason="kombu filesystem broker requires pywin32 on Windows; covered by Linux CI and nightly",
+    reason="kombu filesystem broker requires pywin32 on Windows; the Linux nightly full suite covers this contract",
 )
 
 

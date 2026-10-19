@@ -35,7 +35,7 @@
 | R8 | L40 | "真实 PostgreSQL 恢复组合 15/15" | 有证据-历史 | pg | 2026-10-16 PG 专项（检查点跨进程、API 崩溃恢复、摄取幂等、向量版本检索、续跑）15/15；10-18 又跑 353 passed 企业组合。本轮未重跑。 | 需复跑 → QWEN-105 一次性容器复跑 |
 | R9 | L41 | "13 个在线契约场景 13/13" | 有证据-历史 + 措辞需修正 | cloud（采集）→ offline_replay（评测） | `evals/results/learning-package-v1-summary.json`：`evaluation_mode=offline_replay`、`prediction_kind=recorded`；13/13 指**契约**（结构/引用/预算），且 `human_review_coverage=0.0`。"在线契约"字样易被读成在线质量。 | 措辞改为"真实后端采集的 13 条契约场景（回放评测；非内容质量）" |
 | R10 | L52–55 | 74/76（97.37%）、Hit@5 95.83%、Recall@5 94.79%、引用 100%/100% | 有证据-历史 | cloud | 与脱敏汇总 JSON 逐项一致（0.9583/0.9479/1.0/1.0）。README L62 已声明为历史汇总；引用"有效率"= ID 存在性（L31 已自声明非事实支持）。 | 保持 |
-| R11 | L56 | "本地离线测试 2153 passed, 18 skipped" | 有证据-历史；本轮已复跑 | offline | 原值：2026-10-16 Windows **Python 3.10** 全量 `pytest tests/`（626 s）。本轮 2026-10-19 在 Python 3.12.15（conda `evidence-agent-py312`）复跑全量：**2234 passed / 2 failed / 19 skipped（650.31 s）**；两个失败均为本机环境/测试期望问题（① Windows kombu filesystem broker 缺 pywin32；② TTS 回退 `edge-tts` 未列入测试允许值），非 V2 主线回归。明细与依据见 `output/qwen-baseline-2026-10-19/report.md`（本地，Git 忽略）。 | README 更新为最新复跑口径并加"运行环境（py 版本/平台）"注记；两处测试期望修正归 Wave 1 |
+| R11 | L56 | "本地离线测试 2153 passed, 18 skipped" | 有证据-历史；本轮已复跑并收口 | offline | 原值：2026-10-16 Windows **Python 3.10** 全量 `pytest tests/`（626 s）。本轮 2026-10-19 在 Python 3.12.15（conda `evidence-agent-py312`）复跑全量：首轮 **2234 passed / 2 failed / 19 skipped（650.31 s）**；两处失败定位为① Windows kombu filesystem broker 缺 pywin32、② TTS 回退 `edge-tts` 未列入测试允许值，均属环境/测试期望而非 V2 主线回归。QWEN-004 收口（只改测试：补 `edge-tts` 允许值 + Windows 缺 `pywintypes` 条件 skip）后复跑 **2235 passed / 0 failed / 20 skipped（612.61 s）**。明细见 `output/qwen-baseline-2026-10-19/`（本地，Git 忽略）。 | README 更新为最新复跑口径（2235/0/20，py3.12.15 Windows）并加"运行环境（py 版本/平台）"注记；措辞修正动作归 Wave 1 QWEN-103 |
 | R12 | L57 | PostgreSQL 专项 15/15 | 有证据-历史 | pg | 同 R8。 | 同 R8 |
 | R13 | L58 | 学习包标准在线契约 13/13 | 有证据-历史 | cloud→offline_replay | 同 R9。 | 同 R9 |
 | R14 | L42 | 生产权限边界 "SQLite / PostgreSQL 跨进程验证" | 有证据 | offline + pg | V1 白名单、V2 逐 Run 授权、跨进程认证测试在便携套件今日重跑通过；PG 跨进程认证为历史 pg 证据。 | 保持 |
@@ -96,6 +96,7 @@
 | S5 | 同上 | 本机生产栈 211.3s 构建启动 + 边界全通过 | 有证据-历史 | prod（仅本机） | 明确写了"不等于公网生产验收" ✓。 | 保持该限定 |
 | S6 | 同上 | 费用记录：Redis 预留 188.38/200 元保守额度；"不是账单"；structured-output 费用 unknown 不写 0 | 有证据 | cloud | 符合"费用未知写 unknown"硬约束。 | 保持 |
 | S7 | OPTIMIZATION_HANDOFF_2026-10-18 §5 | "当前工作区提示词版本 v2.6" | 措辞需修正（过期） | offline | 交接时快照为 v2.6；现为 v2.8。交接文档是历史件，不改正文。 | 无动作（本台账标注即可） |
+| S8 | `docs/TripleU平台全功能思维导图.md` L550/L1231、`docs/10-学术与工程创新对照表.md` L490-491、`THIRD_PARTY_NOTICES.md` | "React 内嵌应用：`frontend/integrated-map-src/src`"、"代码主体 `LabView.jsx`，由 Vue 以 iframe 嵌入" 等指向具体源码文件的表述 | **代码缺失 / 措辞需修正** | offline | 本仓库无 `frontend/integrated-map-src/`（`git ls-files` 无匹配、无 `.gitmodules`），但 `frontend/tests/` 有 **15 个** `.test.mjs` 直接 import/读取该树；`frontend/src/views/CockpitView.vue` 同样不存在，而 `routerRoutes.test.mjs` 读取它。`node --test tests/*.test.mjs`（node v24.13.0）实测 **17 passed / 21 failed**（34 文件、38 个顶层结果）。这解释了 QWEN-120"前端单测进 fast"为何不能直接接入。 | 需 Lead 决策：补齐/引入该源码树、或把这 16 个失效测试隔离（移入 `frontend/tests/_orphaned/` 之类，属删除性动作，需授权）、或改为对现有 Vue 源码重写断言；决定后再接 CI，并同步修正文档措辞（QWEN-103） |
 
 ## 6. 许可与素材
 
@@ -113,7 +114,7 @@
 | P1 | "189 个测试文件" | 有证据 | 本轮 `find tests -name 'test_*.py'` = 189 ✓（a 124 / b 42 / integration 9 / regression 5 / benchmarks 4 / 根 5）。 | — |
 | P2 | "23 个 Vue 视图" | 有证据 | `frontend/src/views/*.vue` = 23 ✓。 | — |
 | P3 | "27 个 API 模块" | 措辞需修正 | 实测 `backend/app/api/v1/*.py`（26，不含 `__init__`）+ `v2/*.py`（4）= 30 个模块文件；口径待统一定义后修正。 | 计划文下次修订时改数 |
-| P4 | "CI 只跑约 38（quality）+ 约 30（enterprise）" | 措辞需修正（轻微） | 本轮解析 `ci.yml`：quality 便携清单 37 文件、enterprise 37 文件 + MCP 1（独立步骤）。 | 同上 |
+| P4 | "CI 只跑约 38（quality）+ 约 30（enterprise）" | 措辞需修正（轻微） | 本轮解析 `ci.yml`：quality 便携清单 37 文件、enterprise 37 文件 + MCP 1（独立步骤）。QWEN-120 收口后 enterprise 为 **38** 文件（补入 `test_v2_retrieval_postgres.py`）。 | 计划文下次修订时改数（38 + 38 + MCP 1） |
 | P5 | "基线 main 工作区干净、run #19 全绿" | 有证据（工作区）/ 需复核（CI） | 本轮 `git status --short` 干净 ✓（Wave 0 建分支前）；run #19 同 S2。 | 同 S2 |
 
 ---
@@ -124,6 +125,7 @@
 2. **evals/README.md**：E1 过期句。
 3. **V2_TEN_MODULE_IMPLEMENTATION.md**：T1 版本号、T2 验收状态句。
 4. **竞赛材料横幅**：D1–D7 统一加"历史赛题口径"标注；硬数字（12 Agent→16、90 路由→187、6 种产物）修正。
-5. **不动**：所有诚实的历史归档（S 系列、E3–E6）与"未验证"标注——它们是本项目证据文化的资产。
+5. **需 Lead 决策**：S8 —— `frontend/integrated-map-src/` 与 `CockpitView.vue` 不在本仓库，导致 16 个前端 `.mjs` 测试在本机失败（17 passed / 21 failed），QWEN-120"前端单测进 fast"因此阻塞；处理方案（补源、隔离失效测试、或重写断言）需先定，再接 CI。
+6. **不动**：所有诚实的历史归档（S 系列、E3–E6）与"未验证"标注——它们是本项目证据文化的资产。
 
-**本轮 Wave 0 未修改任何被核对文档的正文**（修正动作属 Wave 1 QWEN-103，需配套 CI 验证）；台账中所有"有证据"结论的复跑证据见 `output/qwen-baseline-2026-10-19/report.md`（本地，Git 忽略）与 [OPTIMIZATION_STATUS_2026-10-19.md](OPTIMIZATION_STATUS_2026-10-19.md)。
+**Wave 0 首轮未修改任何被核对文档的正文**（修正动作属 Wave 1 QWEN-103，需配套 CI 验证）；收口补丁（QWEN-004 / QWEN-120）只改测试期望、测试 skip 与 CI 清单，未改产品行为，结果见 [OPTIMIZATION_STATUS_2026-10-19.md](OPTIMIZATION_STATUS_2026-10-19.md) §六。台账中所有"有证据"结论的复跑证据见 `output/qwen-baseline-2026-10-19/report.md`（本地，Git 忽略）。

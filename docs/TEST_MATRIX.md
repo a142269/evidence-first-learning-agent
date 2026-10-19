@@ -9,7 +9,7 @@
 | 层 | 运行位置 | 集合 | 门槛/预算 | 目的 |
 |---|---|---|---|---|
 | **fast** | 每次 push main / PR（CI `quality` job） | 37 个便携 V2 契约文件（下表 `F` 列） | job 超时 20 分钟；本轮实测 58.5 s（369 passed / 1 skipped） | 主线契约回归：权限、学习包、部分完成、结构化输出、评测器、租约/幂等 |
-| **contract-pg** | CI `enterprise-contract` job（PG16+pgvector / Redis7 服务容器） | 37 个文件（`E` 列）+ MCP 协议 1（`M` 列，独立步骤） | job 超时 20 分钟；历史实测 173.6 s（353 passed） | 真实数据库/中间件合同：跨进程恢复、迁移、认证、检索、摄取 |
+| **contract-pg** | CI `enterprise-contract` job（PG16+pgvector / Redis7 服务容器） | 38 个文件（`E` 列，QWEN-120 补入 `test_v2_retrieval_postgres.py`；首轮统计为 37）+ MCP 协议 1（`M` 列，独立步骤） | job 超时 20 分钟；历史实测 173.6 s（353 passed） | 真实数据库/中间件合同：跨进程恢复、迁移、认证、检索、摄取 |
 | **nightly** | 每日 19:20 UTC + 手动 dispatch（`offline` job） | **全量** `pytest tests/`；需外部依赖的用例按设计自动 skip | job 超时 60 分钟；产出核心覆盖率 `build/coverage.xml` | 发现 fast/contract 未覆盖的 V1/算法/演示资产回归 |
 | **nightly-lock** | 同上 workflow（`linux-lockfile` job） | 学习包核心 3 文件 | 按哈希安装 `requirements.lock.linux.txt` 后运行 | Linux 锁可安装性冒烟 |
 | **manual** | 本地/授权环境 | 见 §4 | 需真人或真实凭据 | 付费云评测、浏览器走查、Docker 冒烟、性能压测 |
@@ -138,7 +138,7 @@
 | tests/a/test_v2_learning_tools.py | F |  |  | ✓ |  |
 | tests/a/test_v2_model_usage.py | F |  |  | ✓ |  |
 | tests/a/test_v2_retrieval_comparison.py |  |  |  | ✓ |  |
-| tests/a/test_v2_retrieval_postgres.py |  |  |  | s | 需显式一次性 PG；未进任何 CI job（缺口 §5.4） |
+| tests/a/test_v2_retrieval_postgres.py |  | ✓ |  | s | 需显式一次性 PG；QWEN-120 已补入 enterprise 清单（本机 pg 实测 1 passed） |
 | tests/a/test_v2_unfinished_postgres.py |  | E |  | s |  |
 | tests/a/test_v2_unfinished_resume.py |  | E |  | ✓ |  |
 | tests/a/test_variant_generator.py |  |  |  | ✓ |  |
@@ -218,7 +218,7 @@
 
 | 集合 | 数量 | 当前覆盖 | 分层 |
 |---|---|---|---|
-| `frontend/tests/*.test.mjs`（node:test 单元，含 `learningStream.test.mjs`） | 34 | **无任何 CI 步骤**（`package.json` 无 `test` 脚本；CI frontend job 只做 `vue-tsc + vite build`） | 现状=manual（`node --test`）；**建议进 fast**（秒级、无外部依赖） |
+| `frontend/tests/*.test.mjs`（node:test 单元，含 `learningStream.test.mjs`） | 34 | **无任何 CI 步骤**（`package.json` 无 `test` 脚本；CI frontend job 只做 `vue-tsc + vite build`） | 现状=manual（`node --test tests/*.test.mjs`：17 passed / 21 failed，失败源于仓库缺失的 `integrated-map-src/`、`CockpitView.vue` 与过期断言）；进 fast **阻塞待 Lead 决策**，见台账 S8 |
 | `tests/desktopPackaging.test.mjs` | 1 | 不在 CI | manual（Electron 打包检查） |
 
 ## 4. manual 层清单（不进自动化）
@@ -238,8 +238,8 @@
 
 1. **nightly 远端实际运行记录未核验**：workflow 已定义（cron `20 19 * * *` + dispatch），本轮无 gh CLI，无法确认最近一次运行结论。第一步：触发一次 `Nightly offline suite` 并把 run 编号/耗时/skip 清单记入状态文档。
 2. **`tests/regression/test_sandbox_security_p0.py` 等 V1 安全专项**只被 nightly 全量收集，无独立步骤：建议 nightly 加独立步骤并单列失败注解——P0 语义不应埋在 60 分钟全量里。
-3. **前端 34 个 `.mjs` 单元**未进任何 CI：建议 `npm run test`（`node --test tests/`）加入 fast（frontend job），成本≈0。
-4. **`tests/a/test_v2_retrieval_postgres.py`** 不在 enterprise 清单（其余 `*_postgres` 均在）：疑似遗漏，建议补入。
+3. **前端 34 个 `.mjs` 单元**未进任何 CI —— **QWEN-120 实测后阻塞，需 Lead 决策**：`node --test tests/*.test.mjs`（cwd=frontend，node v24.13.0）为 **17 passed / 21 failed**；失败集中在依赖本仓库不存在的 `frontend/integrated-map-src/`（15 个文件）、缺失的 `src/views/CockpitView.vue`（1 个）与 5 个过期正则断言。直接接入会把 CI 变红，故未加步骤；细节见台账 S8。另注：`node --test tests/`（目录形式）在 node 24 会把它当模块加载并报 `MODULE_NOT_FOUND`，应使用 glob 形式。
+4. ~~**`tests/a/test_v2_retrieval_postgres.py`** 不在 enterprise 清单~~ —— **QWEN-120 已修**：补入 `.github/workflows/ci.yml` enterprise 清单（37 → 38 文件），本机一次性 pgvector 容器实测 1 passed（pg 级）。
 5. **`tests/b`（42，依赖 torch）与 `tests/integration`（9）**：nightly 全量收集但无分文件通过报表；建议 nightly 步骤输出 `-rf` 短摘要并上传日志 artifact。
 6. **覆盖率门禁仅学习包两模块 ≥80%**：主计划 §7 还要求扩展核心（memory/tools/scheduler）≥70%——nightly 已有 coverage.xml，但无判定；建议在 QWEN-343 中加阈值步骤。
 
@@ -250,3 +250,7 @@
 | fast 清单（本机等价，SQLite/离线） | 37 文件 | **369 passed / 1 skipped / 0 failed**（58.54 s）；skip=`test_auth_restart.py`（需显式一次性 PG） |
 | 覆盖率门禁（本机等价） | 5 文件 | **110 passed**；learning_package 94%、claim_support 83%、合计 92.44%（≥80） |
 | 全量 `pytest tests/`（本机 Windows，Python 3.12.15） | 189 文件 | **2 failed / 2234 passed / 19 skipped**（650.31 s）；两个失败已定位为本机环境依赖（pywin32）与测试期望过期（edge-tts 回退），见台账 R11 与 `output/qwen-baseline-2026-10-19/report.md` |
+| 同上（QWEN-004 收口后复跑，新 `--basetemp` + 独立 SQLite） | 189 文件 | **2235 passed / 0 failed / 20 skipped**（612.61 s，offline）；+1 passed = TTS 断言补 `edge-tts`，+1 skipped = Celery 在 Windows 缺 `pywintypes` 条件跳过；未装 pywin32 |
+| QWEN-004 定向复跑（`test_artifacts_api.py` + `test_celery_worker_process.py`） | 2 文件 | **24 passed / 1 skipped（expected）/ 0 failed**（58.37 s，offline）；`ruff --select F,E9` 与 `tests/ --select F821,F823,E9` 通过 |
+| QWEN-120：`test_v2_retrieval_postgres.py` 加入 enterprise 清单后的本机验证 | 1 文件 | **1 passed**（1.56 s，pg：一次性 pgvector/pg16 容器，tmpfs、仅 `127.0.0.1:55432`，跑完 `--rm` 删除） |
+| QWEN-120：`node --test tests/*.test.mjs`（cwd=frontend） | 34 文件 | **17 passed / 21 failed**（offline，node v24.13.0）；未接入 CI，原因见 §5.3 与台账 S8 |
