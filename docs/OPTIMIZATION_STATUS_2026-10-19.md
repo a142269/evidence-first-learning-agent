@@ -133,3 +133,11 @@
 | Wave 1 分支 | 本机从 `main@64bc815` 建 `qwen/wave1-evidence`；本轮合并前自检的 3 个文档改动随分支带走（未直接落 main） | offline |
 
 Wave 1 队列（Lead 指定顺序）：**QWEN-101 设计稿**（只设计不实现、不代填评分）→ QWEN-102 题集与脚本骨架（不调付费模型，需授权先发 `[QUESTION]`）→ 空档做 QWEN-103 台账措辞修正（T1/E1/D1–D3/R9/R13/R17/S8/S9，纯文档逐条附证据）。
+
+## 八、Wave 1 · QWEN-101 设计稿交付（2026-10-19 14:59）
+
+- 交付：[HUMAN_EVAL_DESIGN_2026-10-19.md](HUMAN_EVAL_DESIGN_2026-10-19.md)。只设计、未写实现、未代填任何评分；覆盖 Lead 指定的七项（评分包数据模型 / 随机化与盲评流程 / 导入与校验 / κ 与置信区间与分歧处理 / CLI 形态 / fixtures 与测试计划 / 隐私与不泄题）。
+- 一手复验（offline，读本地 gitignored `output/ablation-full-20261017/`）：`reviewer-a.json` 与 `reviewer-b.json` 各 26 个 item、**`blind_id` 序列完全相同**（证实设计稿缺陷 A：`scripts/prepare_ablation_review.py:63` 把同一个 `packet` 对象写两次）；26 个 item 的 `scores` **至今全部为 `None`**，即历史上没有真人评分；`blind-mapping.json` 26 行、`item-006` 跳号。
+- 设计稿引用逐条自验后更正了 4 处行号（子代理转述的 `test_ablation_review_packets.py:37/38-44`、`prepare_ablation_review.py:58-60`、`ci.yml:172-210` → 实测 `:35`、`:36-42`、`:63`、`:172-209`）。
+- 新发现的仓库级隐患（记为整改候选，本任务不顺手改）：`.gitignore` 里没有 `reports/`，而 `scripts/evaluate_learning_package.py:26` 默认输出恰在 `ROOT/reports/`，`evals/LEARNING_PACKAGE_EVAL.md:94` 却要求人工审查材料只放本地 `output/reports` —— 三者矛盾，按默认命令运行会把人评材料放进可提交目录。
+- 等 Lead 裁决 6 点（设计稿 §10）后才进入实现。
