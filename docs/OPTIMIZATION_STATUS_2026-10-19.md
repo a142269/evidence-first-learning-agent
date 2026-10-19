@@ -70,12 +70,24 @@
 | 项 | 结论 | 证据等级 |
 |---|---|---|
 | `tests/a/test_v2_retrieval_postgres.py` 确实漏配 | 已加入 `.github/workflows/ci.yml` enterprise-contract 的 pytest 清单（37 → **38 文件**）；本机用一次性 pgvector 容器（tmpfs、仅绑 `127.0.0.1:55432`、跑完即 `docker stop --rm` 删除）实测 **1 passed**（1.56 s，Alembic `upgrade head` + 1024 维向量 + 无付费 Embedding 桩） | pg |
-| 前端 `.mjs` 单元进 fast | **未接入，阻塞**：本机 `node --test tests/*.test.mjs`（node v24.13.0，cwd=frontend）为 **17 passed / 21 failed（38 个顶层结果，34 个文件）**。失败原因分三类：① 15 个文件依赖本仓库未提交的 `frontend/integrated-map-src/`（`git ls-files` 无该路径、无 `.gitmodules`）；② `routerRoutes.test.mjs` 读取不存在的 `frontend/src/views/CockpitView.vue`；③ 5 个文件对现有 Vue 源码的正则断言过期。`frontend/package.json` 也没有 `test` 脚本。按"失败要真实暴露、不 `|| true`"的要求，此时接入会把 CI 直接变红，需 Lead 决定隔离/修复/补源（见台账 S8）。 | offline |
+| 前端 `.mjs` 单元进 fast | **QWEN-120 首测阻塞，已按 Lead 裁决转 QWEN-121 完成**：本机首测 **17 passed / 21 failed**（34 文件、38 个顶层结果，node v24.13.0），失败源于仓库缺失的 `frontend/integrated-map-src/`、缺失的 `src/views/CockpitView.vue` 与过期断言；当时未装 `|| true`、未做"只跑绿文件"的白名单。处置见下一小节。 | offline |
 | 工作流校验 | `yaml.safe_load` 解析 `ci.yml` 通过，enterprise 清单计数与新增文件名核对一致 | offline |
 
 收口后提交：`e74151f`（测试 + CI）、本轮文档与台账更新；未合并 `main`（等 Lead 确认）。
 
+### QWEN-121 前端测试方案 A（Lead 2026-10-19 [DECISION] 批准，含硬约束）
+
+| 步骤 | 实测 | 证据等级 |
+|---|---|---|
+| 孤儿测试隔离（只移不删） | `git mv` **17 个**（不是先前汇报的 16 个）依赖未提交源码的用例到 `frontend/tests/_orphaned/`，新增 `_orphaned/README.md` 逐文件列出缺失路径与恢复办法 | offline |
+| 计数更正 | 先前 [BLOCKER] 按"每个文件的第一条报错"分类，低估了 1 个：`demoLearnerName.test.mjs` 同时读取 4 个 `integrated-map-src/**` 文件，且它对 `src/constants/companion.ts` 的 `不出现"演示学习者"` 断言与当前实现冲突（该文件把 `演示学习者`/`张三` 一起放进 `GENERIC_LEARNER_NAMES` 占位名集合）。故孤儿集合为 16（含 `integrated-map-src`）+ 1（`routerRoutes` 读缺失的 `CockpitView.vue`）= 17 | offline |
+| 过期断言修正 | 4 个文件按当前源码改写并加"当前源码依据"注释：`mistakesCourseSwitching`（课程选项现由 `@/api/knowledge` 的 `listCourses` 动态注入，MistakesView.vue:66-90，源码不再有硬编码 "Python"）、`resourcesRealDataChinese`（`course: requestedCourse` 快照 + "无课程标记则可见"的过滤新语义，ResourcesView.vue:1273/1279/616-619/658-663）、`dashboardChineseTimeline`（旧 `wp.kp_id` 薄弱点列表在本仓库不存在，AI 洞察现为三张焦点卡，改断言 `localizeKnowledgePointLabel(activeMistakeFocus.kp_id)`，DashboardView.vue:1466）、`homeOrbitCentering`（轨道图已从 HomeView 迁到 LoginView，`scale(0.53)` 样式全仓不存在，改为"首页不含 OrbitDiagram + 登录页挂载 + 无 translateX(36px) 补偿"） | offline |
+| 产品 bug 判定 | 未发现需按 Lead 约束 2 停下来上报的产品缺陷：4 处都是"测试指向旧版 UI/旧实现"，当前源码有内建注释说明其设计意图（如历史无课程标记资源仍可见、快照防竞态）。**但** `dashboardChineseTimeline`/`homeOrbitCentering` 的语义被弱化改写，若 Lead 认为那两个 UI 属应恢复的产品功能，应回退这两处并转为产品任务 | offline（判读性结论，非验收） |
+| 本地验证 | `node --test tests/*.test.mjs`（cwd=frontend，node v24.13.0）：17 文件、21 个顶层结果、**0 failed**、exit 0（430.9 ms）；`_orphaned/` 17 文件不被 glob 命中 | offline |
+| CI 接入 | `.github/workflows/ci.yml` frontend job 新增 step `Frontend unit tests (node:test)` → `node --test tests/*.test.mjs`，**不加** `|| true`；`yaml.safe_load` 解析通过 | offline |
+
 ### 台账/矩阵一致性
 
-- `docs/CLAIMS_LEDGER.md` R11 已更新为收口后的全量数字，并新增 S8 记录前端测试与缺失源码树的发现。
-- `docs/TEST_MATRIX.md` §6 追加收口复跑行，并把"前端单元进 fast"从缺口改写为阻塞项。
+- `docs/CLAIMS_LEDGER.md` R11 更新为收口后的全量数字；S8 改写为"已隔离 + 措辞仍待修正"的当前事实；新增 S9（`THIRD_PARTY_NOTICES.md` L453 的 59 个暂存文件说法已过期，实测该路径 `git ls-files` = 0，仅剩 14 个空目录）。
+- `docs/TEST_MATRIX.md` §6 追加 QWEN-121 收口行，§5.3 由"阻塞"改为"已接（方案 A）"，§3 前端表行改为 17 运行 + 17 孤儿。
+- 主计划 QWEN-343 / QWEN-401 各加一条跟踪项（孤儿测试处置与 `integrated-map-src` 来源结论），按 Lead 约束 5 执行。

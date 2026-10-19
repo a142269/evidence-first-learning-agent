@@ -37,7 +37,11 @@ assert.match(model, /"cnn\/batch_norm":\s*"批归一化（BatchNorm）"/, "CNN �
 assert.match(source, /label:\s*localizeKnowledgePointLabel\(name/, "BKT 左轴应使用中文知识点名称");
 assert.match(source, /seriesName === "掌握度"/, "BKT 悬浮框应读取掌握度系列而不是背景轨道");
 assert.match(source, /matrix\.knowledgePoints\.map\(\(kpId\) => localizeKnowledgePointLabel\(kpId\)\)/, "错因矩阵纵轴应显示中文知识点名称");
-assert.match(source, /localizeKnowledgePointLabel\(wp\.kp_id\)/, "AI 洞察薄弱点应显示中文名称");
+// 当前源码依据：frontend/src/views/DashboardView.vue:1439-1493 的 AI 洞察区已改为
+// "错因回放 / 多模态修复包 / 变式验证" 三张焦点卡，不再有 wp.* 薄弱点列表；
+// 知识点中文名现由 activeMistakeFocus.kp_id 承载（同文件 L1466）。
+// 原断言 localizeKnowledgePointLabel(wp.kp_id) 指向本工作树不存在的旧版列表标记。
+assert.match(source, /localizeKnowledgePointLabel\(activeMistakeFocus\.kp_id\)/, "AI 洞察应显示知识点中文名");
 assert.match(model, /export function localizeLearningMaterialTitle/, "AI 推荐资料应提供英文标题中文兜底");
 assert.match(source, /localizeLearningMaterialTitle\(m\.title\)/, "AI 洞察应显示中文资料标题");
 assert.match(model, /doc:\s*"文档"/, "DOC 资料类型应显示为文档");

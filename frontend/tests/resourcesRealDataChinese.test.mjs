@@ -59,13 +59,35 @@ for (const expected of [
 assert.match(source, /listCourses/, "资源库应从后端加载真实课程列表");
 assert.match(source, /class="course-switcher"/, "资源库顶部应提供课程切换器");
 assert.match(source, /setCourse/, "课程切换器应更新共享会话课程");
-assert.match(source, /course:\s*course\.value/, "资源请求应携带当前课程");
+// 当前源码依据：frontend/src/views/ResourcesView.vue:1273/1279 —— refresh() 先把
+// course.value 快照进 requestedCourse 再发请求，配合 refreshSequence 丢弃过期响应，
+// 所以资源请求携带的是快照变量而不是 course.value 本身。
+assert.match(source, /const requestedCourse = course\.value;/, "资源刷新应快照当前课程");
+assert.match(source, /course:\s*requestedCourse/, "资源请求应携带当前课程");
 assert.match(source, /getRecommendations\(userId\.value,\s*4,\s*course\.value\)/, "AI 推荐请求应携带当前课程");
 assert.match(source, /Python 程序设计课程资源/, "Python 课程应显示动态课程标题");
 assert.match(source, /watch\(course,[\s\S]*refresh\(\)[\s\S]*loadRecommendations\(\)/, "切换课程后应刷新资源与推荐");
 assert.match(source, /artifactCourse[\s\S]*course\.value/, "多模态产物应按当前课程筛选");
-assert.match(source, /resourceCourse[\s\S]*return resourceCourse === course\.value/, "资源卡片层应按当前课程二次过滤，不能依赖后端进程是否已重启");
-assert.match(source, /artifactCourse[\s\S]*return artifactCourse === course\.value/, "未标注课程的产物不应在切换课程后继续混入底部资源");
+// 当前源码依据：frontend/src/views/ResourcesView.vue:615-619（resources 卡片区）与
+// 657-663（artifacts 卡片区）—— 现在只有"明确标注了课程"的条目才做课程隔离，
+// 未写 course 元数据的历史资源/产物保持可见，否则接口有数据也会被前端筛成空白。
+// 原断言要求 return resourceCourse === course.value / return artifactCourse === course.value
+// 属旧版"未标注即隐藏"实现，已被上述行为替代。
+assert.match(
+  source,
+  /return !resourceCourse \|\| resourceCourse === course\.value;/,
+  "资源卡片区应只在条目带课程标记时做课程隔离，历史无标记资源仍可见",
+);
+assert.match(
+  source,
+  /const courseMatches = !artifactCourse \|\| artifactCourse === course\.value;/,
+  "产物卡片区应只在条目带课程标记时做课程隔离，历史无标记产物仍可见",
+);
+assert.match(
+  source,
+  /return courseMatches && artifact\.exists !== false && artifact\.download_ready !== false;/,
+  "失效产物不应进入卡片区，同时保留课程隔离判断",
+);
 
 const sessionSource = readFileSync(sessionPath, "utf8");
 assert.match(sessionSource, /COURSE_STORAGE_KEY/, "当前课程应持久化到本地存储");

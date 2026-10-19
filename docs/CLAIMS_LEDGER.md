@@ -96,7 +96,8 @@
 | S5 | 同上 | 本机生产栈 211.3s 构建启动 + 边界全通过 | 有证据-历史 | prod（仅本机） | 明确写了"不等于公网生产验收" ✓。 | 保持该限定 |
 | S6 | 同上 | 费用记录：Redis 预留 188.38/200 元保守额度；"不是账单"；structured-output 费用 unknown 不写 0 | 有证据 | cloud | 符合"费用未知写 unknown"硬约束。 | 保持 |
 | S7 | OPTIMIZATION_HANDOFF_2026-10-18 §5 | "当前工作区提示词版本 v2.6" | 措辞需修正（过期） | offline | 交接时快照为 v2.6；现为 v2.8。交接文档是历史件，不改正文。 | 无动作（本台账标注即可） |
-| S8 | `docs/TripleU平台全功能思维导图.md` L550/L1231、`docs/10-学术与工程创新对照表.md` L490-491、`THIRD_PARTY_NOTICES.md` | "React 内嵌应用：`frontend/integrated-map-src/src`"、"代码主体 `LabView.jsx`，由 Vue 以 iframe 嵌入" 等指向具体源码文件的表述 | **代码缺失 / 措辞需修正** | offline | 本仓库无 `frontend/integrated-map-src/`（`git ls-files` 无匹配、无 `.gitmodules`），但 `frontend/tests/` 有 **15 个** `.test.mjs` 直接 import/读取该树；`frontend/src/views/CockpitView.vue` 同样不存在，而 `routerRoutes.test.mjs` 读取它。`node --test tests/*.test.mjs`（node v24.13.0）实测 **17 passed / 21 failed**（34 文件、38 个顶层结果）。这解释了 QWEN-120"前端单测进 fast"为何不能直接接入。 | 需 Lead 决策：补齐/引入该源码树、或把这 16 个失效测试隔离（移入 `frontend/tests/_orphaned/` 之类，属删除性动作，需授权）、或改为对现有 Vue 源码重写断言；决定后再接 CI，并同步修正文档措辞（QWEN-103） |
+| S8 | `docs/TripleU平台全功能思维导图.md` L550/L1231、`docs/10-学术与工程创新对照表.md` L490-491、`THIRD_PARTY_NOTICES.md` L425 | "React 内嵌应用：`frontend/integrated-map-src/src`"、"代码主体 `LabView.jsx`，由 Vue 以 iframe 嵌入" 等指向具体源码文件的表述 | **代码缺失（测试已隔离，措辞仍待修正）** | offline | 本仓库无 `frontend/integrated-map-src/`（`git ls-files` 无匹配、无 `.gitmodules`；Lead 复核 `git log --all` 亦无记录），只有其构建产物 `frontend/public/integrated-map/assets/*`（2 个文件）；`frontend/src/views/CockpitView.vue` 也不存在（后端 `cockpit.py` 与前端 `api/cockpit.ts` 在）。QWEN-121 处置：`git mv` **17 个**依赖缺失源码的测试到 `frontend/tests/_orphaned/`（只移不删，附逐文件缺失路径清单，其中 `demoLearnerName.test.mjs` 另与 `src/constants/companion.ts` 的 `GENERIC_LEARNER_NAMES` 设计冲突）；其余 17 个文件 `node --test tests/*.test.mjs`（node v24.13.0）实测 **21 顶层结果全通过 / 0 failed / exit 0**，已接入 CI frontend job（无 `|| true`）。 | 源码来源结论归 QWEN-401；孤儿测试与 nightly 复核归 QWEN-343；文档正文措辞修正归 QWEN-103（不得把构建产物说成有源码） |
+| S9 | `THIRD_PARTY_NOTICES.md` L453-456 | "59 tracked files under `frontend/public/integrated-map/pixel-campus/` 已在工作树删除但未暂存" | 措辞需修正（过期） | offline | 本轮实测该路径 `git ls-files` = **0**（去重已提交），磁盘只剩 14 个空目录（0 文件，Git 不跟踪空目录，`git status` 干净）；同文档 L37 的 30 个 `frontend/public/assets` 陈旧 React 产物计数仍一致。属 Wave 4 许可清点输入。 | QWEN-401 重跑清点后更新该行；本轮不改文档正文 |
 
 ## 6. 许可与素材
 
@@ -125,7 +126,7 @@
 2. **evals/README.md**：E1 过期句。
 3. **V2_TEN_MODULE_IMPLEMENTATION.md**：T1 版本号、T2 验收状态句。
 4. **竞赛材料横幅**：D1–D7 统一加"历史赛题口径"标注；硬数字（12 Agent→16、90 路由→187、6 种产物）修正。
-5. **需 Lead 决策**：S8 —— `frontend/integrated-map-src/` 与 `CockpitView.vue` 不在本仓库，导致 16 个前端 `.mjs` 测试在本机失败（17 passed / 21 failed），QWEN-120"前端单测进 fast"因此阻塞；处理方案（补源、隔离失效测试、或重写断言）需先定，再接 CI。
+5. **已按 Lead 裁决执行（QWEN-121，方案 A）**：S8 —— 17 个依赖未提交源码的前端测试 `git mv` 到 `frontend/tests/_orphaned/`（只移不删），4 个过期断言按当前源码修正，CI frontend job 增加 `node --test tests/*.test.mjs`（本机 21/21 通过、exit 0）。**注意**：其中 2 个测试的语义被改写（`dashboardChineseTimeline` 的薄弱点列表断言、`homeOrbitCentering` 的首页 orbit 断言），因为它们指向本仓库不存在的 UI；如你认为该 UI 属应恢复的产品功能，请回退这两处并转为产品任务。
 6. **不动**：所有诚实的历史归档（S 系列、E3–E6）与"未验证"标注——它们是本项目证据文化的资产。
 
 **Wave 0 首轮未修改任何被核对文档的正文**（修正动作属 Wave 1 QWEN-103，需配套 CI 验证）；收口补丁（QWEN-004 / QWEN-120）只改测试期望、测试 skip 与 CI 清单，未改产品行为，结果见 [OPTIMIZATION_STATUS_2026-10-19.md](OPTIMIZATION_STATUS_2026-10-19.md) §六。台账中所有"有证据"结论的复跑证据见 `output/qwen-baseline-2026-10-19/report.md`（本地，Git 忽略）。

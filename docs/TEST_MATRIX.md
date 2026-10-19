@@ -218,7 +218,7 @@
 
 | 集合 | 数量 | 当前覆盖 | 分层 |
 |---|---|---|---|
-| `frontend/tests/*.test.mjs`（node:test 单元，含 `learningStream.test.mjs`） | 34 | **无任何 CI 步骤**（`package.json` 无 `test` 脚本；CI frontend job 只做 `vue-tsc + vite build`） | 现状=manual（`node --test tests/*.test.mjs`：17 passed / 21 failed，失败源于仓库缺失的 `integrated-map-src/`、`CockpitView.vue` 与过期断言）；进 fast **阻塞待 Lead 决策**，见台账 S8 |
+| `frontend/tests/*.test.mjs`（node:test 单元，含 `learningStream.test.mjs`） | 17（另有 17 个移入 `_orphaned/`） | **已进 CI**：`ci.yml` frontend job 新增 `node --test tests/*.test.mjs`（无 `|| true`）；本机 node v24.13.0 实测 21 顶层结果 **0 failed / exit 0** | fast（QWEN-121）；`_orphaned/` 17 个 = 已知缺口，等 `integrated-map-src`/`CockpitView.vue` 来源结论（QWEN-401/343），**不是"已覆盖"** |
 | `tests/desktopPackaging.test.mjs` | 1 | 不在 CI | manual（Electron 打包检查） |
 
 ## 4. manual 层清单（不进自动化）
@@ -238,7 +238,7 @@
 
 1. **nightly 远端实际运行记录未核验**：workflow 已定义（cron `20 19 * * *` + dispatch），本轮无 gh CLI，无法确认最近一次运行结论。第一步：触发一次 `Nightly offline suite` 并把 run 编号/耗时/skip 清单记入状态文档。
 2. **`tests/regression/test_sandbox_security_p0.py` 等 V1 安全专项**只被 nightly 全量收集，无独立步骤：建议 nightly 加独立步骤并单列失败注解——P0 语义不应埋在 60 分钟全量里。
-3. **前端 34 个 `.mjs` 单元**未进任何 CI —— **QWEN-120 实测后阻塞，需 Lead 决策**：`node --test tests/*.test.mjs`（cwd=frontend，node v24.13.0）为 **17 passed / 21 failed**；失败集中在依赖本仓库不存在的 `frontend/integrated-map-src/`（15 个文件）、缺失的 `src/views/CockpitView.vue`（1 个）与 5 个过期正则断言。直接接入会把 CI 变红，故未加步骤；细节见台账 S8。另注：`node --test tests/`（目录形式）在 node 24 会把它当模块加载并报 `MODULE_NOT_FOUND`，应使用 glob 形式。
+3. ~~**前端 34 个 `.mjs` 单元**未进任何 CI~~ —— **QWEN-121 已接（方案 A，Lead 2026-10-19 [DECISION]）**：`ci.yml` frontend job 增加 `node --test tests/*.test.mjs`（cwd=frontend，shell 展开 glob，**无** `|| true`）。17 个依赖本仓库未提交源码（`frontend/integrated-map-src/` 或 `frontend/src/views/CockpitView.vue`）的用例 `git mv` 到 `frontend/tests/_orphaned/`（只移不删，附逐文件缺失路径清单），glob 单层 `*` 不跨目录所以不会被命中；另 4 个过期断言按当前源码修正，其中 2 个语义被改写（见台账 S8）。本机：17 文件 / 21 顶层结果 **0 failed、exit 0**（node v24.13.0）；CI 用 node 20，待合并后由 main 的 CI 复验。注意 `node --test tests/`（目录形式）在 node 24 会当模块加载并报 `MODULE_NOT_FOUND`，必须用 glob 形式。
 4. ~~**`tests/a/test_v2_retrieval_postgres.py`** 不在 enterprise 清单~~ —— **QWEN-120 已修**：补入 `.github/workflows/ci.yml` enterprise 清单（37 → 38 文件），本机一次性 pgvector 容器实测 1 passed（pg 级）。
 5. **`tests/b`（42，依赖 torch）与 `tests/integration`（9）**：nightly 全量收集但无分文件通过报表；建议 nightly 步骤输出 `-rf` 短摘要并上传日志 artifact。
 6. **覆盖率门禁仅学习包两模块 ≥80%**：主计划 §7 还要求扩展核心（memory/tools/scheduler）≥70%——nightly 已有 coverage.xml，但无判定；建议在 QWEN-343 中加阈值步骤。
@@ -253,4 +253,5 @@
 | 同上（QWEN-004 收口后复跑，新 `--basetemp` + 独立 SQLite） | 189 文件 | **2235 passed / 0 failed / 20 skipped**（612.61 s，offline）；+1 passed = TTS 断言补 `edge-tts`，+1 skipped = Celery 在 Windows 缺 `pywintypes` 条件跳过；未装 pywin32 |
 | QWEN-004 定向复跑（`test_artifacts_api.py` + `test_celery_worker_process.py`） | 2 文件 | **24 passed / 1 skipped（expected）/ 0 failed**（58.37 s，offline）；`ruff --select F,E9` 与 `tests/ --select F821,F823,E9` 通过 |
 | QWEN-120：`test_v2_retrieval_postgres.py` 加入 enterprise 清单后的本机验证 | 1 文件 | **1 passed**（1.56 s，pg：一次性 pgvector/pg16 容器，tmpfs、仅 `127.0.0.1:55432`，跑完 `--rm` 删除） |
-| QWEN-120：`node --test tests/*.test.mjs`（cwd=frontend） | 34 文件 | **17 passed / 21 failed**（offline，node v24.13.0）；未接入 CI，原因见 §5.3 与台账 S8 |
+| QWEN-120 首测：`node --test tests/*.test.mjs`（cwd=frontend） | 34 文件 | **17 passed / 21 failed**（offline，node v24.13.0）；失败原因见台账 S8 |
+| QWEN-121 方案 A 执行后：`git mv` 17 个孤儿测试进 `_orphaned/`（只移不删）+ 修正 4 个过期断言 | 17 文件 | **21 顶层结果 passed / 0 failed / exit 0**（430.9 ms，offline，node v24.13.0）；已接入 CI frontend job（无 `|| true`）；CI node 20 待 main 复验 |
