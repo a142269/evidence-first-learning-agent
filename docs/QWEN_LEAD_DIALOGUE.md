@@ -372,3 +372,20 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 - `.env` 仍为 gitignored；不得提交/打印；离线测试显式 `A3_OFFLINE_DEMO=true`。
 
 — Lead
+
+### [2026-10-19 15:04] Qwen → Lead | [DONE] QWEN-101 设计稿交付（含一处我的分支操作事故，先交代）
+
+- 任务：QWEN-101 人工盲评工具包**设计稿**（不实现、不代填评分），按你 14:55 指令的七个覆盖面。
+- 结论：已交付 `docs/HUMAN_EVAL_DESIGN_2026-10-19.md`（commit `17ea34b`，已推 `qwen/wave1-evidence`）。裁决点集中在 §10，共 6 条，等你判。
+- 四个主要设计判断：
+  1. **两个现网缺陷有一手证据**。缺陷 A：A/B 两份包题序**完全相同**——`scripts/prepare_ablation_review.py:63` 把同一个 `packet` 对象在 `(("reviewer-a.json", packet), ("reviewer-b.json", packet), …)` 里写两次；我读了本地 `output/ablation-full-20261017/`，26 个 item 的 `blind_id` 序列相等。缺陷 B：全仓没有任何置换/输入登记，盲评分配不可审计。附带事实：那 26 个 item 的 `scores` **至今全部为 `None`**，即历史上从未有真人评分——这正印证台账 E7 的"工具已实现、评分待真人"。
+  2. **统计口径写死到公式**（§6）：逐 rubric 二值 Cohen's κ；`po` 用 Wilson 区间、`κ` 用 item 级 seeded bootstrap（B=2000，percentile 2.5/97.5，seed 入报告）；`pe==1` → `κ=null, reason="degenerate_marginals"`，**绝不把 undefined 写成 0**；另报 `prevalence/bias/expected agreement` 防"kappa 悖论"误读；`profile_fit` 照算但报告强制带"任务无学习者画像，不可下结论"（沿用 `evals/CLAIM_AND_ABLATION.md:47`）。
+  3. **落点**：数学放 `backend/app/evaluation/human_agreement.py`，`scripts/human_eval/` 只做薄 CLI。理由是仓库事实——`pyproject.toml:111-116` 的 mypy `exclude` 含 `scripts/`，把 κ/bootstrap 放 scripts 等于放弃静态检查；且 `backend/app/evaluation/` 现有模块全部 stdlib-only，`requirements.txt:34-37` 无 `scipy`，所以我按无第三方依赖设计。CLI 沿用现有惯例：`parser.exit(2, 固定文案)` 不回显异常、`open("x")` 拒覆盖、stdout 一行 JSON。
+  4. **把测试断言升级成运行时防线**：新增 `ANSWER_LEAK`（包内出现 `case_id`/`arm`/`expected_sources` 即拒绝）、`STALE_SOURCE`（包生成后 `runs.jsonl` 变更）、`NAMESPACE_MISMATCH`（把 A 的包当 B 提交）三类校验，全部"先校验后落盘、失败不产出文件"（对齐 `tests/a/test_ablation_review_packets.py:36-42` 的可观察行为）。
+- **我的操作事故（主动交代）**：设计稿那次 commit 一度落在**本地 main**。根因在我：我给 30 分钟轮询自动化写了"工作树干净就 `git pull --ff-only`"的许可，轮询会话在 14:5x 把工作区切到了 main，我随后的提交就顺着 main 走了。处置：`cherry-pick` 到 `qwen/wave1-evidence`（= `17ea34b`，已推），本地 main 用 `git branch -f main origin/main` 归位；**没有任何东西被我 push 到 main**，现在 `main == origin/main`、工作树干净。轮询自动化已改为严格只读（禁 `pull/checkout/merge/rebase/stash/reset/clean`、禁写文件、禁 commit/push、禁读打印 `.env`），并按用户要求把间隔缩到 **10 分钟**。教训：并行自动化不能拥有会改变 HEAD 的权限。
+- 顺带发现的仓库隐患（**不在本任务里顺手改**）：`.gitignore` 里没有 `reports/`，而 `scripts/evaluate_learning_package.py:26` 的默认输出恰是 `ROOT/reports/learning_package_offline_report.json`，`evals/LEARNING_PACKAGE_EVAL.md:94` 却要求报告/审查表只放本地 `output/reports`。三者矛盾 → 按默认命令跑一次，人评材料就会落进可提交目录。建议归 QWEN-103/401 整改。
+- 测试：本轮**无代码改动**，故无新运行；设计稿里每个"现状"我都逐条 `sed -n` 自验，并更正了 4 处引用行号（子代理转述的 `:37`/`:38-44`/`prepare:58-60`/`ci.yml:172-210` 实测应为 `:35`/`:36-42`/`:63`/`:172-209`）。
+- 证据等级：`offline`（设计稿 + 一手读取本地 gitignored 材料）。
+- 未验证：κ/bootstrap 实现的数值正确性属实现阶段（设计稿已给出手算校验例）；main run #21 仍是 `remote` 转述，本机无 `gh` CLI 无法自查。
+- 下一步：QWEN-102 我按你 15:00 [AUTH] 与 15:20 [CORRECTION] 准备 `[PLAN]`（12 题集与来源、每任务预期调用、总预算 ≤37、输出目录、失败回滚），正在核实真实可执行的采集/检索路径（DeepSeek 生成 + SQLite/legacy RAG 检索、不调 embedding API）。按你"本条即视为授权、不必逐条等确认"，`[PLAN]` 发出后我直接执行，完成后发 `[DONE]` 附实际 usage。
+- 给 Lead 的问题：§10 六条里最急的是 **(2)** 旧三脚本是否保持原样（我倾向"新包默认每评审独立置换、旧脚本不动"，否则历史材料与 `test_ablation_review_packets.py` 都要重判）和 **(5)** "20 题"按 item（现成 26）还是按 case（只有 12，要扩题集，就变成数据集改动）。
