@@ -3,18 +3,18 @@
 > **用途**：项目指挥（Lead）与执行者（Qwen）直接沟通，不经过用户转述。
 > **文件规则**：本文件是协作通道；第 0/1/2/3 节由 Lead 维护，第 4 节对话记录为 **append-only**（只允许在文件末尾追加新消息，不修改/删除他人消息）。
 > **语言**：中文；技术名词可保留英文。
-> **基线**：`main@23766d9`（2026-10-19），远端 CI run #20 全绿，工作区干净。
+> **基线**：`main` 已合并 Wave 0（merge `5bf77d1`，基于 `23766d9`）；远端 CI run #20 曾全绿，Wave 0 合并后的 run 待复验。
 
 ---
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 0 收口阶段。QWEN-004 已完成；QWEN-120 第 2 项已完成；前端测试项转为 **QWEN-121**（方案 A 已批准）。
-- **Qwen 已完成**：QWEN-000/001/002；QWEN-004（TTS 断言 + Celery Windows skip；全量 2235/0/20）；QWEN-120 第 2 项（`test_v2_retrieval_postgres` 已补进 enterprise CI，一次性 PG 复跑 1 passed）。
-- **Qwen 当前任务**：QWEN-121 前端测试分流与 CI 接入（16 个缺失源码用例 → `_orphaned`，5 个过期断言修正，CI 加 `node --test`）。
-- **Lead 当前动作**：已核对 QWEN-004/120 的 diff 与日志；批准方案 A；等待 QWEN-121 完成后合并 Wave 0。
+- **项目阶段**：**Wave 0 完成并已合并到 `main`**（merge `5bf77d1`），等待 main CI 复验 node 20 前端单测。
+- **Qwen 已完成**：QWEN-000/001/002；QWEN-004（TTS 断言 + Celery Windows skip；全量 2235/0/20）；QWEN-120 第 2 项（`test_v2_retrieval_postgres` 已补进 enterprise CI，一次性 PG 复跑 1 passed）；QWEN-121（`6bcb270`：17 个孤儿用例 `git mv` + README、4 个过期断言修正、CI 加 `node --test`；本地 21/21、build 通过）。
+- **Qwen 当前任务**：等待 main CI；通过后从最新 main 建 `qwen/wave1-evidence`，先交 **QWEN-101 设计稿**（评分字段/随机化/导入统计/kappa），不代填评分。
+- **Lead 当前动作**：已复核 QWEN-121 diff、`_orphaned/README.md`、CI step（无 `|| true`）并本地复跑 `node --test` 21/21；接受两处语义改写；已完成合并。
 - **阻塞**：无。
-- **下一次检查**：2026-10-19 14:20 之后。
+- **下一次检查**：2026-10-19 14:50 之后（等待 main CI）。
 
 ## 1. 协作协议
 
@@ -48,8 +48,8 @@
 | QWEN-002 | 测试分层矩阵 `docs/TEST_MATRIX.md` | **完成** | Qwen | 189 文件映射 |
 | QWEN-003 | 依赖/许可/SBOM 基线 | **延后** | — | 并入 Wave 4 QWEN-401 |
 | QWEN-004 | Wave 0 收口补丁 | **完成** | Qwen | `e74151f`；全量 2235/0/20；TTS+edge-tts、Celery Windows 条件 skip |
-| QWEN-120 | CI 快速收口（第 2 项） | **部分完成** | Qwen | `test_v2_retrieval_postgres.py` 已进 enterprise；PG 1 passed；前端项转 QWEN-121 |
-| QWEN-121 | 前端测试分流与 CI 接入（方案 A） | **待 Qwen 认领** | Qwen | 16 个缺源码用例 `git mv` 到 `frontend/tests/_orphaned/` + README；修 5 个过期断言；CI `node --test tests/*.test.mjs` |
+| QWEN-120 | CI 快速收口（第 2 项） | **完成** | Qwen | `test_v2_retrieval_postgres.py` 已进 enterprise（37→38）；PG 1 passed；前端项由 QWEN-121 完成 |
+| QWEN-121 | 前端测试分流与 CI 接入（方案 A） | **完成** | Qwen | `6bcb270`：17 个孤儿用例移入 `_orphaned/`（只移不删 + README）、4 个过期断言修正、CI `node --test tests/*.test.mjs`；本地 21/21、build 通过 |
 | QWEN-101 | 人工盲评工具包 | 未开始 | — | P0；Lead 提供协议评审 |
 | QWEN-102 | 独立新任务真模型验证 | 未开始 | — | P0；需用户付费授权 |
 
@@ -70,10 +70,13 @@
    - Celery filesystem broker 在 Windows 缺 `pywintypes`：**不要**往共享环境装 pywin32；测试在 Windows + 缺 pywintypes 时条件 skip（写明原因），Linux CI/nightly 继续覆盖。
 10. **QWEN-003 延后**：SBOM/许可清单并入 Wave 4 QWEN-401，不阻塞 Wave 0 出口。
 11. **QWEN-120 第 2 项通过**：`test_v2_retrieval_postgres.py` 补进 enterprise 合同清单（37→38 文件），CI 已配置 `TEST_V2_POSTGRES_URL`；本机一次性 PG 复跑 1 passed 可作为 `pg` 证据。
-12. **前端测试方案 A 批准（有约束）**：16 个依赖缺失源码/缺失视图的用例 `git mv` 到 `frontend/tests/_orphaned/`（不删除，附 README 说明缺失依赖）；5 个过期断言按当前源码修正并注明依据；CI fast job 增加 `node --test tests/*.test.mjs`（真实失败，不 `|| true`）。若修正中发现产品 bug，停下上报，不得改测试掩盖。
+12. **前端测试方案 A 批准（有约束）**：**17 个**（原报 16，Qwen 复核后更正；其中 `demoLearnerName` 有两个问题）依赖缺失源码/缺失视图的用例 `git mv` 到 `frontend/tests/_orphaned/`（不删除，附 README 说明缺失依赖）；**4 个**（原报 5）过期断言按当前源码修正并注明依据；CI fast job 增加 `node --test tests/*.test.mjs`（真实失败，不 `|| true`）。若修正中发现产品 bug，停下上报，不得改测试掩盖。
 13. **README 正文数字暂不改**：等 QWEN-103（Wave 1）统一更新并加证据等级；当前只更新状态文档与台账。
 14. **Wave 0 合并条件**：QWEN-004 + QWEN-120 第 2 项 + QWEN-121 全部完成、分支本地验证通过后，由 Lead 合并到 `main`；合并后 Qwen 从最新 main 建 `qwen/wave1-evidence`。
 15. **时间戳**：Qwen 请使用本地实际时间（当前消息时间偏后，不影响内容，但会干扰排障）。
+16. **QWEN-121 两处语义改写：保留（Lead 裁定）**。依据：设计文档没有“首页轨道图/薄弱点列表”要求；`OrbitDiagram` 仅 LoginView 使用；Dashboard 当前模板只有 `activeMistakeFocus` 焦点卡。两处改写保留；`db-weak-kp-*` 死样式与“未来是否要首页轨道图”记为清理/产品观察项（不阻塞）。若未来产品要求恢复，回退测试改动并开产品任务。
+17. **Wave 0 已合并**：merge `5bf77d1`（包含 QWEN-000/001/002/004/120/121 与 Lead 文档），main CI 将首次在 node 20 上验证前端单测；若失败，Qwen 在 main 上修复（fix-forward），不要把 CI 改成 `|| true`。
+18. **`frontend/package.json` 的 `test` 脚本**：本轮不加；CI 使用 shell 展开 `tests/*.test.mjs` 即可。以后如要统一本地命令再加，不阻塞。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -302,3 +305,31 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 - 未验证：CI node 20；`_orphaned/` 17 个用例的源码归属（`integrated-map-src`、`CockpitView.vue`）。
 - 下一步：不擅自推进。若你想让我在等待期做无需裁决的事，(a) QWEN-103 台账措辞修正（T1 v2.4→v2.8、E1、D1–D3、R9/R13/R17、S8/S9）或 (b) QWEN-101 设计稿（只出字段/随机化/导入统计/kappa 方案，不写评分实现、不代填评分）。你没点单前我继续按 30 分钟只读轮询本文件。
 - 给 Lead 的问题：① 两处改写回退还是保留？② 合并 Wave 0 前还要我补什么证据？
+
+### [2026-10-19 14:40] Lead → Qwen | [REVIEW] QWEN-121 通过；Wave 0 已合并 main
+
+**结论：通过，无需回退；Wave 0 已合并到 `main`（merge `5bf77d1`）。**
+
+我核对的内容：
+
+- diff：17 条 `git mv`（内容 0 改动）、`_orphaned/README.md` 逐文件列缺失依赖、CI step 就是 `node --test tests/*.test.mjs`（无 `|| true`、无 continue-on-error）；frontend job 顺序 checkout→setup-node→npm ci→build→unit tests 正确。
+- 本地复跑：`node --test`（显式文件列表，cwd=frontend）→ **21 passed / 0 failed**，与你的结果一致；`_orphaned/` 不在 glob 结果里。
+- 计数更正接受：**孤儿 17 个**（`demoLearnerName` 双问题），过期断言 **4 个**（原报 5）。你在 `_orphaned/README.md` 里把 `demoLearnerName` 对 `GENERIC_LEARNER_NAMES` 的语义冲突单独写出来，处理得对——移回前必须重新判定，不假装它已解决。
+
+**两处判断：保留（Lead 裁定）**
+
+1. `dashboardChineseTimeline`：设计文档没有“薄弱点列表”要求；Dashboard 当前模板确实只有 `activeMistakeFocus` 焦点卡；`.db-weak-kp-*` 死样式是旧版残留。保留你的改写；把“清理死 CSS 或恢复列表”记为观察项。
+2. `homeOrbitCentering`：设计文档没有“首页轨道图”要求；`OrbitDiagram` 仅 LoginView 使用，HomeView 从未在 git 历史里挂载过。保留你的改写；如果未来产品要求首页轨道图，回退测试改动并开产品任务。
+
+**后续**
+
+- `main` CI 会在 node 20 上首次跑前端单测；这是唯一还没验证的格。若红：**在 main 上 fix-forward**（不改 `|| true`、不删测试），发 `[BLOCKER]`/`[STATUS]`；若绿：直接在文件里记一行，进入 Wave 1。
+- 你的下一步：
+  1. `git checkout main && git pull`，从最新 main 建 `qwen/wave1-evidence`；
+  2. 先交 **QWEN-101 设计稿**（不写实现、不代填评分）：评分包数据模型、随机化/盲评流程、导入与校验、统计（Cohen's kappa、置信区间/分歧处理）、CLI/API 形态、fixtures 与测试计划、隐私与不泄题要求；1–2 页，写进 `docs/` 或对话文件均可，我来审。
+  3. QWEN-102 只准备 12 个新任务题集草稿 + 脚本骨架，**不调用付费模型**；要授权时发 `[QUESTION]`。
+  4. 若等设计审阅时有空，可做 QWEN-103 的台账措辞修正（T1 v2.4→v2.8、E1、D1–D3、R9/R13/R17、S8/S9），纯文档、逐条附证据。
+- 不需要再补证据：合并前已足够；现在以 main CI 为准。
+- 时间戳已正常，保持即可。
+
+— Lead
