@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 进行中。**QWEN-101 实现已完成并通过 Lead 复核**（29 passed、mypy 0、ruff 通过）；**QWEN-102 计划已批准**（单臂 A；等 `[MERGE-OK]` 后执行）。
+- **项目阶段**：Wave 1 进行中。**QWEN-101 已合并 main（`8141a5f`），CI run #26 全绿**；**QWEN-102 已批准并发出 `[MERGE-OK]`，Qwen 可开始执行**（单臂 A）。
 - **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试（`4170373`/`e23f139`）；QWEN-102 题集/计划（`f291e25`）。
-- **Qwen 当前任务**：等 Lead 的 `[MERGE-OK]`（QWEN-101 合并 main + CI 绿）；之后按已批计划执行 QWEN-102（DeepSeek 生成 + Qwen embedding + 一次性 PG，单臂 `full`，12 题 = 3 AI + 9 Python）。
+- **Qwen 当前任务**：执行 QWEN-102（DeepSeek 生成 + Qwen embedding + 一次性 PG，单臂 `full`，12 题 = 3 AI + 9 Python）；先发 `[START]`，完成发 `[DONE]` 附 usage。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**（MaaS 兼容端点，1024 维）；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复核 QWEN-101 diff/测试；批准 QWEN-102 计划；正在合并 QWEN-101 到 main 并等待 CI。
-- **阻塞**：无（等待 CI）。
-- **下一次检查**：2026-10-19 16:50 之后。
+- **Lead 当前动作**：已复核 QWEN-101（29 passed/mypy/ruff）、合并 main、确认 CI #26 绿；已发出 `[MERGE-OK]`。
+- **阻塞**：无。
+- **下一次检查**：2026-10-19 17:00 之后（观察 QWEN-102 的 `[START]`/`[DONE]`）。
 
 ## 1. 协作协议
 
@@ -51,8 +51,8 @@
 | QWEN-004 | Wave 0 收口补丁 | **完成** | Qwen | `e74151f`；全量 2235/0/20；TTS+edge-tts、Celery Windows 条件 skip |
 | QWEN-120 | CI 快速收口（第 2 项） | **完成** | Qwen | `test_v2_retrieval_postgres.py` 已进 enterprise（37→38）；PG 1 passed；前端项由 QWEN-121 完成 |
 | QWEN-121 | 前端测试分流与 CI 接入（方案 A） | **完成** | Qwen | `6bcb270`：17 个孤儿用例移入 `_orphaned/`（只移不删 + README）、4 个过期断言修正、CI `node --test tests/*.test.mjs`；本地 21/21、build 通过 |
-| QWEN-101 | 人工盲评工具包 | **完成（待合并）** | Qwen | `4170373`+`e23f139`；Lead 复跑 29 passed、mypy 0、ruff 通过；工具/协议就绪，真人评分仍待发生 |
-| QWEN-102 | 独立新任务真模型验证 | **计划已批，等 MERGE-OK** | Qwen | `f291e25`：12 题（3 AI+9 Python）、单臂 `full`、PG+Qwen embedding、预算/停止条件已写；`computer_work` 无正文的处置已接受 |
+| QWEN-101 | 人工盲评工具包 | **完成（已合并）** | Qwen | `4170373`+`e23f139`；Lead 复跑 29 passed、mypy 0、ruff 通过；main CI #26 绿；真人评分仍待发生 |
+| QWEN-102 | 独立新任务真模型验证 | **执行中（已发 MERGE-OK）** | Qwen | `f291e25`：12 题（3 AI+9 Python）、单臂 `full`、PG+Qwen embedding、预算/停止条件；`computer_work` 无正文已接受 |
 | QWEN-103 | 台账措辞修正 | 未开始 | — | Wave 1；QWEN-101 合并后在 main 上做 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
@@ -550,6 +550,22 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 - 收到 `[MERGE-OK]` 后：先发 `[START]`（最终容器名、步骤、预期运行/嵌入调用数），再按计划执行；完成 `[DONE]` 附实际 usage（生成运行数、内部调用数、输入输出 token、嵌入请求/块、延迟、费用 unknown）。
 - 合并后 QWEN-103 在 main 上做，不要与 QWEN-102 分支混改。
 - 仍不得提交/打印 `.env`；不得把 key 写进日志/报告；离线测试显式 `A3_OFFLINE_DEMO=true`。
+
+— Lead
+
+
+### [2026-10-19 16:38] Lead → Qwen | [MERGE-OK] QWEN-101 已合并，CI #26 全绿；开始 QWEN-102
+
+- **合并**：`qwen/wave1-evidence` 已 fast-forward 到 `main`（`8141a5f`），包含 QWEN-101 实现/协议/测试 + QWEN-102 题集/计划 + `--arm` 改动。
+- **CI**：main **run #26 `success`**，四个 job 全绿；QWEN-101 的两个新测试文件已在 Linux CI 上通过。这是 `remote` 证据，不是本机推断。
+- **QWEN-101 验收**：通过（Lead 本机 29 passed、mypy 0、ruff 通过；三处收紧接受）。真人评分仍待发生。
+- **QWEN-102 现在解禁**：
+  1. 先发 `[START]`：最终容器名、步骤顺序、预期运行/嵌入调用数；确认只用 `qwen102-pg` / `qwen102-redis`，不碰 `echomind-*`/`a3-*`。
+  2. 按已批计划执行：单臂 `full`、12 题（3 AI + 9 Python）、12 章镜像 + PG/pgvector + Qwen embedding；生成运行 ≤37（运行级）、嵌入请求 ≤30/块 ≤300；记录内部调用、token、延迟、费用 unknown。
+  3. 停止条件照旧；任何 401/配额/异常放大立即 `[BLOCKER]`，只写类别/HTTP 状态，不写 key。
+  4. 完成发 `[DONE]`，附实际 usage 与产物路径；报告写"镜像域、单臂、未做真人盲评/未做三臂"的限制。
+- **分支**：继续用 `qwen/wave1-evidence`（已与 main 同步）；不要推 main。QWEN-102 完成并经我复核后，QWEN-103 从最新 main 另开分支，不与本分支混改。
+- **硬约束**：不提交/打印/上传 `.env`；离线测试显式 `A3_OFFLINE_DEMO=true`；原始回答只留在 gitignored `output/`。
 
 — Lead
 
