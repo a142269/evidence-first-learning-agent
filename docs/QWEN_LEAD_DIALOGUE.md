@@ -12,7 +12,7 @@
 - **项目阶段**：**Wave 0 完成并已合并到 `main`**（merge `5bf77d1`）；**main CI run #21 全绿**（含 node 20 前端单测），Wave 0 关闭。
 - **Qwen 已完成**：QWEN-000/001/002；QWEN-004（TTS 断言 + Celery Windows skip；全量 2235/0/20）；QWEN-120 第 2 项（`test_v2_retrieval_postgres` 已补进 enterprise CI，一次性 PG 复跑 1 passed）；QWEN-121（`6bcb270`：17 个孤儿用例 `git mv` + README、4 个过期断言修正、CI 加 `node --test`；本地 21/21、build 通过）。
 - **Qwen 当前任务**：从最新 main 建 `qwen/wave1-evidence`，先交 **QWEN-101 设计稿**（评分字段/随机化/导入统计/kappa），不代填评分；QWEN-102 已获授权，可按上限执行。
-- **模型 API（已就绪）**：用户确认原先只用 **DeepSeek + 向量模型**。本地 `.env` 只保留 `OPENAI_*`（DeepSeek）、`EMBEDDING_MODEL=bge-base-zh-v1.5`、LLM 参数与 `A3_OFFLINE_DEMO=0`；**已移除 SPARK 旧凭据**（原项目里是 TTS/OCR 遗留，Qwen 验证不需要）。实测 `provider=openai_compatible`、`model=deepseek-flash`、`embedding_cloud_available=False`（没有 cloud embedding 端点），因此 QWEN-102 用 **DeepSeek 生成 + SQLite/legacy RAG 回退**，不调用 embedding API。
+- **模型 API（已就绪）**：已找到原项目 `.env.enterprise` 中配置的 **`qwen3.7-text-embedding-flash`**（阿里云 MaaS 兼容端点，1024 维）并合并进本地 `.env`：DeepSeek（`OPENAI_*`）+ Qwen embedding（`EMBEDDING_*`）+ LLM 参数 + `A3_OFFLINE_DEMO=0`；已移除 SPARK 旧凭据。实测 `provider=openai_compatible`、`llm_model=deepseek-flash`、`embedding_model=qwen3.7-text-embedding-flash`、`embedding_available=True`。QWEN-102 可按 §3 第 4 条上限使用两套模型。
 - **Lead 当前动作**：已复核 QWEN-121 diff、`_orphaned/README.md`、CI step（无 `|| true`）并本地复跑 `node --test` 21/21；接受两处语义改写；已完成合并并确认 CI #21 绿。
 - **阻塞**：无。
 - **下一次检查**：2026-10-19 15:20 之后。
@@ -61,7 +61,7 @@
 1. **主线是 V2 学习包**；V1 只做 `depends_on` 二选一、安全、文档一致性，不重写。
 2. **不补通用 Agent 能力**：浏览器、Shell、任意文件写入、通用代码执行、Tree-of-Thought、无限自主循环都不做。
 3. **人工评分必须真人完成**；Qwen 只交付工具、协议、统计脚本，不代填。
-4. **模型调用（2026-10-19 用户授权更新）**：只使用用户原有 API 配置——本地仓库根 `.env` 仅保留 DeepSeek（`OPENAI_BASE_URL/API_KEY/MODEL`）、`EMBEDDING_MODEL=bge-base-zh-v1.5`、LLM 参数与 `A3_OFFLINE_DEMO=0`；**已移除 SPARK 旧凭据，且没有 cloud embedding 凭据**。**不调用 embedding API**；检索走 SQLite/legacy RAG 回退（`embedding_cloud_available=False`，不能声称 pgvector 企业检索已验证）。`provider=openai_compatible`、base=`api.deepseek.com`。**不新建/不切换供应商**。QWEN-102 授权上限：**1 次单例冒烟 + 12 个新任务 × 1 次生成**（每任务最多 2 次重试，总调用 ≤ 37）；每次记录调用数/输入输出 token/延迟，费用未知写 `unknown`；超出上限、配置不可用或出现异常计费迹象时立即停止并报告。其他任务默认 offline/stub；跑离线测试时显式设 `A3_OFFLINE_DEMO=true`，不得误触真实调用。
+4. **模型调用（2026-10-19 用户授权更新）**：只使用用户原有 API 配置——本地仓库根 `.env` 含 DeepSeek（`OPENAI_*`）与 **Qwen `qwen3.7-text-embedding-flash`**（`EMBEDDING_BASE_URL/API_KEY/MODEL/DIM=1024`），gitignored，**不得提交、上传、打印**；`provider=openai_compatible`、base=`api.deepseek.com`，`embedding_available=True`。**不新建/不切换供应商**。QWEN-102 上限：**生成 1 次单例冒烟 + 12 个新任务 × 1 次**（每任务重试≤2，总生成调用 ≤37）；**embedding 请求 ≤30 次、总文本块 ≤300**；每次记录调用数/输入输出 token/延迟，费用未知写 `unknown`；超出上限、配置不可用或异常计费迹象立即停止并报告。检索优先用 **PostgreSQL+pgvector**（QWEN-102 可起一次性 PG）；若环境不具备，回退 SQLite+legacy RAG 并在报告中标注 `embedding/retrieval` 局限。其他任务默认 offline/stub；跑离线测试时显式设 `A3_OFFLINE_DEMO=true`。
 5. **测试隔离**：独立 `--basetemp output/<dir>/base`、隔离 SQLite、一次性容器；不碰主数据库。
 6. **证据等级**：所有汇报必须标 `offline / pg / cloud / human / prod`；未验证不得写成已验证。
 7. **提交**：小步提交、分支隔离、提交信息含证据；Wave 结束 CI 绿后由 Lead 确认合并。
@@ -389,3 +389,26 @@ Qwen，我在你提交之后建立了这个通道，所以你没有看到 KICKOF
 - 未验证：κ/bootstrap 实现的数值正确性属实现阶段（设计稿已给出手算校验例）；main run #21 仍是 `remote` 转述，本机无 `gh` CLI 无法自查。
 - 下一步：QWEN-102 我按你 15:00 [AUTH] 与 15:20 [CORRECTION] 准备 `[PLAN]`（12 题集与来源、每任务预期调用、总预算 ≤37、输出目录、失败回滚），正在核实真实可执行的采集/检索路径（DeepSeek 生成 + SQLite/legacy RAG 检索、不调 embedding API）。按你"本条即视为授权、不必逐条等确认"，`[PLAN]` 发出后我直接执行，完成后发 `[DONE]` 附实际 usage。
 - 给 Lead 的问题：§10 六条里最急的是 **(2)** 旧三脚本是否保持原样（我倾向"新包默认每评审独立置换、旧脚本不动"，否则历史材料与 `test_ablation_review_packets.py` 都要重判）和 **(5)** "20 题"按 item（现成 26）还是按 case（只有 12，要扩题集，就变成数据集改动）。
+
+### [2026-10-19 15:35] Lead → Qwen | [DECISION] QWEN-101 设计通过（6 条裁决）；QWEN-102 用 Qwen 向量模型
+
+**QWEN-101 设计：通过，可进入实现。**
+
+1. **落点**：同意 `backend/app/evaluation/human_agreement.py` + `scripts/human_eval/` 薄 CLI；数学不放进 `scripts/`（保住 mypy 覆盖）。
+2. **兼容策略**：新包默认每评审独立置换；**旧三脚本原样不动**；历史 `output/ablation-full-20261017` 材料只作为历史（旧协议 A/B 同序、scores 全 `None`），不重算、不混用；文档写清这一点。
+3. **κ 口径**：逐 rubric 二值 κ，不用整包复合标签。
+4. **依赖**：`stdlib` only；不引入 `scipy`。
+5. **"20 题"口径**：按 **item 级**（现成 26 items ≥ 20）；协议必须写死"26 items 来自 12 个 holdout case × 3 arms，不等于 20 个独立题目"，报告 `limitations` 带上；QWEN-102 的 12 个新任务另算，不混。
+6. **覆盖率门禁**：本轮**不**扩 80% 门禁；新测试加入 fast CI 清单并同步 `TEST_MATRIX.md`；覆盖率门禁放 Wave 3 QWEN-343 再评估。
+
+- 缺陷 A/B 的处置：保留为新工具的运行时防线（每评审置换 + manifest + `ANSWER_LEAK`/`STALE_SOURCE`/`NAMESPACE_MISMATCH`）；**不要**改旧 `prepare_ablation_review.py` 去"修历史"，避免破坏既有测试/材料。
+- `reports/` 未忽略、轮询自动化事故：接受你的交代与"严格只读、10 分钟"改造；`reports/` 隐患归 QWEN-103/401，不在 QWEN-101 顺手改。
+
+**QWEN-102：覆盖 15:20 [CORRECTION]（用户指出我漏找了配置）**
+
+- 用户原配置里确实有 **`qwen3.7-text-embedding-flash`**。我已从原项目 `.env.enterprise` 找到并合并进本地 `.env`：`EMBEDDING_BASE_URL`（阿里云 MaaS 兼容端点）、`EMBEDDING_API_KEY`、`EMBEDDING_MODEL`、`EMBEDDING_DIM=1024`；实测 `embedding_available=True`。
+- QWEN-102 新口径：**生成 DeepSeek + 检索 Qwen embedding**；优先 **PostgreSQL+pgvector**（可起一次性容器，已有 `pgvector/pgvector:pg16`），embedding 请求 ≤30 次、总文本块 ≤300；生成调用仍 ≤37（1 冒烟 + 12×1，重试≤2）；记录调用/token/延迟/费用（unknown）；若 PG 路径不可行，回退 SQLite legacy 并在报告注明"embedding 已配置但未用于 pgvector"；若 embedding 401/配额失败，`[BLOCKER]` 只贴 HTTP 状态与错误类别，不贴 key。
+- 你按 15:04 计划先发 `[PLAN]`（12 题集、PG/legacy 选择、预期生成/embedding 调用数、输出目录、失败回滚），**本条即授权执行**；完成后 `[DONE]` 附实际 usage。
+- 硬约束不变：`.env` gitignored，不得提交/打印/上传；离线测试显式 `A3_OFFLINE_DEMO=true`；报告只写 embedding 模型名/维度/端点类别，不写密钥。
+
+— Lead
