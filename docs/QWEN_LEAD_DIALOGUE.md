@@ -761,3 +761,41 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 
 — Lead
 
+### [2026-10-21 23:24] Qwen → Lead | [DONE] QWEN-106 测试隔离收口（零模型调用；含两次我自造的测量错误更正）
+
+**交付**
+
+分支 `qwen/wave1-health`（从 `origin/main@e9d2dcf` 建），提交 `b8491e0` + 本条 §4 追加提交；6 个文件改动：测试 2、文档 4。**未改任何产品代码**，未读未打印 `.env`，未创建/重启容器，只推 `qwen/*`。证据等级全部 `offline`（本机一手复跑）。
+
+**按你 5 条要求逐项交代**
+
+1. **embedding 隔离**：`tests/a/test_embedding_provider.py:24` 补 `monkeypatch.delenv("EMBEDDING_BATCH_SIZE", raising=False)`。定向复跑 **1 passed / 0.19 s**，且是**在本机带真实 `.env`（值 20）的前提下**绿的——provider 构造时才读 `os.getenv`（`backend/app/services/embedding_provider.py:34`），所以 delenv 有效。产品代码零改动。
+2. **manim 那条不是顺序依赖，是外联依赖**——复现与判定：
+   - 给 `tests/integration/test_manim_fallback.py:133` 的断言**只加失败消息**（断言强度不变、产品不变），于是根因直接打在屏幕上：`fallback_assets={'used': True, 'reason': 'manim_render_failed', …}`。
+   - 链条：`_detect_manim_needs_fallback()` 第一条触发就是 `not envelope.success`（`multi_with_fallback.py:70`）；而 `types=["manim"]` + `include_manim=false` 时 Level‑1 agent 视频被质量门拒（日志 `画面与旁白时长偏差 2.49s，超过允许的 2.00s，已阻止发布`），Level‑2 只出脚本无 `.mp4`，`_gen_manim` 返回 `success=False`（`multi.py:2868`）→ `used` 必为 `True`。
+   - 三组对照实验（同一用例，写了个 fail-closed socket 探针 `output/qwen106-2026-10-21/qwen_net_probe.py`，用 `-p qwen_net_probe` 加载）：
+     | 条件 | 结果 |
+     | --- | --- |
+     | 无离线开关 + 探针阻断外联 | **1 failed / 50.71 s**，探针 **3 次尝试 / 3 IP**，含 `api.deepseek.com:443 /v1/chat/completions`（只报端点类别） |
+     | `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 探针 | **1 passed / 45.57 s**，探针 **`outbound attempts=0`** |
+     | 整文件无护栏 | 9 passed / 248.98 s（绿，但代价是真外联） |
+   - 结论：**离线开关下它稳定绿，无需改测试或产品**；但产品语义与用例期望在 `types=["manim"]`+`include_manim=false` 时确实互相矛盾（用例注释说"不触发兜底"，代码说"没拿到 MP4 就是失败要兜底"）。**我没动它**——这不是放宽断言能解决的，需要你先定语义。建议开一张代码卡，两个方案二选一：① 用例显式设 `A3_OFFLINE_DEMO/LLM_PROVIDER=none` 并接受"脚本态也算失败"的现状；② 把期望改成断言 `reason=='manim_render_failed'`，或让 `_gen_manim` 在 `include_manim=false` 时返回 `success=True`+`video_status=script_only`（这条改产品行为，我不擅自做）。
+3. **全量复跑（本轮 README 数字来源）**：**2264 passed / 0 failed / 20 skipped，834.21 s，191 个 `test_*.py` / 2284 项**。口径：`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 新 `--basetemp output/qwen106-2026-10-21/base-official` + TEMP/TMP 迁入 `output/` + 全程挂探针。日志 `output/qwen106-2026-10-21/logs/pytest-full-official-guarded.log`。对 QWEN-103 的 2263/1/20：**+1 passed 恰是第 1 项的修复，红点清零**；679.38→834.21 s 的变慢来自探针阻断后的重试等待，与用例增减无关。
+   附带：**CI 便携清单 39 文件 = 398 passed / 1 skipped / 0 failed（83.92 s，探针 `attempts=0`）**，与你上次记的 398/1 逐项一致，我的两处测试改动没让既有用例转红。
+   按你 22:25 的边界，README:56、`docs/00-评委30秒导览.md` 统计表、`docs/TEST_MATRIX.md` §6、`docs/CLAIMS_LEDGER.md` §9 已按实测刷新；§8 的 QWEN-103 登记**原文不回改**，只在 §9 说明被新实测取代。
+4. **检查**：`git diff --check` 干净（我第一版 §9 追加在 EOF 多留了一个空行，被 `-check` 抓到并已修正）；`ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（即 `ci.yml:115` 原口径）**All checks passed**。补一条如实事实：该 manim 文件全文裸跑 `ruff check` 有 20 条 RUF002/RUF003/I001/B007/EM101 历史告警，**都不在 CI 口径内，也不在我新增的行上**，我没顺手清。
+5. 推送只到 `qwen/wave1-health`，未碰 main。
+
+**两次我自己造成的测量错误（不掩饰，也据此更正我先前播过的结论）**
+
+- **① 我一度宣布"QWEN-103 标注 `offline` 的全量复跑可能发出了真实付费调用"——该结论现在撤回。** 真实原因是我这次**漏设** `A3_OFFLINE_DEMO/LLM_PROVIDER=none`；补上后探针 `attempts=0` 且全绿。`docs/CLAIMS_LEDGER.md` §8 早就写明 QWEN-103 用的是这组离线口径，所以那轮的 `offline` 标注成立。我在会话中途把相反结论说给了你和 Qoder，特此更正（台账 §9.3 已登记）。
+- **② 我用 `DATABASE_URL="sqlite:///$PWD/..."` 造出 6 个假红点。** Git Bash 下 `$PWD` 是 `/d/xunfei/…`，拼出 `sqlite:////d/xunfei/…`，SQLite 实际开在**仓库外**的 `D:\d\xunfei\evidence-first-learning-agent\output\qwen106-2026-10-21\`。首轮全量因此多出 6 红（全是 `no such table: profiles/knowledge_points`：`test_cockpit_endpoint.py` ×4、`test_cockpit_branches.py` ×1、`test_collaboration_resource_regressions.py` ×1）。归因实验：探针在这批用例上 `attempts=0`（与网络无关），去掉该 `DATABASE_URL` 覆盖后同批文件 **97 passed / 34.99 s**。**这不是产品缺陷也不是测试隔离缺陷，是我的命令行错误**，已在矩阵与台账里如实标注为非结论。
+- 需要你处置的残留：上面那 3 个游离 `.db`（`full.db` 3,174,400 B / 37 表、`full-seeded.db` 782,336 B、`legacy-full.db` 0 B）在 `D:\d\…` 仓库外路径。我尝试把它们复制进 `output/` 留证时被策略拦下（工作区外读写受限），**所以既没删也没搬**。要不要删请你定；它们不影响 Git 状态（仓库内 0 个游离文件，`git status` 干净）。
+
+**本轮遗留（都在台账 §9 有编号）**
+
+1. manim 语义矛盾 → 需你定 §2 的方案 ① 或 ②（涉及产品行为，我不擅自改）。
+2. 全量跑里仍有 **6 次外联尝试 / 2 个 IP**（101.201.58.201、47.94.20.201）在离线开关生效下依旧发生、被探针挡掉且无用例转红；本轮无失败用例，**探针只在会话结束汇总，我没能逐条归属这 6 次是谁发的**。若要坐实"套件 100% 无外联意图"，需要给探针加 per-attempt 记录再跑一轮（+14 min），我建议排进你之后的健康卡。
+3. 时间戳按你 §3-24 条 ② 与提交时间交叉核对过：本条 `date` 读数 23:24，`b8491e0` 提交时间 2026-10-21 23:22:20 +0800，一致。
+
+— Qwen
