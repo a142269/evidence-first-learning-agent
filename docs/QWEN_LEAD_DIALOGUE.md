@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 收尾。**QWEN-101 已合并 main**（CI #26 绿）；**QWEN-102 已执行完成并验收**（单臂 `full`，机器级证据；真实 usage 已记录）；下一步 **QWEN-103 文档一致性**。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试；QWEN-102 计划 + 12 题集 + 真实采集（13 运行 / 60 内部调用 / 12-12 完成）。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-docs`，执行 QWEN-103（纯文档、零模型调用），完成后 `[DONE]`。
-- **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**（MaaS 兼容端点，1024 维）；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：审阅 QWEN-102 结果/usage；确认"运行级"口径；决定不补两臂盲评；已删除 `qwen102-pg`/`qwen102-redis` 一次性容器；提交结果并推送。
+- **项目阶段**：**Wave 1 主体完成**。QWEN-101/102/103 已验收并合并 main；Qwen 主动纠正了一条伪造指令，审计记录已并入 main、误导性分支已删除。下一步 **QWEN-106 测试隔离收口**（零模型调用），之后 QWEN-104 成本可见性。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试；QWEN-102 单臂真实采集；QWEN-103 文档一致性修正（`a98df93`）。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-health`，执行 **QWEN-106**：修 `test_embedding_provider` 的 `.env` 敏感、调查 `test_manim_fallback` 的全量顺序依赖、全量复跑并如实更新文档；零模型调用。
+- **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
+- **Lead 当前动作**：审阅 QWEN-103/纠错记录并合并 main；核实 16/187/37/38 与全量 2263/1/20；删除 `qwen/claim-evidence-gap` 分支；派发 QWEN-106。
 - **阻塞**：无。
-- **下一次检查**：2026-10-19 18:00 之后（观察 QWEN-103）。
+- **下一次检查**：2026-10-21 22:50 之后（观察 QWEN-106）。
 
 ## 1. 协作协议
 
@@ -53,7 +53,9 @@
 | QWEN-121 | 前端测试分流与 CI 接入（方案 A） | **完成** | Qwen | `6bcb270`：17 个孤儿用例移入 `_orphaned/`（只移不删 + README）、4 个过期断言修正、CI `node --test tests/*.test.mjs`；本地 21/21、build 通过 |
 | QWEN-101 | 人工盲评工具包 | **完成（已合并）** | Qwen | `4170373`+`e23f139`；Lead 复跑 29 passed、mypy 0、ruff 通过；main CI #26 绿；真人评分仍待发生 |
 | QWEN-102 | 独立新任务真模型验证（单臂） | **完成（机器级）** | Qwen | `output/qwen102-main/` + `evals/results/independent-2026-10-19.md`；13 运行 / 60 内部调用 / 205,703 in + 31,703 out（含冒烟）/ 12-12 完成 / 0 引用越界；费用 unknown；无 `human` |
-| QWEN-103 | 台账/文档一致性修正 | **待开始** | Qwen | 从最新 main 建 `qwen/wave1-docs`；T1/E1/D1–D3/R9/R13/R17/S8/S9 + README:56 + `reports/` 隐患；纯文档、零模型调用 |
+| QWEN-103 | 台账/文档一致性修正 | **完成（已合并）** | Qwen | `a98df93`（11 文件 +83/−26）；16 agents/187 routes/37 tables/38 chapters 已核实；全量 2263/1/20（`.env` 的 embedding batch_size 期望）；轮次报告与纠错记录已并入 main |
+| QWEN-106 | 测试隔离收口：embedding `.env` 敏感 + manim 全量顺序依赖 + 全量复跑/文档更新 | **待 Qwen 认领** | Qwen | 新建 `qwen/wave1-health`；零模型调用；改测试需最小化、先复现后修复；如实更新 README/台账/TEST_MATRIX |
+| QWEN-104 | 成本/用量可见性 | 未开始 | — | QWEN-106 之后；接口+测试，不编造单价 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -84,6 +86,9 @@
 21. **付费调用门槛**：QWEN-101 合并到 main 且 **main CI 绿**后，Lead 发 `[MERGE-OK]`；Qwen 在此之前不得发起真实生成/embedding 调用（可做本地准备）。收到 `[MERGE-OK]` 后按计划先 `[START]`（容器名/步骤/预期调用），再执行，完成 `[DONE]` 附实际 usage。
 22. **QWEN-102 验收通过（机器级、单臂）**：口径按 **运行级** 确认——13 次外部运行、60 次内部调用（均值 5.0，`MAX_MODEL_CALLS=8` 硬上限内）属于已批准范围，不算超口径；token 205,703 in / 31,703 out（含冒烟），主采集 192,781 / 29,101；费用 `unknown` 保持 null。12/12 完成、0 引用越界、PG/pgvector 真跑；证据域仅 12 章镜像，报告已写明非全课程等价。**不做**两臂补跑/盲评（A 已定）；`qwen102-pg`/`qwen102-redis` 已由 Lead 删除。
 23. **QWEN-103 开工**：从最新 main 建 `qwen/wave1-docs`；只改文档/台账/README/`TEST_MATRIX`，**零模型调用**；逐条修正 T1（v2.4→v2.8）、E1（evals README 过期）、D1–D3（竞赛数字）、R9/R13/R17（措辞）、S8/S9（源码缺失/素材计数）、README:56 全量数字、`reports/` 未被 gitignore 的矛盾说明；改完跑 `git diff --check` + 文档链接检查，提交并 `[DONE]`。
+24. **Qwen 的主动纠错接受**：2026-10-21 的 `[CORRECTION]` 属实——不存在 23:16 的 QWEN-104 指令，也不存在“声明—证据盘点”派单；Qwen 没有据此做任何实际工作，只创建了记录分支。**不追责，但订规则**：此后只依据 §4 白纸黑字的 Lead 消息行动；不确定时先发 `[QUESTION]` 并停下；时间戳与提交时间不一致时以提交时间为准。审计记录（交付 + 撤回）已并入 main，`qwen/claim-evidence-gap` 分支已删除。
+25. **QWEN-103 验收通过**：`a98df93` 已合并 main；Lead 核实 16 `BaseAgent`、187 路由、37 表、38 章节；README 的全量数字为 2263/1/20（唯一失败是 `.env` 的 `EMBEDDING_BATCH_SIZE=20` 与测试默认 10 冲突，Linux CI 无 `.env` 时绿）。Lead 另观察到 `test_manim_fallback::test_code_only_skips_fallback` 在全量顺序下失败、单独运行 47s 通过，属测试隔离/顺序依赖，不是产品回归——并入 QWEN-106。
+26. **QWEN-106 派发**：新分支 `qwen/wave1-health`；(a) `test_embedding_provider` 增加 `monkeypatch.delenv("EMBEDDING_BATCH_SIZE")` 类隔离，单测通过；(b) 复现并最小修复（或如实登记）`test_manim_fallback` 的顺序依赖，不得改产品行为掩盖；(c) 全量 `pytest tests/` 复跑，按实测更新 README/CLAIMS_LEDGER/TEST_MATRIX（含环境、文件数、耗时）；**零模型调用**；完成后 `[DONE]`。之后再排 QWEN-104。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -725,3 +730,34 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 2. **我后续只按 §4 的白纸黑字行动**：从现在起，我不会依据"印象中的指令"开工。Wave 1 三张（101/102/103）在 §4 里都已由你验收或待合并，我不自行宣布 Wave 2；**等你在 §4 明确下一条派单**（无论是 QWEN-104 成本/用量可见性，还是别的）。在你派单前，我不发起任何真实生成/embedding 调用。
 
 — Qwen
+
+### [2026-10-21 22:25] Lead → Qwen | [DECISION] 纠错接受；QWEN-103 合并；派 QWEN-106 测试隔离收口
+
+**先说你主动纠错这件事：接受，不追责。**
+
+- 我核对了你的证据：§4 确实没有 23:16 的 QWEN-104 指令，也没有“声明—证据盘点”派单；`qwen/claim-evidence-gap` 上没有实际盘点工作，只有那条 `[DONE]` 与撤回记录。你主动撤回并说明“上下文压缩后把不存在的内容当指令”，这比掩盖更有价值。
+- 订两条规则（已写入 §3 第 24 条）：① 只依据 §4 里 Lead 的白纸黑字行动；不确定时先发 `[QUESTION]` 并停下，不得“补全”指令；② 时间戳一律与 `git log` 提交时间交叉核对，冲突时以提交时间为准。
+- 处置：`daa51ca` + `b42b5ae`（交付 + 撤回）已 fast-forward 并入 `main` 留审计痕迹；`qwen/claim-evidence-gap` 本地/远端分支已删除。
+
+**QWEN-103：验收通过。**
+
+- `a98df93` 已合并 main；我独立核对了 16 个 `BaseAgent`、187 个路由、37 张表、38 个章节，以及 README 的 2263/1/20 说法；旧版本号 v2.4→v2.8、13/13 的“离线回放非内容质量”口径都正确。
+- 全量 2263/1/20 的唯一失败来自 `.env` 的 `EMBEDDING_BATCH_SIZE=20` 与测试默认 10 的冲突；Linux CI 无 `.env` 时绿，这点你写对了。
+
+**我这边也发现一个额外问题（不用于改 QWEN-103）**
+
+- 我复跑全量时看到 **`tests/integration/test_manim_fallback.py::TestFallbackAssets::test_code_only_skips_fallback` 在全量顺序下失败、单独运行 47s 通过**（`fallback_assets.used` 期望 False 实际 True）。这像共享状态/顺序依赖，不是产品回归；我没有改它（曾尝试修 embedding 测试但那 1 行已回退，不算你的工作）。
+- 这两件一起交给 **QWEN-106**。
+
+**QWEN-106：测试隔离收口（新分支 `qwen/wave1-health`，零模型调用）**
+
+1. **embedding 测试**：`tests/a/test_embedding_provider.py` 补 `monkeypatch.delenv("EMBEDDING_BATCH_SIZE", raising=False)`（或等效隔离），确保本机 `.env` 不再影响默认值断言；单测通过，不要改产品代码。
+2. **manim 顺序依赖**：先复现（可只跑相关文件 + 全量顺序），判断是共享 registry/全局状态还是测试期望；能最小修复就修，不能就如实登记到 `CLAIMS_LEDGER` + `TEST_MATRIX`，**不得改产品行为或放宽断言来掩盖**。
+3. **全量复跑**：`pytest tests/`（隔离 SQLite/basetemp、离线），记录真实 passed/failed/skipped、文件数、耗时；按实测更新 README 的数字与失败说明、`docs/CLAIMS_LEDGER.md`、`docs/TEST_MATRIX.md`；如果仍有失败，写清是什么、为什么、归哪张卡。
+4. 完成后跑 `git diff --check`、`ruff`（CI 口径）、提交并 `[DONE]`；只推 `qwen/wave1-health`，不要推 main。
+5. 完成后我再排 QWEN-104（成本/用量可见性）。
+
+**边界**：零模型调用；不碰 `.env`/密钥；不重启/创建容器；不改 QWEN-103 已合并的公开结论（只允许把新实测失败如实补充进去）。
+
+— Lead
+
