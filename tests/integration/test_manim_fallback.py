@@ -130,7 +130,10 @@ class TestFallbackAssets:
         fa = env["metadata"].get("fallback_assets")
         # 如果 include_manim=False，fallback_assets 应该 used=False
         if fa:
-            assert fa["used"] is False
+            assert fa["used"] is False, (
+                f"fallback_assets={fa} manim_success={env.get('success')} "
+                f"error={env.get('error')!r} metadata={env.get('metadata')}"
+            )
 
     def test_fallback_reason_is_known_value(self, client: TestClient):
         """触发兜底时，reason 必须在已知集合内"""

@@ -155,3 +155,39 @@
 1. **`tests/a/test_embedding_provider.py` 对宿主配置敏感**：用例 monkeypatch 了 `EMBEDDING_BASE_URL/KEY/MODEL/DIM`，却没 patch `EMBEDDING_BATCH_SIZE`，于是断言 `batch_size == 10` 读到本机 `.env` 的真实值 `20` 而失败。这是 Wave 0 全量 2235/0/20 之后**新出现**的红点，成因是 2026-10-19 15:20 前后把 Qwen embedding 配置合并进 `.env`（Lead 操作），属测试期望缺口而非产品回归；CI（无 `.env`）仍绿。修法是一行 `monkeypatch.delenv/setenv`，但那是测试代码改动，**超出 QWEN-103 的纯文档范围**，请 Lead 派单（建议归 QWEN-343 或 Wave 2 的测试隔离项）。
 2. **`reports/` 未被 gitignore 的三点矛盾**（已在 `evals/LEARNING_PACKAGE_EVAL.md` 正文登记）：脚本默认输出 `ROOT/reports/learning_package_offline_report.json`（`scripts/evaluate_learning_package.py:26`）× `.gitignore` 无 `reports/` × 文档要求"报告只放本地 `output/reports`"。当前 `reports/` 不存在、跟踪 0 文件，故尚未泄露；整改需改 `.gitignore` 或改脚本默认值，属代码/配置动作，归 QWEN-401/403。本轮只在文档里写清矛盾与临时规避（显式 `--output`）。
 3. **口径纪律**：日期型归档与交接文档（`docs/OPTIMIZATION_HANDOFF_2026-10-18.md` 仍写 v2.6）按"保留历史原貌"原则**不回改**，只在台账登记；本轮只刷新自称"描述当前代码"的文档。
+
+## 9. QWEN-106 测试隔离收口登记（2026-10-21，分支 `qwen/wave1-health`，零模型调用）
+
+执行边界：未读未打印 `.env`；未创建/重启容器；未改产品代码；`ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（CI 同口径）通过；`git diff --check` 干净。
+
+### 9.1 已修（测试代码，最小改动）
+
+| 条目 | 落点 | 改动 | 一手证据 |
+| --- | --- | --- | --- |
+| ① embedding 宿主配置隔离 | `tests/a/test_embedding_provider.py:24` | 补 `monkeypatch.delenv("EMBEDDING_BATCH_SIZE", raising=False)`。用例此前 patch 了 base_url/key/model/dim 却漏了 batch_size，于是 `assert provider.batch_size == 10` 读到本机 `.env` 的 `20` | 单文件本机带真实 `.env` 复跑 **1 passed / 0.19s**（`-o addopts= --benchmark-disable`）；provider 在构造时读 `os.getenv`（`backend/app/services/embedding_provider.py:34`），故 delenv 生效 |
+| ② manim 用例诊断信息 | `tests/integration/test_manim_fallback.py:133-137` | 只给 `assert fa["used"] is False` 加失败消息（打印 `fallback_assets`、`manim_success`、`error`、`metadata`），**断言强度不变、产品行为不变** | 加消息后一次被阻断的复跑直接把根因打到屏幕上：`reason='manim_render_failed'` |
+
+### 9.2 定位结论：`test_code_only_skips_fallback` 不是"顺序依赖"，而是**外联依赖**
+
+判定链条（全部本机复现）：
+
+1. `_detect_manim_needs_fallback()` 的第一个触发条件是 `not envelope.success`（`backend/app/api/v1/artifacts/multi_with_fallback.py:70`）。
+2. `_gen_manim()` 在 Level‑1 agent 视频被质量门拒绝、且 Level‑2 只产出脚本（无 `.mp4`）时返回 `success=False` 的 envelope（`multi.py:2719` 记录 `画面与旁白时长偏差 2.49s，超过允许的 2.00s，已阻止发布`；`multi.py:2868` 返回 `success=False`）。
+3. 因此该用例的绿/红取决于**真实媒体链路与真实 LLM 外联是否可用**，而不是产品逻辑：在既未设 `A3_OFFLINE_DEMO` 也未设 `LLM_PROVIDER=none` 的条件下，探针记录到 3 次外联尝试，端点类别为 `api.deepseek.com:443 /v1/chat/completions`，同一用例 **1 failed / 50.71s**。
+4. 补上仓库文档口径的两个环境变量（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）后，同一用例 **1 passed / 45.57s，探针 `outbound attempts=0`** —— 即离线态下该用例稳定通过，无需改测试或改产品。
+5. 对照：同一文件不加任何护栏整体复跑 **9 passed / 248.98s**（能出绿，但代价是真的向外联）。
+
+**结论与归属**：产品侧"脚本态 manim 一律 `success=False`"与用例侧"`include_manim=false` 就不该触发兜底"这两条语义在 `types=["manim"]` 时相互矛盾——绿只在离线开关生效时出现。本轮**不改产品行为、不放宽断言**（Lead 边界），登记为遗留项，建议开一张代码卡处理（要么让用例显式设 `A3_OFFLINE_DEMO/LLM_PROVIDER=none`，要么把 `types=["manim"]`+`include_manim=false` 的期望改成断言 `reason=='manim_render_failed'`，二者都属产品语义决策，需 Lead 定）。
+
+### 9.3 我本轮自造的两个测量错误（如实登记，避免下轮重犯）
+
+1. **`DATABASE_URL="sqlite:///$PWD/..."`**：Git Bash 下 `$PWD` 是 `/d/xunfei/...`，拼出的 URL 变成 `sqlite:////d/xunfei/...`，SQLite 实际打开的是仓库外的 `D:\d\xunfei\...`。于是首轮全量多出 **6 个红点**，报错全是 `sqlite3.OperationalError: no such table: profiles/knowledge_points`（`tests/a/test_cockpit_endpoint.py` 4 例、`tests/a/test_cockpit_branches.py` 1 例、`tests/a/test_collaboration_resource_regressions.py` 1 例）。**这不是产品缺陷也不是网络所致**：探针在同一批用例上记录 `outbound attempts=0`；去掉这个自造的 `DATABASE_URL`（用仓库默认 DB）后同批文件 **97 passed / 34.99s**。该拼写错误在**仓库外**落了 3 个 `.db`（`D:\d\xunfei\evidence-first-learning-agent\output\qwen106-2026-10-21\`：`full.db` 3,174,400 B / 37 表、`full-seeded.db` 782,336 B、`legacy-full.db` 0 B，均为本轮 22:41–23:01 我新建）。我**没有删除**它们：工作区外路径的读写受策略限制，且这些文件正是该错误的物证；处置请 Lead 定。
+2. **漏设离线开关**：见 9.2 第 3 点，我一度据此推断"此前标注 `offline` 的全量复跑可能发出过真实调用"。该推断**已被本轮实验推翻**：`docs/CLAIMS_LEDGER.md` §8 记录的 QWEN-103 口径本来带 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按其口径复跑时探针 `outbound attempts=0`，QWEN-103 的 `offline` 标注成立。我在 §4 的中间播报里下过相反结论，需按本节口径撤回。
+### 9.4 本轮实测数字（README 与导览表以此为准）
+
+| 运行 | 集合 | 结果 |
+| --- | --- | --- |
+| 全量 `pytest tests/`（离线 + 探针，QWEN-106 官方口径） | 191 文件 / 2284 项 | **2264 passed / 0 failed / 20 skipped**，834.21 s；探针 6 次外联尝试 / 2 个 IP 全部阻断，无失败用例因阻断产生 |
+| 对照 QWEN-103（2026-10-19） | 同 191 文件 | 2263 / 1 / 20，679.38 s；+1 passed 恰为 ① 的隔离修复 |
+
+日志：`output/qwen106-2026-10-21/logs/pytest-full-official-guarded.log`（Git 忽略）。上表两处"探针未逐条归属"的限制已在 `docs/TEST_MATRIX.md` §6 同批行内写明。

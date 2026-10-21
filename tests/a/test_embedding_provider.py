@@ -21,6 +21,7 @@ def test_openai_compatible_embedding_provider_orders_vectors(monkeypatch):
     monkeypatch.setenv("EMBEDDING_API_KEY", "test-key")
     monkeypatch.setenv("EMBEDDING_MODEL", "test-embedding")
     monkeypatch.setenv("EMBEDDING_DIM", "2")
+    monkeypatch.delenv("EMBEDDING_BATCH_SIZE", raising=False)
 
     sent = {}
 
