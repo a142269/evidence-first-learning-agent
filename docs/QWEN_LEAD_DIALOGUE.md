@@ -650,3 +650,49 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 
 — Lead
 
+
+
+
+### [2026-10-19 23:24] Qwen → Lead | [DONE] QWEN-103 文档一致性修复交付（纯文档、零模型调用）
+
+**结论**
+
+`qwen/wave1-docs`（从 `main@7f87233` 建）已提交并推送 `a98df93`：**11 个文件 +83/−26，全部是文档/台账/README**。未碰业务代码、未动 `output/` 原始材料、未重启容器、**本轮 0 次模型调用**（未读未打印 `.env`，无网络请求）。**没有向 main 提交或推送**，等你审阅合并。证据等级：全部 `offline`。
+
+**逐项落地（§3 第 23 条）**
+
+- **T1** `docs/V2_TEN_MODULE_IMPLEMENTATION.md`：`PROMPT_VERSION` v2.4 → **v2.8**，对齐 `backend/app/services/learning_package.py:20`，并补上 `WORKFLOW_VERSION=learning-workflows-v2.3`（`backend/app/api/v2/run_lifecycle.py:29`）；文档头日期 → 2026-10-19。
+- **E1** `evals/README.md`：把"目前未完成真实云端验收"替换为 2026-10-16 的在线事实（74/76、Hit@5 95.83%、Recall@5 94.79%、引用 100%/100%，指向 `evals/results/qa-golden-v2-summary.json`），同时写清仍未做的事，并加 QWEN-102 十二题单臂结果的指针。
+- **D1–D3** `docs/00-评委30秒导览.md`：顶部加口径说明；Agent 12 → **16**（演示主线 12 + critic/debate/evaluator/safe_decline 等实验角色 4）；路由 90 → **187**；表 15 → **37**；章节 24 → **38**（AI 20 + Python 18，`computer_work` 已注册但 0 章）；测试 1186 → **2284 项（2263 passed / 1 failed / 20 skipped）** 并附环境口径；"真 6 种产物" → **7 类**（补 OCR、视频；SVG 是 Manim 占位）并标注属 V1/实验。顺手修了该文件自己一条错误的 `docs/10-...` 相对链接。
+- **R9/R13** `README.md`：13/13 契约行改说明白——是**离线复放结构/引用/预算断言**，不等于内容质量验收。
+- **README:56 全量数字（R11）**：改为 **2263 passed / 1 failed / 20 skipped**（2026-10-19 本机 Windows + Python 3.12.15，679.38 s，191 个测试文件），并写明唯一失败是宿主 `.env` 把 `EMBEDDING_BATCH_SIZE` 设为 20、用例期望默认 10（属配置期望不是回归，Linux CI 无该 `.env` 时全绿）；旧的 2235/0/20 作为历史参考保留。
+- **R17** `README.md`：PRODUCTION_DEPLOYMENT 链接旁注明**公网 TLS、域名、备份与监控未验证**。
+- **S8**：`docs/TripleU平台全功能思维导图.md`（§3.11 + 代码位置清单）与 `docs/10-学术与工程创新对照表.md` 三处 `frontend/integrated-map-src/**` 说法改为实测状态——源码树缺失（0 tracked、无 `.gitmodules`、无 git 历史），只有 2 个构建产物在 `frontend/public/integrated-map/assets/`，17 个孤儿测试隔离在 `frontend/tests/_orphaned/`。
+- **S9** `THIRD_PARTY_NOTICES.md`：工作树条目改写为实测的"已提交"状态；G9 行同步。
+- **`reports/` 矛盾** `evals/LEARNING_PACKAGE_EVAL.md`：新增说明块——脚本默认输出在 `scripts/evaluate_learning_package.py:26` = `ROOT/reports/learning_package_offline_report.json`，而 `.gitignore` 没有 `reports/`，文档却要求本地写进 `output/reports`；当前 `reports/` 不存在且 0 tracked，属**预防性缺口**；修复需改代码/配置 → 归 QWEN-401/403；过渡办法是显式 `--output output/reports/<name>.json`。
+- **台账**：`docs/CLAIMS_LEDGER.md` 新增 §8「QWEN-103 修正登记」（项 → 落点文件 → 改动 → 一手证据）并登记 3 条发现；`docs/TEST_MATRIX.md` §6 补 398 fast 清单与本轮全量两行；`docs/OPTIMIZATION_STATUS_2026-10-19.md` 新增 §十（QWEN-102 收口与实际 usage）、§十一（QWEN-103 修正账）。
+
+**验证（全部本机复跑）**
+
+- `git diff --check HEAD~1 HEAD` → exit 0，无空白错误。
+- 文档链接检查（`output/qwen103-2026-10-19/link_check.py`，刚复跑）：除 `docs/10-学术与工程创新对照表.md` 外**全部 0 broken**；那 **28 条是本分支之前就在的 root-relative 链接**，我没改其语义——已核对 `git show HEAD~1:<file>` 与工作树的 `](backend/` 计数同为 19，我在该文件的 diff 是 +2/−0。
+- 数字先实测再写文档：`class *BaseAgent)` grep = **16**；`@router.{get,post,put,delete,patch}` = **187**；`backend/app/core/models.py` `__tablename__` = **37**；`knowledge_base/*/chapters/*.md` = **38**（AI 20 / Python 18）；全量日志尾部 = `1 failed, 2263 passed, 20 skipped, 20 warnings in 679.38s`（`output/qwen103-2026-10-19/logs/pytest-full.log`，`--basetemp output/qwen103-2026-10-19/base-full`）。
+
+**登记但未修（越界或需你派单）**
+
+1. `tests/a/test_embedding_provider.py::test_openai_compatible_embedding_provider_orders_vectors`：用例 monkeypatch 了 base_url/key/model/dim，唯独没 patch `EMBEDDING_BATCH_SIZE`，于是读到我真实 `.env` 的 20 而断言默认 10（`assert 20 == 10`）。**该用例不发网络**（`requests.post` 已 fake），Linux CI 无 `.env` 时为绿。修法是测试里补一行 monkeypatch，属测试代码，而 QWEN-103 授权是纯文档，所以我没动——**请你派单**（建议单独一张卡：1 行改动 + 复跑该文件）。
+2. `reports/` 默认输出目录与 `.gitignore` 缺项：同属代码/配置，留给 QWEN-401/403，本轮只在文档里把矛盾说清。
+3. `docs/10-学术与工程创新对照表.md` 的 28 条 root-relative 链接、D4–D7 的自评式表述、D6 措辞：不在你 23 条清单内，改它们要另开口径讨论，我只在 CLAIMS_LEDGER §8 登记。
+4. 带日期的交接档案（如 `docs/OPTIMIZATION_HANDOFF_2026-10-18.md` 里的 v2.6）按「历史记录不回写」原则不改，已在台账说明。
+
+**边界与如实披露**
+
+- 本分支只有 `a98df93` 一个提交；main 未动，无 rebase、无 force push；只推 `qwen/*`。
+- 未安装任何依赖，未改 `scripts/prepare_ablation_*.py`，未动 CI 清单、不加 `|| true`。
+- 本轮零付费调用，QWEN-102 的预算余量不变。
+
+**下一步**
+
+等你审阅合并 `qwen/wave1-docs`。看到你 23:16 的 QWEN-104 指令：我先收口这条，然后从远端 main 建 `qwen/claim-evidence-gap`，按 §2.1/§2.3 先出「声明—证据」口径盘点（纯文档、零模型调用、不删声明），做完再 `[DONE]` 给你，由你决定是否派 QWEN-404。
+
+— Qwen
