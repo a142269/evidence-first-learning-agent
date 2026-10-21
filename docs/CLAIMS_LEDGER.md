@@ -181,7 +181,7 @@
 
 ### 9.3 我本轮自造的两个测量错误（如实登记，避免下轮重犯）
 
-1. **`DATABASE_URL="sqlite:///$PWD/..."`**：Git Bash 下 `$PWD` 是 `/d/xunfei/...`，拼出的 URL 变成 `sqlite:////d/xunfei/...`，SQLite 实际打开的是仓库外的 `D:\d\xunfei\...`。于是首轮全量多出 **6 个红点**，报错全是 `sqlite3.OperationalError: no such table: profiles/knowledge_points`（`tests/a/test_cockpit_endpoint.py` 4 例、`tests/a/test_cockpit_branches.py` 1 例、`tests/a/test_collaboration_resource_regressions.py` 1 例）。**这不是产品缺陷也不是网络所致**：探针在同一批用例上记录 `outbound attempts=0`；去掉这个自造的 `DATABASE_URL`（用仓库默认 DB）后同批文件 **97 passed / 34.99s**。该拼写错误在**仓库外**落了 3 个 `.db`（`D:\d\xunfei\evidence-first-learning-agent\output\qwen106-2026-10-21\`：`full.db` 3,174,400 B / 37 表、`full-seeded.db` 782,336 B、`legacy-full.db` 0 B，均为本轮 22:41–23:01 我新建）。我**没有删除**它们：工作区外路径的读写受策略限制，且这些文件正是该错误的物证；处置请 Lead 定。
+1. **`DATABASE_URL="sqlite:///$PWD/..."`**：Git Bash 下 `$PWD` 是 `/d/xunfei/...`，拼出的 URL 变成 `sqlite:////d/xunfei/...`，SQLite 实际打开的是仓库外的 `D:\d\xunfei\...`。于是首轮全量多出 **6 个红点**，报错全是 `sqlite3.OperationalError: no such table: profiles/knowledge_points`（`tests/a/test_cockpit_endpoint.py` 4 例、`tests/a/test_cockpit_branches.py` 1 例、`tests/a/test_collaboration_resource_regressions.py` 1 例）。**这不是产品缺陷也不是网络所致**：探针在同一批用例上记录 `outbound attempts=0`；去掉这个自造的 `DATABASE_URL`（用仓库默认 DB）后同批文件 **97 passed / 34.99s**。该拼写错误在**仓库外**落了 3 个 `.db`（`D:\d\xunfei\evidence-first-learning-agent\output\qwen106-2026-10-21\`：`full.db` 3,174,400 B / 37 表、`full-seeded.db` 782,336 B、`legacy-full.db` 0 B，均为本轮 22:41–23:01 新建）。**Lead 已于 2026-10-21 23:50 左右删除这 3 个游离文件**（只删 `.db`，保留目录内其他文件）；这是测试命令错误，不是产品/测试缺陷。
 2. **漏设离线开关**：见 9.2 第 3 点，我一度据此推断"此前标注 `offline` 的全量复跑可能发出过真实调用"。该推断**已被本轮实验推翻**：`docs/CLAIMS_LEDGER.md` §8 记录的 QWEN-103 口径本来带 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按其口径复跑时探针 `outbound attempts=0`，QWEN-103 的 `offline` 标注成立。我在 §4 的中间播报里下过相反结论，需按本节口径撤回。
 ### 9.4 本轮实测数字（README 与导览表以此为准）
 
@@ -191,3 +191,10 @@
 | 对照 QWEN-103（2026-10-19） | 同 191 文件 | 2263 / 1 / 20，679.38 s；+1 passed 恰为 ① 的隔离修复 |
 
 日志：`output/qwen106-2026-10-21/logs/pytest-full-official-guarded.log`（Git 忽略）。上表两处"探针未逐条归属"的限制已在 `docs/TEST_MATRIX.md` §6 同批行内写明。
+
+### 9.5 Lead 裁定（2026-10-21）
+
+1. **QWEN-106 验收通过**：Lead 独立复跑全量 **2264 passed / 0 failed / 20 skipped / 816.03s**（无探针），与 Qwen 的 834.21s（带探针）互相印证；embedding `.env` 隔离修复接受。
+2. **manim 语义选方案①**：测试显式设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按现状接受 `reason='manim_render_failed'`；**本轮不改产品行为**。方案②（脚本态改为 `success=True/script_only`）需产品需求后再做。
+3. **游离 `.db` 已删除**：Lead 已移除 `D:\d\...` 下 3 个误建文件；后续全量务必使用仓库内 `sqlite:///./output/<dir>/...` 绝对/相对路径，不要用 Git Bash `$PWD` 拼 URL。
+4. **QWEN-107 派发**：测试确定性 + 探针 per-attempt 归属（6 次外联尝试/2 IP）；零模型调用、不改产品。**QWEN-104 成本可见性仍优先**。

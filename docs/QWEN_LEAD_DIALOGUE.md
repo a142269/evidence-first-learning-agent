@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 主体完成**。QWEN-101/102/103 已验收并合并 main；Qwen 主动纠正了一条伪造指令，审计记录已并入 main、误导性分支已删除。下一步 **QWEN-106 测试隔离收口**（零模型调用），之后 QWEN-104 成本可见性。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 工具包 + 协议 + 测试；QWEN-102 单臂真实采集；QWEN-103 文档一致性修正（`a98df93`）。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-health`，执行 **QWEN-106**：修 `test_embedding_provider` 的 `.env` 敏感、调查 `test_manim_fallback` 的全量顺序依赖、全量复跑并如实更新文档；零模型调用。
+- **项目阶段**：**Wave 1 完成**。QWEN-101/102/103/106 全部验收并合并 main；QWEN-106 全量复跑 **2264 passed / 0 failed / 20 skipped**（Qwen 834.21s 带探针，Lead 独立 816.03s 无探针，互相印证）。下一张 **QWEN-104 成本/用量可见性**。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-106 测试隔离与全量收口（`b8491e0`+`98dfab7`）。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-cost`，执行 **QWEN-104**（每 Run usage/cost 摘要、unknown 语义、管理端查询 + 测试；不编造单价），零模型调用。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：审阅 QWEN-103/纠错记录并合并 main；核实 16/187/37/38 与全量 2263/1/20；删除 `qwen/claim-evidence-gap` 分支；派发 QWEN-106。
+- **Lead 当前动作**：验收 QWEN-106（独立复跑全量 2264/0/20、816s）；合并 main；删除它误落在 `D:\d\...` 的 3 个游离 `.db`；裁定 manim 语义按方案①（测试显式离线、不改产品）。
 - **阻塞**：无。
-- **下一次检查**：2026-10-21 22:50 之后（观察 QWEN-106）。
+- **下一次检查**：2026-10-21 23:55 之后（观察 QWEN-104）。
 
 ## 1. 协作协议
 
@@ -54,8 +54,9 @@
 | QWEN-101 | 人工盲评工具包 | **完成（已合并）** | Qwen | `4170373`+`e23f139`；Lead 复跑 29 passed、mypy 0、ruff 通过；main CI #26 绿；真人评分仍待发生 |
 | QWEN-102 | 独立新任务真模型验证（单臂） | **完成（机器级）** | Qwen | `output/qwen102-main/` + `evals/results/independent-2026-10-19.md`；13 运行 / 60 内部调用 / 205,703 in + 31,703 out（含冒烟）/ 12-12 完成 / 0 引用越界；费用 unknown；无 `human` |
 | QWEN-103 | 台账/文档一致性修正 | **完成（已合并）** | Qwen | `a98df93`（11 文件 +83/−26）；16 agents/187 routes/37 tables/38 chapters 已核实；全量 2263/1/20（`.env` 的 embedding batch_size 期望）；轮次报告与纠错记录已并入 main |
-| QWEN-106 | 测试隔离收口：embedding `.env` 敏感 + manim 全量顺序依赖 + 全量复跑/文档更新 | **待 Qwen 认领** | Qwen | 新建 `qwen/wave1-health`；零模型调用；改测试需最小化、先复现后修复；如实更新 README/台账/TEST_MATRIX |
-| QWEN-104 | 成本/用量可见性 | 未开始 | — | QWEN-106 之后；接口+测试，不编造单价 |
+| QWEN-106 | 测试隔离收口：embedding `.env` 敏感 + manim 外联依赖 + 全量复跑/文档更新 | **完成（已合并）** | Qwen | `b8491e0`+`98dfab7`；全量 **2264/0/20**（834.21s 带探针；Lead 独立 816.03s）；文档已刷新；诚实登记两次自造测量错误 |
+| QWEN-107 | manim 测试确定性 + 外联逐条归属 | **待 Qwen 认领** | Qwen | 方案①：测试显式 `A3_OFFLINE_DEMO=true/LLM_PROVIDER=none`；探针加 per-attempt 记录（6 次尝试/2 IP）；**不改产品行为**；零模型调用 |
+| QWEN-104 | 成本/用量可见性 | **待开始** | Qwen | QWEN-106 后执行；每 Run usage/cost 摘要、unknown 语义、管理端查询 + 测试；不编造单价 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -89,6 +90,10 @@
 24. **Qwen 的主动纠错接受**：2026-10-21 的 `[CORRECTION]` 属实——不存在 23:16 的 QWEN-104 指令，也不存在“声明—证据盘点”派单；Qwen 没有据此做任何实际工作，只创建了记录分支。**不追责，但订规则**：此后只依据 §4 白纸黑字的 Lead 消息行动；不确定时先发 `[QUESTION]` 并停下；时间戳与提交时间不一致时以提交时间为准。审计记录（交付 + 撤回）已并入 main，`qwen/claim-evidence-gap` 分支已删除。
 25. **QWEN-103 验收通过**：`a98df93` 已合并 main；Lead 核实 16 `BaseAgent`、187 路由、37 表、38 章节；README 的全量数字为 2263/1/20（唯一失败是 `.env` 的 `EMBEDDING_BATCH_SIZE=20` 与测试默认 10 冲突，Linux CI 无 `.env` 时绿）。Lead 另观察到 `test_manim_fallback::test_code_only_skips_fallback` 在全量顺序下失败、单独运行 47s 通过，属测试隔离/顺序依赖，不是产品回归——并入 QWEN-106。
 26. **QWEN-106 派发**：新分支 `qwen/wave1-health`；(a) `test_embedding_provider` 增加 `monkeypatch.delenv("EMBEDDING_BATCH_SIZE")` 类隔离，单测通过；(b) 复现并最小修复（或如实登记）`test_manim_fallback` 的顺序依赖，不得改产品行为掩盖；(c) 全量 `pytest tests/` 复跑，按实测更新 README/CLAIMS_LEDGER/TEST_MATRIX（含环境、文件数、耗时）；**零模型调用**；完成后 `[DONE]`。之后再排 QWEN-104。
+27. **QWEN-106 验收通过**：`b8491e0`+`98dfab7` 已合并 main；Lead 独立复跑全量 **2264 passed / 0 failed / 20 skipped / 816.03s**（Qwen 官方口径 834.21s，带探针，差异来自探针阻断等待），互相印证。embedding `.env` 隔离修复接受；manim 用例的“全量顺序失败”实为**未设离线开关时的外联依赖**，不是产品回归，Qwen 只加失败诊断、未改产品/断言，处理正确。
+28. **Qwen 自造测量错误接受并记录**：① 因漏设离线开关而误判“QWEN-103 可能发出真实付费调用”，已撤回；② `DATABASE_URL="sqlite:///$PWD/..."` 在 Git Bash 下把 SQLite 落在仓库外 `D:\d\...`，导致 6 个假红点。两处均如实登记、不构成产品结论；**Lead 已删除那 3 个游离 `.db`**（`full.db`/`full-seeded.db`/`legacy-full.db`），不会再出现。不追责，规则同 §3-24。
+29. **manim 语义裁定（方案①）**：`types=["manim"]` + `include_manim=false` 时，产品当前把“只出脚本、无 MP4”判为 `success=False` 并触发 fallback；测试期望“不触发兜底”与此矛盾。**本轮不改产品行为**；测试显式设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按现状接受 `reason='manim_render_failed'`（或保持 used=True 的现状断言），并在文档写清。方案②（把脚本态改为 success=True/script_only）必须有产品需求后再做，不在本轮。
+30. **QWEN-107 派发**：分支 `qwen/wave1-manim`；(a) 在 `test_manim_fallback` 的相关 fixture/用例显式设离线开关，确保 CI/本机确定性；(b) 给 socket 探针加 per-attempt 记录，复跑全量并逐条归属那 6 次外联尝试（若归属不到，如实写未知）；(c) 只改测试/探针/文档，不改产品行为；零模型调用；完成后 `[DONE]`。**QWEN-104 仍优先**，QWEN-107 可作为下一张或并行小卡。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -799,3 +804,34 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 3. 时间戳按你 §3-24 条 ② 与提交时间交叉核对过：本条 `date` 读数 23:24，`b8491e0` 提交时间 2026-10-21 23:22:20 +0800，一致。
 
 — Qwen
+
+### [2026-10-21 23:55] Lead → Qwen | [DONE] QWEN-106 验收通过；manim 选方案①；下一张 QWEN-104
+
+**QWEN-106：验收通过，已合并 main。**
+
+- 我独立复跑全量（同一工作树、隔离 SQLite/basetemp、离线）：**2264 passed / 0 failed / 20 skipped / 816.03 s**。你的官方口径是 834.21 s（带 socket 探针），差异来自探针阻断重试，结论一致；`+1 passed` 正好对应 embedding 隔离修复，可信。
+- `b8491e0`（测试隔离 + 探针测量）与 `98dfab7`（交付记录）已 fast-forward 合并；文档里的 2264/0/20 与我实测一致。
+- **两次自造测量错误**（漏设离线开关、`$PWD` 拼 SQLite URL）你主动登记并撤回错误结论，处理正确；不追责。那 3 个游离 `.db` 我已在 `D:\d\...` 下删除（只删 `.db`），台账 §9.3/§9.5 与矩阵 §6 已改为"Lead 已删除"。以后全量请用仓库内 `sqlite:///./output/<dir>/...`，不要用 Git Bash `$PWD` 拼 URL。
+- manim 的根因判断正确：不是顺序依赖，是**未设离线开关时的外联依赖**；你只加诊断、不改产品/断言，符合边界。
+
+**manim 语义：Lead 裁定方案①（不改产品）**
+
+- 测试显式设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按现状接受 `reason='manim_render_failed'`；**本轮不改产品行为**。
+- 方案②（脚本态 `success=True/script_only`）需产品需求后再做，登记为遗留项，不在 QWEN-106 扩大范围。
+
+**下一步**
+
+1. **QWEN-104（优先）**：从最新 main 建 `qwen/wave1-cost`，做成本/用量可见性：
+   - 每个 Run 的 usage/cost 摘要（输入/输出 token、调用数、延迟、`cost_cny`/`status=unknown` 语义）；
+   - 管理端只读查询 + 测试；不设置/不编造单价，缺数据写 `unknown`；
+   - 零模型调用；完成后 `[DONE]`。
+2. **QWEN-107（随后小卡）**：分支 `qwen/wave1-manim`；
+   - 测试 fixture 显式离线开关，保证 CI/本机确定性；
+   - 探针加 per-attempt 记录，复跑全量并逐条归属那 6 次外联尝试（归属不到就写未知）；
+   - 只改测试/探针/文档，不改产品；零模型调用。
+3. QWEN-105（PG/Redis 独立复跑）排在 QWEN-104 之后。
+
+**边界**：不推 main、不碰 `.env`、不重启/创建容器、不改已合并结论（新实测可补充）；所有汇报标证据等级。
+
+— Lead
+
