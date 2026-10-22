@@ -2668,6 +2668,9 @@ async def _gen_tts(req: MultiResourceRequest) -> ResourceEnvelope:
     )
 
 
+MANIM_SCRIPT_MISSING_ERROR = "讲稿脚本未生成，脚本态产物没有可交付内容"
+
+
 async def _gen_manim(req: MultiResourceRequest) -> ResourceEnvelope:
     """生成教学视频 — 优先使用 Agent 头像 + TTS + ffmpeg，降级到 Manim。
 
@@ -2868,10 +2871,25 @@ async def _gen_manim(req: MultiResourceRequest) -> ResourceEnvelope:
             # QWEN-107：用户没有请求渲染（include_manim/manim_render 均为 False）时，
             # 交付的产物本就是可编辑讲稿脚本 → 成功。渲染/质量门只约束真正请求了
             # 渲染的调用，否则其抖动会决定本用例红绿。
+            # QWEN-107b：成功必须有交付物。generate_manim 顶层没有 script/code
+            # 字段，讲稿正文在 metadata["generated_code"]；缺失或为空时显式失败，
+            # 不静默返回空 content。
+            script = str((r_dict.get("metadata") or {}).get("generated_code") or "")
+            if not script.strip():
+                return ResourceEnvelope(
+                    success=False,
+                    type="manim",
+                    error=MANIM_SCRIPT_MISSING_ERROR,
+                    evidence=enrichment["evidence"],
+                    cov=enrichment["cov"],
+                    safety=enrichment["safety"],
+                    downloads=[],
+                    metadata=meta,
+                )
             return ResourceEnvelope(
                 success=True,
                 type="manim",
-                content=None,
+                content=script,
                 evidence=enrichment["evidence"],
                 cov=enrichment["cov"],
                 safety=enrichment["safety"],

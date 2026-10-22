@@ -266,7 +266,8 @@ class TestScriptOnlySemantics:
         monkeypatch.setattr(video_xunfei, "get_video_service", lambda: svc)
         self._reject_gate(monkeypatch)
 
-    def _level2(self, monkeypatch, *, filepath: str, success: bool = True):
+    def _level2(self, monkeypatch, *, filepath: str, success: bool = True,
+                code: str = "# fake manim script"):
         """Level 2 generate_manim：filepath 为空 = 脚本态，.mp4 = 渲染态。"""
         from backend.app.api.v1.artifacts import generate as generate_mod
         from backend.app.api.v1.artifacts.generate import ResourceResult
@@ -280,7 +281,7 @@ class TestScriptOnlySemantics:
                 type="manim_video" if filepath else "manim_code",
                 filepath=filepath,
                 method="manim" if filepath else "code_only",
-                metadata={"generated_code": "# fake manim script"},
+                metadata={"generated_code": code},
                 success=success,
             )
 
@@ -298,6 +299,8 @@ class TestScriptOnlySemantics:
 
     # --- include_manim=false：脚本态即成功，且确定性不触发兜底 ---
     def test_script_only_is_success_when_render_not_requested(self, client, monkeypatch):
+        from backend.app.api.v1.artifacts import multi as multi_mod
+
         self._no_level1(monkeypatch)
         seen = self._level2(monkeypatch, filepath="")
         r = _post_rich(client, include_manim=False)
@@ -311,6 +314,19 @@ class TestScriptOnlySemantics:
         assert meta["playback_status"] == "unavailable"
         assert meta["fallback_assets"]["used"] is False
         assert meta["fallback_assets"]["reason"] == ""
+        # QWEN-107b：success=True 必须携带可编辑讲稿，正文来自 metadata["generated_code"]
+        content = env["content"]
+        assert content, "脚本态成功却没有交付物"
+        assert "# fake manim script" in content
+
+        # 同一用例的另一半：讲稿缺失/为空时必须显式失败并给稳定错误，
+        # 不静默返回空 content（不新增测试项，保持套件计数不变）。
+        self._level2(monkeypatch, filepath="", code="   ")
+        empty = _post_rich(client, include_manim=False).json()["results"]["manim"]
+        assert empty["success"] is False
+        assert empty["error"] == multi_mod.MANIM_SCRIPT_MISSING_ERROR
+        assert not empty["content"], "失败分支不得伪造交付物"
+        assert empty["metadata"]["video_status"] == "script_only"
 
     def test_quality_gate_jitter_does_not_fail_unrequested_render(self, client, monkeypatch):
         """历史抖动场景：Level 1 被质量门拒绝 → 未请求渲染仍应 success=True 且不兜底。"""
