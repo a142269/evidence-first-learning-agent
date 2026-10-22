@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 完成**（QWEN-101/102/103/104/106/107 均已验收并合并 main）。QWEN-107 完成 manim 脚本态成功语义修正，全量 **2278 passed / 0 failed / 20 skipped**（1095.22s，192 文件 / 2298 项）。下一张小卡 **QWEN-107b：脚本作为 content 交付**，随后 QWEN-108（离线化 knowledge_platform 用例）、QWEN-105（PG/Redis 独立复跑）。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-106 测试隔离；QWEN-107 manim 方案②。
-- **Qwen 当前任务**：继续 `qwen/wave1-manim`，执行 **QWEN-107b**（脚本态 `content` 交付 + 回归断言；零模型调用）；之后 QWEN-108。
+- **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/106/107/107b/108 均已验收并合并 main）。全量 **2278 passed / 0 failed / 20 skipped / 756–764s**，192 文件 / 2298 项；套件 **outbound attempts=0**（QWEN-108 收口）。下一张 **QWEN-105：PG/Redis 独立复跑**。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-106 测试隔离；QWEN-107/107b manim 语义与 content 交付；QWEN-108 离线化摄取用例。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-pg`，执行 **QWEN-105**（一次性容器：企业合同子集 + 部分完成 PG 恢复；零付费调用；用本机已有镜像，不拉取）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复跑 QWEN-107 新增 5 个回归测试（5 passed/70.5s）；合并 main；裁定 `content` 必须交付脚本；派 QWEN-107b/108。
+- **Lead 当前动作**：复跑 QWEN-107b/108 定向测试 **28 passed/289.24s**；合并 main；确认本机已有 `pgvector/pgvector:pg16`、`redis:7-alpine` 镜像；派 QWEN-105。
 - **阻塞**：无。
-- **下一次检查**：2026-10-22 17:00 之后（观察 QWEN-107b）。
+- **下一次检查**：2026-10-22 18:00 之后（观察 QWEN-105）。
 
 ## 1. 协作协议
 
@@ -56,9 +56,10 @@
 | QWEN-103 | 台账/文档一致性修正 | **完成（已合并）** | Qwen | `a98df93`（11 文件 +83/−26）；16 agents/187 routes/37 tables/38 chapters 已核实；全量 2263/1/20（`.env` 的 embedding batch_size 期望）；轮次报告与纠错记录已并入 main |
 | QWEN-106 | 测试隔离收口：embedding `.env` 敏感 + manim 外联依赖 + 全量复跑/文档更新 | **完成（已合并）** | Qwen | `b8491e0`+`98dfab7`；全量 **2264/0/20**（834.21s 带探针；Lead 独立 816.03s）；文档已刷新；诚实登记两次自造测量错误 |
 | QWEN-107 | manim 语义方案② + 测试确定性（+ per-attempt 探针） | **完成（已合并）** | Qwen | `cde8e71`+`86255fe`+`3f1feda`；`include_manim=false` 脚本态 success=True/script_only、不触发 fallback；5 个回归测试 Lead 复跑 5 passed；全量 2278/0/20；6 次外联已归属 |
-| QWEN-107b | 脚本态 `content` 交付 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave1-manim`：成功返回时 `content` 带可编辑讲稿（`metadata.generated_code`），扩展现有回归断言；零模型调用 |
-| QWEN-108 | `test_knowledge_platform` 离线化 | 未开始 | — | 6 次外联来源已定位（upload roundtrip setup 的 embedding 调用）；显式 offline/mock，不依赖探针；零模型 |
-| QWEN-105 | PG/Redis 独立复跑 | 未开始 | — | QWEN-108 之后；一次性容器、零付费调用 |
+| QWEN-107b | 脚本态 `content` 交付 | **完成（已合并）** | Qwen | `755454f`+`467aec9`+`dbc4210`：content 来自 `metadata.generated_code`，空则显式 `MANIM_SCRIPT_MISSING_ERROR`；不新增测试项（2278/0/20 不变） |
+| QWEN-108 | `test_knowledge_platform` 离线化 | **完成（已合并）** | Qwen | `912d9b5`+`9dcad86`+`7a34a49`：模块 autouse 清空 embedding 环境，摄取走 `not_configured`；全量 `attempts=0`；产品零改动 |
+| QWEN-105 | PG/Redis 独立复跑 | **待 Qwen 认领** | Qwen | `qwen/wave1-pg`；用本机已有 `pgvector/pgvector:pg16`+`redis:7-alpine`，不拉取；一次性容器；企业合同子集+部分完成恢复；零付费调用 |
+| QWEN-109 | 评测战役成本视图（JSONL） | 未开始 | — | QWEN-105 之后；只读汇总，不编造单价 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -102,6 +103,9 @@
 34. **QWEN-107 验收通过**：`cde8e71`+`86255fe`+`3f1feda` 已合并 main；Lead 复跑新增 5 个回归 `5 passed / 70.5s`；全量 2278/0/20（1095.22s，192 文件 / 2298 项）接受。方案②只改 `include_manim=false` 的脚本态成功语义，质量门阈值与其他产物未动，符合裁定。6 次外联归属为 `test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 embedding 调用（被测探针阻断，无计费），归属清楚。
 35. **`content` 交付裁定**：脚本态 `success=True` 但 `content=None` 属真实功能缺口；**决定**：脚本态成功时 `content` 必须携带可编辑讲稿（来源 `metadata.generated_code`，不得为空；若生成器字段变化则显式报错而非静默空）。扩展现有 `test_script_only_is_success_when_render_not_requested` 断言 `content` 非空且包含代码文本，**不新增测试项**（维持 2278/0/20 计数）；零模型调用。派 **QWEN-107b**。
 36. **QWEN-108 派发**：把 `test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 embedding 调用显式离线化/mock（不依赖 socket 探针阻断），并保留既有覆盖；只改测试/fixture/文档，不改产品；零模型调用。之后 QWEN-105（PG/Redis 独立复跑）；QWEN-108 之后另排评测战役成本视图（暂记 QWEN-109）。
+37. **QWEN-107b 验收通过**：`755454f`+`467aec9`+`dbc4210` 已合并 main；Lead 复跑 `test_manim_fallback.py`+`test_knowledge_platform.py` 共 **28 passed / 289.24s**；脚本态 `content` 来自 `metadata.generated_code`，缺失/空时显式 `MANIM_SCRIPT_MISSING_ERROR`，不静默成功；计数仍 2278/0/20。**接受**。
+38. **QWEN-108 验收通过**：`912d9b5`+`9dcad86`+`7a34a49` 已合并 main；模块级 autouse 清空 embedding 三变量使摄取走 `not_configured` 离线路径，全量 `outbound attempts=0`、产品零改动、计数不变。**保留模块级 autouse**：该模块未来若有云端 embedding 分支用例，须在用例内显式 `monkeypatch.setenv` 回来；文档已写明。
+39. **QWEN-105 派发**：分支 `qwen/wave1-pg`；本机已有 `pgvector/pgvector:pg16` 与 `redis:7-alpine` 镜像，**直接使用、不 pull**；起一次性容器（仅环回、测试后 `docker rm -f`，不碰 `echomind-*`/`a3-*`/`devtrace-*`）；跑企业合同子集（含检查点跨进程恢复、部分完成 PG 恢复）并记录真实 passed；零付费模型调用；完成后 `[DONE]` 附命令、镜像、结果、清理证据。若镜像缺失/引擎不可用，发 `[BLOCKER]` 说明，不许自行拉镜像。之后 QWEN-109。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1072,3 +1076,29 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 **文档已刷新**：`README.md:56`、`docs/00-评委30秒导览.md:106` 各加 QWEN-108 一句并指向最新小节；`docs/CLAIMS_LEDGER.md` §13、`docs/TEST_MATRIX.md` §10 新增。旧的 `attempts=6` 数字按约定全部作历史保留、未回改。产物在 `output/qwen108-2026-10-22/`（`reports/` 未动）。
 
 **球在您那边**：QWEN-107b（`dbc4210`）与 QWEN-108（`9dcad86`）两张卡验收。按您 16:03（`c26d9a4`）的字面排序，之后是 **QWEN-105**（PG/Redis 独立复跑，一次性容器，零付费调用），评测战役成本视图为 **QWEN-109** 不插队——这两张我都没开工，等您指令。另需提醒：本机只有 Docker Hub 拉不动的限制，QWEN-105 若要在本机跑容器，我可能需要先报 `[BLOCKER]` 请您指定镜像来源或改到远端口径。
+
+### [2026-10-22 17:20] Lead → Qwen | [DONE] QWEN-107b / 108 验收通过；派 QWEN-105（本机镜像已就绪）
+
+**QWEN-107b：验收通过。**
+
+- 我复跑 `test_manim_fallback.py` + `test_knowledge_platform.py`：**28 passed / 289.24s**，与你的数字一致。
+- `755454f` 的 content 交付符合裁定：`content` 来自 `metadata["generated_code"]`，空/缺失时显式 `MANIM_SCRIPT_MISSING_ERROR`，不静默成功；同一用例内的失败分支断言也正确，计数仍 2278/0/20。已合并 main。
+
+**QWEN-108：验收通过。**
+
+- 模块级 autouse 清空 `EMBEDDING_BASE_URL/API_KEY/MODEL`，摄取走 `not_configured` 离线路径；全量 `outbound attempts=0`，产品零改动，计数不变；`9dcad86`+`7a34a49` 已合并。
+- **保留模块级 autouse**：该模块未来若有“云端 embedding 已配置”的分支用例，必须在用例内显式 `monkeypatch.setenv` 回来；你写的这条限制保留。
+- 你第一版断言写错、red 轮也记进文档，处理正确。
+
+**QWEN-105：PG/Redis 独立复跑（零付费调用）**
+
+- 本机镜像已确认存在：`pgvector/pgvector:pg16`（631MB）、`redis:7-alpine`（57.8MB）——**直接使用，不要 pull**。
+- 起一次性容器（只绑环回），跑企业合同子集（检查点跨进程恢复、部分完成 PG 恢复等）并记录真实 passed/failed/skipped、命令、镜像 tag、耗时；测试后 `docker rm -f` 自己的容器，**不碰** `echomind-*`/`a3-*`/`devtrace-*`。
+- 分支 `qwen/wave1-pg`；零模型调用；不读 `.env`；完成后 `[DONE]` 附清理证据。
+- 若镜像缺失、引擎不可用或环境异常：发 `[BLOCKER]` 说明，不要自行拉镜像或改生产配置。
+- 之后 QWEN-109（评测战役成本视图，只读 JSONL，不编造单价）。
+
+**边界**：不推 main、不重启既有容器、不改已合并结论；所有汇报标证据等级。
+
+— Lead
+
