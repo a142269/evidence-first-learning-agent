@@ -303,6 +303,15 @@ class TestScriptOnlySemantics:
 
         self._no_level1(monkeypatch)
         seen = self._level2(monkeypatch, filepath="")
+        # QWEN-107c：捕获进入 CoV/Safety 审计的文本，验证脚本态审计的是交付正文
+        audited: list = []
+        real_enrich = multi_mod._enrich_with_safety_cov
+
+        def spy(text, *args, **kwargs):
+            audited.append(text)
+            return real_enrich(text, *args, **kwargs)
+
+        monkeypatch.setattr(multi_mod, "_enrich_with_safety_cov", spy)
         r = _post_rich(client, include_manim=False)
         assert r.status_code == 200
         env = r.json()["results"]["manim"]
@@ -318,6 +327,12 @@ class TestScriptOnlySemantics:
         content = env["content"]
         assert content, "脚本态成功却没有交付物"
         assert "# fake manim script" in content
+        # QWEN-107c：交付出去的讲稿必须真的经过 CoV/Safety 审计，
+        # 审计输入不能只有顶层那个空的 script/code。
+        assert any("# fake manim script" in text for text in audited), (
+            f"脚本态交付正文未进入审计：{[t[:40] for t in audited]!r}"
+        )
+        audited_after_success = list(audited)
 
         # 同一用例的另一半：讲稿缺失/为空时必须显式失败并给稳定错误，
         # 不静默返回空 content（不新增测试项，保持套件计数不变）。
@@ -327,6 +342,9 @@ class TestScriptOnlySemantics:
         assert empty["error"] == multi_mod.MANIM_SCRIPT_MISSING_ERROR
         assert not empty["content"], "失败分支不得伪造交付物"
         assert empty["metadata"]["video_status"] == "script_only"
+        assert "   " not in audited[len(audited_after_success):], (
+            "讲稿缺失时不得把空白伪正文送进 CoV/Safety 审计"
+        )
 
     def test_quality_gate_jitter_does_not_fail_unrequested_render(self, client, monkeypatch):
         """历史抖动场景：Level 1 被质量门拒绝 → 未请求渲染仍应 success=True 且不兜底。"""

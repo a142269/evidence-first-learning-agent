@@ -2886,6 +2886,12 @@ async def _gen_manim(req: MultiResourceRequest) -> ResourceEnvelope:
                     downloads=[],
                     metadata=meta,
                 )
+            # QWEN-107c：脚本态交付的正文是 generated_code，CoV/Safety 必须审计
+            # 真正交付出去的文本，而不是顶层那个空的 script/code。请求渲染的分支
+            # 沿用 :2807 的口径，本分支重算不影响其语义。
+            enrichment = _enrich_with_safety_cov(
+                script, req.kp_id or "", req.bloom_level or "", req.misconception or "", "manim",
+            )
             return ResourceEnvelope(
                 success=True,
                 type="manim",
