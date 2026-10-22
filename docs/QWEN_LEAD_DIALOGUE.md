@@ -993,3 +993,45 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 
 — Lead
 
+
+### [2026-10-22 16:37] Qwen → Lead | [DONE] QWEN-107b 脚本态 content 交付（零模型调用；计数仍 2278/0/20）
+
+**证据等级：offline**（本机 Windows + Git Bash + Python 3.12.15；`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + fail-closed socket 探针；无 remote/pg/cloud/human/prod 口径结论）。
+
+**取证起点**：您 16:10 那条 §4 消息，落地提交是 `c26d9a4`（16:03:46）。按 §3-24② 以提交时间为准，标题时间戳 16:10 与其不一致一事如实登记，不影响指令内容。
+
+**分支与提交**（`qwen/wave1-manim`，`main` 未动；已把该分支 fast-forward 到 `c26d9a4` 后再开工，无 rebase/无强推）：
+- `755454f` 16:30:41 产品 + 用例
+- `467aec9` 16:36:57 文档
+
+**1. 改了什么（产品仅一处）**
+- `backend/app/api/v1/artifacts/multi.py:2671` 新增常量 `MANIM_SCRIPT_MISSING_ERROR = "讲稿脚本未生成，脚本态产物没有可交付内容"`（稳定错误，供用例直接比对）。
+- `:2870-2898` 脚本态成功分支：`script = str((r_dict.get("metadata") or {}).get("generated_code") or "")`；非空 → `content=script`（`:2892`）；空/缺失 → `success=False`、`error=MANIM_SCRIPT_MISSING_ERROR`、`content` 留空、`downloads=[]`（`:2878-2888`）。来源严格按您指定的 `metadata["generated_code"]`，没有另找字段、没有二次截断（上游 `generate.py:473-488` 已截到 5000 字符）。
+- 未动：请求渲染时的失败/质量门拒绝分支与文案、阈值 3.0 s / 2.00 s、`multi_with_fallback.py`、`.github/workflows/ci.yml`、registry 清理行为、路由（`grep -rhoE '@router\.(get|post|put|delete|patch)\(' backend/app | wc -l` = **189**）。
+
+**2. 用例怎么扩的（严守"不新增测试项"）**
+- 只扩展 `test_script_only_is_success_when_render_not_requested`：先断言 `content` 非空且含 `# fake manim script`；再在**同一用例内**用 `_level2(..., code="   ")` 复跑一次，断言 `success is False`、`error == MANIM_SCRIPT_MISSING_ERROR`、`content` 仍为空。`_level2` helper 加 `code` 形参，默认值等价原内联字面量。
+- 计数核验（不是口头保证）：定向仍 **14 用例**、全量仍 **2298 项 / 192 文件**。坦白一处过程反复：我第一版误加成新的 `def test_...`，看到您"不新增测试项"的字面要求后立刻折叠进原用例，最终交付态无新增项。
+
+**3. 实测数字（本轮全部重跑，未复用上轮数）**
+
+| 运行 | 结果 |
+|---|---|
+| 定向 `tests/integration/test_manim_fallback.py` | **14 passed / 451.60 s**，探针 `attempts=0 unique_hosts=0` |
+| 全量 `pytest tests/`（README 口径） | **2278 passed / 0 failed / 20 skipped / 756.16 s**，192 文件 / 2298 项 —— 与 QWEN-107 官方跑**计数逐项相同**，符合您的要求 |
+| CI 便携清单（同 40 文件清单） | **407 passed / 1 skipped / 0 failed / 81.34 s**，`attempts=0`，唯一 skip 仍是 `tests/a/test_auth_restart.py:18 Explicit disposable PostgreSQL required` |
+| CI 口径 lint | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed**；`multi.py` 不在 mypy 白名单，类型门不受影响 |
+| 真链路只读探针（非 mock） | `generate_manim(render=False)` → `manim_code`、`filepath=''`、`success=True`、`generated_code` **3002 字符**；`_gen_manim(include_manim=False)` → `success=True`、`video_status='script_only'`、`rendered=False`、`playback_status='unavailable'`、`downloads=[]`、**`content` 是 3002 字符的 `str` 且 `content == generated_code`**；`attempts=0 unique_hosts=0` |
+
+真链路那次还**第一手复现了抖动**：Level 1 被质量门以"画面与旁白时长偏差 **2.01s** > 2.00s"拒绝（Kimi/讯飞凭据未配置 → 本地脚本），脚本态仍 `success=True` —— 方案②在真实链路上确实消除了红绿抖动。
+
+**4. 外联尝试（本轮未动，属 QWEN-108）**：全量仍 `attempts=6 unique_hosts=2`，`distinct tests=1`，逐条归属 `tests/a/test_knowledge_platform.py::test_upload_index_hit_test_roundtrip (setup)`，栈 `knowledge_admin.py:247 ← knowledge_ingest.py:384 ← knowledge_ingest.py:191 ← embedding_provider.py:63`，全部被阻断、零出网、无计费。
+
+**5. 登记待您裁定的三件事（我没越界动）**
+1. **`evidence`/`cov`/`safety` 校验的对象不是新交付的讲稿**：`_enrich_with_safety_cov(str(content), ...)`（`multi.py:2807`）在分支之前执行，其 `content` 变量在脚本态仍取顶层 `script`/`code`（恒空），所以现在正文交付了、安全与一致性校验仍是对空文本跑的。改它会影响 `cov/safety` 输出与可能的新失败面，超出您划的"content 交付"范围，我只登记。
+2. **行号漂移**：常量插在 `_gen_manim` 之前使其后行号 **+3**，§11.1 的 `:2785-2880`/`:2787`/`:2867` 现应读作 `:2788-2883`/`:2790`/`:2870`（`render_requested` 实测在 `:2790`）。按"旧论断不回改"原则，我在 §12.2 里做了对照说明，没有改写 §11 正文。
+3. **裸 ruff（非 CI 口径）**：`test_manim_fallback.py` 42 → **49**、`multi.py` 884 → **889**，增量全落在 `RUF001/RUF002/RUF003` 中文全角标点类，与 QWEN-107 同类；HEAD 版对照文件在 `output/qwen107b-2026-10-22/tmp/lintbase/`。
+
+**文档已刷新**：`README.md:56`、`docs/00-评委30秒导览.md:106` 各加 QWEN-107b 一句并指向最新小节；`docs/CLAIMS_LEDGER.md` §12、`docs/TEST_MATRIX.md` §9 新增（含取代关系与真链路探针行）。旧数字一律作历史保留。产物全在 `output/qwen107b-2026-10-22/`（`reports/` 未动）。
+
+**球在您那边**：QWEN-107b 验收。您 16:10 那条把 **QWEN-108 定义改成"离线化 `test_upload_index_hit_test_roundtrip` 的 embedding 外联"**、评测战役成本视图挪为 **QWEN-109**、顺序变为 **108 → 105**（我早前接手记录里的"108=成本视图、顺序 105→108"是旧快照，已作废）。我已只读完不改地预研了 QWEN-108：出网条件在 `embedding_provider.py:36-38`（`EMBEDDING_BASE_URL/API_KEY/MODEL` 三者齐备才 `available`），而 `knowledge_ingest.py:205-206` 对未配置有显式 `not_configured` 离线路径且 `status` 仍 `indexed`，该用例现有断言（`indexed` / `chunk_count>=1` / `audit.verdict` / `.orig` / 命中 `total>=1`）都不依赖真 embedding —— 因此在测试模块内用 `monkeypatch.delenv` 钉离线即可零出网、不改产品。**未开工，等您一声**。
