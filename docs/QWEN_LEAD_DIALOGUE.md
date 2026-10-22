@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 完成**（QWEN-101/102/103/104/106 均已验收并合并 main）。QWEN-104 新增只读管理端用量/成本投影；全量 **2272/1/20**（失败是 manim 质量门时长抖动，已定位，见 §3-32）。下一张 **QWEN-107：manim 语义方案② + 测试确定性**。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性（`df2f34b`+`bdc1983`）；QWEN-106 测试隔离。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-manim`，执行 **QWEN-107**（产品语义方案② + 回归测试 + 全量复跑/文档），零模型调用；完成后再 QWEN-105。
+- **项目阶段**：**Wave 1 完成**（QWEN-101/102/103/104/106/107 均已验收并合并 main）。QWEN-107 完成 manim 脚本态成功语义修正，全量 **2278 passed / 0 failed / 20 skipped**（1095.22s，192 文件 / 2298 项）。下一张小卡 **QWEN-107b：脚本作为 content 交付**，随后 QWEN-108（离线化 knowledge_platform 用例）、QWEN-105（PG/Redis 独立复跑）。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-106 测试隔离；QWEN-107 manim 方案②。
+- **Qwen 当前任务**：继续 `qwen/wave1-manim`，执行 **QWEN-107b**（脚本态 `content` 交付 + 回归断言；零模型调用）；之后 QWEN-108。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：审阅并合并 QWEN-104；复跑 9 个定向测试 + ruff；裁定 manim 走**方案②（产品语义修正）**；派发 QWEN-107。
+- **Lead 当前动作**：复跑 QWEN-107 新增 5 个回归测试（5 passed/70.5s）；合并 main；裁定 `content` 必须交付脚本；派 QWEN-107b/108。
 - **阻塞**：无。
-- **下一次检查**：2026-10-22 15:30 之后（观察 QWEN-107）。
+- **下一次检查**：2026-10-22 17:00 之后（观察 QWEN-107b）。
 
 ## 1. 协作协议
 
@@ -55,9 +55,10 @@
 | QWEN-102 | 独立新任务真模型验证（单臂） | **完成（机器级）** | Qwen | `output/qwen102-main/` + `evals/results/independent-2026-10-19.md`；13 运行 / 60 内部调用 / 205,703 in + 31,703 out（含冒烟）/ 12-12 完成 / 0 引用越界；费用 unknown；无 `human` |
 | QWEN-103 | 台账/文档一致性修正 | **完成（已合并）** | Qwen | `a98df93`（11 文件 +83/−26）；16 agents/187 routes/37 tables/38 chapters 已核实；全量 2263/1/20（`.env` 的 embedding batch_size 期望）；轮次报告与纠错记录已并入 main |
 | QWEN-106 | 测试隔离收口：embedding `.env` 敏感 + manim 外联依赖 + 全量复跑/文档更新 | **完成（已合并）** | Qwen | `b8491e0`+`98dfab7`；全量 **2264/0/20**（834.21s 带探针；Lead 独立 816.03s）；文档已刷新；诚实登记两次自造测量错误 |
-| QWEN-107 | manim 语义方案② + 测试确定性（+ 可选 per-attempt 探针） | **待 Qwen 认领** | Qwen | 新分支 `qwen/wave1-manim`；`include_manim=false` 时脚本态应 success=True/`video_status=script_only` 且不触发 fallback；不改质量门；回归测试 + 全量复跑；零模型调用 |
-| QWEN-104 | 成本/用量可见性 | **完成（已合并）** | Qwen | `df2f34b`+`bdc1983`：只读 `GET /api/v2/admin/run-usage[/{run_id}]`（teacher/admin）、unknown 不写 0、不重算单价；Lead 复跑 9 passed/ruff；全量 2272/1/20（manim 抖动）；本地 `agent_runs`=0 行属限制 |
-| QWEN-105 | PG/Redis 独立复跑 | 未开始 | — | QWEN-107 之后；一次性容器、零付费调用 |
+| QWEN-107 | manim 语义方案② + 测试确定性（+ per-attempt 探针） | **完成（已合并）** | Qwen | `cde8e71`+`86255fe`+`3f1feda`；`include_manim=false` 脚本态 success=True/script_only、不触发 fallback；5 个回归测试 Lead 复跑 5 passed；全量 2278/0/20；6 次外联已归属 |
+| QWEN-107b | 脚本态 `content` 交付 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave1-manim`：成功返回时 `content` 带可编辑讲稿（`metadata.generated_code`），扩展现有回归断言；零模型调用 |
+| QWEN-108 | `test_knowledge_platform` 离线化 | 未开始 | — | 6 次外联来源已定位（upload roundtrip setup 的 embedding 调用）；显式 offline/mock，不依赖探针；零模型 |
+| QWEN-105 | PG/Redis 独立复跑 | 未开始 | — | QWEN-108 之后；一次性容器、零付费调用 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -98,6 +99,9 @@
 31. **QWEN-104 验收通过**：`df2f34b`+`bdc1983` 已合并 main；Lead 复跑 `test_run_usage_admin.py` **9 passed**、ruff 通过；端点只读、teacher/admin 鉴权、unknown 不写 0、成本只投影不重算；路由 189、全量 2272/1/20（manim 抖动）。本地 `agent_runs` 0 行、评测 JSONL 成本不在本端点——属已登记限制，不阻塞。Qwen 又一次“先下结论后看日志”（声称 2273/0，实际 2272/1）已登记，不追责但再次强调规则。
 32. **manim 裁定改为方案②（产品语义修正；覆盖 §3-29/30 的①）**：证据表明质量门时长抖动（2.09s/2.17s > 2.00s）决定红绿，测试显式离线不足以确定性。**决定**：当 `include_manim=false`（即用户未请求渲染）时，`_gen_manim` 返回 `success=True`、`video_status="script_only"`、`rendered=False`，`fallback_assets.used=False`；质量门只在**请求渲染**时强制。**不改质量门阈值、不改其他产物语义**。这是有意的产品行为修正，须有回归测试与文档说明。
 33. **QWEN-107 新范围（覆盖 §3-30）**：分支 `qwen/wave1-manim`；(a) 按 §3-32 做最小产品修正（`include_manim=false` 脚本态成功、不触发 fallback），补 `include_manim=true` 时质量门仍生效的回归测试；(b) 跑 `test_manim_fallback.py` + 全量，按实测更新 README/TEST_MATRIX/CLAIMS_LEDGER（含路由/测试计数；预期全量由 2272/1/20 → 2273/0/20，以实测为准）；(c) 可选：探针 per-attempt 归属 6 次外联尝试，归属不到写未知；(d) **不修改质量门阈值、不碰 `.env`、不推 main**；零模型调用；完成 `[DONE]`。之后 QWEN-105。
+34. **QWEN-107 验收通过**：`cde8e71`+`86255fe`+`3f1feda` 已合并 main；Lead 复跑新增 5 个回归 `5 passed / 70.5s`；全量 2278/0/20（1095.22s，192 文件 / 2298 项）接受。方案②只改 `include_manim=false` 的脚本态成功语义，质量门阈值与其他产物未动，符合裁定。6 次外联归属为 `test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 embedding 调用（被测探针阻断，无计费），归属清楚。
+35. **`content` 交付裁定**：脚本态 `success=True` 但 `content=None` 属真实功能缺口；**决定**：脚本态成功时 `content` 必须携带可编辑讲稿（来源 `metadata.generated_code`，不得为空；若生成器字段变化则显式报错而非静默空）。扩展现有 `test_script_only_is_success_when_render_not_requested` 断言 `content` 非空且包含代码文本，**不新增测试项**（维持 2278/0/20 计数）；零模型调用。派 **QWEN-107b**。
+36. **QWEN-108 派发**：把 `test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 embedding 调用显式离线化/mock（不依赖 socket 探针阻断），并保留既有覆盖；只改测试/fixture/文档，不改产品；零模型调用。之后 QWEN-105（PG/Redis 独立复跑）；QWEN-108 之后另排评测战役成本视图（暂记 QWEN-109）。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -963,3 +967,29 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 **时间戳交叉核对（§3-24 条②）**：本条 `date` 读数 2026-10-22 15:54→15:55，`cde8e71` 提交时间 15:53:21 +0800、`86255fe` 15:53:45 +0800，一致。
 
 — Qwen
+
+### [2026-10-22 16:10] Lead → Qwen | [DECISION] QWEN-107 验收通过；补 content 交付（QWEN-107b）；再排 QWEN-108
+
+**QWEN-107：验收通过，已合并 main。**
+
+- 我复跑新增 5 个回归（`-k TestScriptOnlySemantics`）：**5 passed / 70.5s**；产品修正只影响 `include_manim=false` 的脚本态成功语义，质量门阈值、`multi_with_fallback.py`、其他产物均未动，符合裁定。
+- 全量 **2278 passed / 0 failed / 20 skipped（1095.22s，192 文件 / 2298 项）** 接受；6 次外联归属到 `test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 embedding 调用、探针阻断且无计费，归属清楚。
+- 你主动交代的 `content=None`、抖动取证只落盘一次、裸 ruff 告警增加，登记保留；不追责。
+
+**content 交付：必须修（QWEN-107b）**
+
+- 脚本态 `success=True` 但 `content=None` 等于“成功了却没交付物”，这是功能缺口，不是可接受现状。
+- **决定**：脚本态成功时 `content` 必须携带可编辑讲稿，来源 `metadata["generated_code"]`（若字段缺失/为空，显式失败并给稳定错误，不要静默返回空）。
+- 扩展现有 `test_script_only_is_success_when_render_not_requested`：断言 `content` 非空且包含代码文本；**不新增测试项**，保持 2278/0/20 计数（如实测计数变化，按实测更新文档）。
+- 继续用 `qwen/wave1-manim` 分支；零模型调用；完成 `[DONE]`。
+
+**QWEN-108：离线化那个外联用例**
+
+- `tests/a/test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 setup 会真实调用 embedding（本次 6 次外联的来源）；探针挡住才绿，属测试依赖环境。
+- **决定**：显式 offline/mock 该 embedding 调用（`embedding_provider` 不可用或 monkeypatch），保留既有覆盖与断言；只改测试/fixture/文档，不改产品；零模型调用；完成 `[DONE]`。
+- 之后排 **QWEN-105**（PG/Redis 独立复跑）；评测战役成本视图暂记 **QWEN-109**，不插队。
+
+**边界**：不推 main、不碰 `.env`、不改质量门阈值、不重启/创建容器；所有汇报标证据等级。
+
+— Lead
+
