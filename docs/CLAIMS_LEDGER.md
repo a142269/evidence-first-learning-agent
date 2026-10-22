@@ -284,3 +284,34 @@
 - **端点类别**：embeddings 接口，**不是聊天/补全模型端点**；探针只记录 host/IP 与栈，未记录 URL 全文与请求体。`base_url` 的实际值来自本机配置，本轮**未读取 `.env`**，因此不写服务商名。
 - **是否造成计费**：无。6 次 connect 全部被 fail-closed 探针阻断在 `socket.connect`（返回 `OSError`），出网字节数为 0，用例本身仍 passed。日志：`output/qwen107-2026-10-22/logs/pytest-full-attribution.log`。
 - **本轮未做的事**：没改这个用例、没改 `embedding_provider.py`、没给用例加离线开关。这条"套件靠探针才离线"的事实是**既有行为**（QWEN-104 §10.3 与 QWEN-106 均记录过同一现象），要否把它变成显式离线（例如用例内 mock embeddings 或设 `EMBEDDING_*` 桩）请 Lead 裁定，属另一张卡的范围。
+
+## 12. QWEN-107b 脚本态 `content` 交付登记（2026-10-22，分支 `qwen/wave1-manim`，零模型调用）
+
+Lead 2026-10-22 裁定：脚本态 `success=True` 但 `content=None` 等于"成功了却没交付物"，属功能缺口，必须修。本节取代 §11.4 第 2 条所描述的**现状**（那条记录的实测事实——`generate_manim` 顶层无 `script`/`code` 字段、讲稿只在 `metadata.generated_code`——仍然成立并保留，只是产品不再把它当成"可以不给交付物"的理由）。
+
+### 12.1 交付内容（1 处产品代码 + 1 个既有用例，无新增测试项）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/api/v1/artifacts/multi.py` | 新增模块级常量 `MANIM_SCRIPT_MISSING_ERROR`（`:2671`）；脚本态成功分支（`:2870-2898`）改为 `script = str((r_dict.get("metadata") or {}).get("generated_code") or "")`（`:2877`），非空则 `content=script`（`:2892`），为空/缺失则 `success=False` + `error=MANIM_SCRIPT_MISSING_ERROR` + `content` 留空 + `downloads=[]`（`:2878-2888`），不静默交付空产物 |
+| `tests/integration/test_manim_fallback.py` | 只**扩展现有** `test_script_only_is_success_when_render_not_requested`：先断言 `content` 非空且含讲稿文本，再在同一用例内用 `code="   "` 复跑一次并断言 `success is False`、`error` 等于稳定错误常量、`content` 仍为空。`_level2` helper 增加 `code` 形参（默认值等价原内联字面量）。**未新增 `def test_` 用例**，故套件计数不变 |
+
+### 12.2 未做的事（边界）
+
+- **没改渲染态与失败态**：请求渲染时的质量门拒绝分支、`fallback_reason` 文案、`success=False` 语义一字未动；质量门阈值 `3.0 s` / `2.00 s` 未动；`multi_with_fallback.py`、`.github/workflows/ci.yml` 未动。
+- **没加端点**：路由仍 **189**（`grep -rhoE '@router\.(get|post|put|delete|patch)\(' backend/app | wc -l`）。
+- **没扩 `content` 的其它来源**：只取 Lead 指定的 `metadata["generated_code"]`；`metadata.generated_code` 上游已被 `generate.py:473-488` 截到 5000 字符，本轮未再加 1500 字符那类二次截断（渲染态分支的 `str(content)[:1500]` 保持原样）。
+- **`evidence`/`cov`/`safety` 的输入未动**：`_enrich_with_safety_cov(str(content), ...)`（`multi.py:2807`）在两条分支之前执行，其 `content` 变量在脚本态仍取自顶层 `script`/`code` 字段（恒空），所以 CoV/Safety 校验的对象**不是**新交付的讲稿正文。这是既有实现的选择，本轮按 Lead 划定的最小范围没有改；若要"对交付的讲稿做安全/一致性校验"，需另开卡裁定。
+- **行号漂移说明**：常量插在 `_gen_manim` 之前使其后所有行号 **+3**，故 §11.1 里 `multi.py:2785-2880` / `:2787`（`render_requested`）/ `:2867`（脚本态成功分支）应读作 `:2788-2883` / `:2790` / `:2870`。§11 正文按"旧论断保留"原则未回改。
+
+### 12.3 本轮实测（证据等级：offline）
+
+| 项 | 结果 |
+|---|---|
+| 定向 `tests/integration/test_manim_fallback.py` | **14 passed / 451.60 s**（`-p sandbox_tmpdir_shim -p qwen_net_probe_attempts`，`outbound attempts=0 unique_hosts=0`）；用例数仍 14，与扩展前一致 |
+| 全量 `pytest tests/` | **2278 passed / 0 failed / 20 skipped / 756.16 s**，`192` 个测试文件 / `2298` 项（2278+20，与 QWEN-107 官方跑同为 192 文件 2298 项）——**计数零变化**，符合 Lead "不新增测试项、保持 2278/0/20" 的要求 |
+| 外联尝试 | 仍 `attempts=6 unique_hosts=2`，逐条归属到 `tests/a/test_knowledge_platform.py::test_upload_index_hit_test_roundtrip (setup)`，栈为 `knowledge_admin.py:247 ← knowledge_ingest.py:384 ← knowledge_ingest.py:191 ← embedding_provider.py:63`，全部被探针阻断、零出网、无计费。**本轮未改这个用例**——它属 QWEN-108 范围 |
+| CI 口径 lint | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed**；`multi.py` 不在 mypy 白名单内，类型门无影响 |
+| 裸 ruff（非 CI 口径，仅如实登记） | `test_manim_fallback.py` 42 → **49**（+7），`multi.py` 884 → **889**（+5），全部落在 `RUF001/RUF002/RUF003` 中文全角标点类，与 QWEN-107 同类，不在 CI 选择集内 |
+| 抖动说明 | 定向从动上两轮的 277.40 s / 343.17 s 变为本轮 451.60 s，全量 1095.22 s → 756.16 s；本机媒体/模型链路未变，属既有 run-to-run 时长抖动，与本轮改动无因果证据 |
+| 真链路（非 mock）交付验证 | `output/qwen107b-2026-10-22/probe_content_delivery.py` 一次运行：脚本态 `success=True` 且 `content` 为 **3002 字符** 的 `str`，`content == metadata.generated_code`；同轮日志第一手复现 Level-1 被质量门以 `drift=2.01s > 2.00s` 拒绝而脚本态仍成功。探针 `attempts=0 unique_hosts=0`（零出网）。日志 `logs/probe-content.txt`，详见 `docs/TEST_MATRIX.md` §9 |
