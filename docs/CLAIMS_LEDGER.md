@@ -27,16 +27,16 @@
 |---|---|---|---|---|---|---|
 | R1 | L13 CI badge | main 分支 CI 绿 | 需复跑（远端） | —（CI 环境） | GitHub Actions 徽章是实时远端状态；本机无 `gh` CLI，本轮未能程序化复核。归档记录：2026-10-18 run #17/#18 全绿，主计划基线注记 run #19 全绿（`1ba64fa`）；Wave 0 合并（merge `5bf77d1`）后 **run #21 success**（Lead 2026-10-19 14:55 报告，含 node 20 前端单测 step；证据等级 `remote`，非本机复核）。 | Wave 1 起每次合并后在状态文档记录 run 编号与结论；如要本机复核需给 `gh` CLI 或网络权限 |
 | R2 | L25 | "每个回答都携带实际使用的来源" | 有证据 | offline | `tests/a/test_learning_package.py` 覆盖未使用证据排除、逐项引用、按 chunk_id 去重；今日便携套件重跑通过。 | 保持 |
-| R3 | L25 | "PostgreSQL 检查点和执行租约实现断线恢复" | 有证据 | offline + pg | 检查点跨进程恢复、租约、API 崩溃恢复测试在 CI enterprise 与 2026-10-18 一次性容器（353 passed）验证；今日 SQLite 便携子集复跑通过。 | 保持；PG 组合本轮未重跑（QWEN-105） |
+| R3 | L25 | "PostgreSQL 检查点和执行租约实现断线恢复" | 有证据 | offline + pg | 检查点跨进程恢复、租约、API 崩溃恢复测试在 CI enterprise 与 2026-10-18 一次性容器（353 passed）验证；今日 SQLite 便携子集复跑通过。 | 保持；PG 组合已由 QWEN-105（2026-10-22）在本机一次性容器复跑：`test_learning_checkpoint_postgres.py`、`test_run_leases.py`、`test_postgres_api_recovery.py` 均在 38 文件 / 364 passed 两轮内，见 §14 |
 | R4 | L27 | V2 旗舰链路（受限规划→Tutor→Practice→Reviewer→一次返工→按需人审） | 有证据 | offline（契约）+ cloud（单次采集） | 代码 `learning_package.py`（v2.8）+ 便携套件今日 369 passed；真实后端 13 条标准场景采集通过（cloud 历史）。契约测试不等于内容质量。 | 保持 |
 | R5 | L29 | "`depends_on` 是未执行的兼容字段，不提供 DAG 依赖调度" | 有证据 | offline | 与 `orchestrator.py` 实现一致；README 主动降级表述，正确示范。 | V1 `depends_on` 二选一处置属 QWEN-212 |
 | R6 | L31 | "三组对照已记录 72 次真实模型运行"；"双人质量复核尚未完成" | 有证据 | cloud + 待人工 | `evals/results/ablation-fixed-evidence-20261017.md`：24 任务 × 3 组 = 72 次，真实 DeepSeek Flash；人工评分确实未完成，措辞诚实。 | 保持（这是正确的"不宣称"范例） |
 | R7 | L39 | "76 条新版 Golden Set 中 74 条通过" | 有证据-历史 | cloud | 2026-10-16 第二轮在线验收（`UPGRADE_IMPLEMENTATION_STATUS.md` 最终批）；脱敏汇总 `evals/results/qa-golden-v2-summary.json`（74/76、pass_rate 0.9737）。逐例原始记录只在本地 `output/`，未上传。 | 保持，但建议加"2026-10-16 历史"角标（L48 已有总说明） |
-| R8 | L40 | "真实 PostgreSQL 恢复组合 15/15" | 有证据-历史 | pg | 2026-10-16 PG 专项（检查点跨进程、API 崩溃恢复、摄取幂等、向量版本检索、续跑）15/15；10-18 又跑 353 passed 企业组合。本轮未重跑。 | 需复跑 → QWEN-105 一次性容器复跑 |
+| R8 | L40 | "真实 PostgreSQL 恢复组合 15/15" | 有证据-历史 | pg | 2026-10-16 PG 专项（检查点跨进程、API 崩溃恢复、摄取幂等、向量版本检索、续跑）15/15；10-18 又跑 353 passed 企业组合。本轮未重跑。 | 已复跑（QWEN-105，2026-10-22，`pg`）：这五个类别所属文件全在 CI `enterprise-contract` 38 文件清单内，本机一次性容器两轮 **364 passed / 0 failed / 0 skipped**。注意口径不同——**不是**按 15 项为单位复现，而是更宽的 38 文件清单，故 15/15 原值保留为历史。见 §14 |
 | R9 | L41 | "13 个在线契约场景 13/13" | 有证据-历史 + 措辞需修正 | cloud（采集）→ offline_replay（评测） | `evals/results/learning-package-v1-summary.json`：`evaluation_mode=offline_replay`、`prediction_kind=recorded`；13/13 指**契约**（结构/引用/预算），且 `human_review_coverage=0.0`。"在线契约"字样易被读成在线质量。 | 措辞改为"真实后端采集的 13 条契约场景（回放评测；非内容质量）" |
 | R10 | L52–55 | 74/76（97.37%）、Hit@5 95.83%、Recall@5 94.79%、引用 100%/100% | 有证据-历史 | cloud | 与脱敏汇总 JSON 逐项一致（0.9583/0.9479/1.0/1.0）。README L62 已声明为历史汇总；引用"有效率"= ID 存在性（L31 已自声明非事实支持）。 | 保持 |
 | R11 | L56 | "本地离线测试 2153 passed, 18 skipped" | 有证据-历史；本轮已复跑并收口 | offline | 原值：2026-10-16 Windows **Python 3.10** 全量 `pytest tests/`（626 s）。本轮 2026-10-19 在 Python 3.12.15（conda `evidence-agent-py312`）复跑全量：首轮 **2234 passed / 2 failed / 19 skipped（650.31 s）**；两处失败定位为① Windows kombu filesystem broker 缺 pywin32、② TTS 回退 `edge-tts` 未列入测试允许值，均属环境/测试期望而非 V2 主线回归。QWEN-004 收口（只改测试：补 `edge-tts` 允许值 + Windows 缺 `pywintypes` 条件 skip）后复跑 **2235 passed / 0 failed / 20 skipped（612.61 s）**。明细见 `output/qwen-baseline-2026-10-19/`（本地，Git 忽略）。 | README 更新为最新复跑口径（2235/0/20，py3.12.15 Windows）并加"运行环境（py 版本/平台）"注记；措辞修正动作归 Wave 1 QWEN-103 |
-| R12 | L57 | PostgreSQL 专项 15/15 | 有证据-历史 | pg | 同 R8。 | 同 R8 |
+| R12 | L57 | PostgreSQL 专项 15/15 | 有证据-历史 | pg | 同 R8。 | 同 R8；README L57 已加 QWEN-105 复跑注记（38 文件 / 364 passed，`pg`），原 15/15 未删除 |
 | R13 | L58 | 学习包标准在线契约 13/13 | 有证据-历史 | cloud→offline_replay | 同 R9。 | 同 R9 |
 | R14 | L42 | 生产权限边界 "SQLite / PostgreSQL 跨进程验证" | 有证据 | offline + pg | V1 白名单、V2 逐 Run 授权、跨进程认证测试在便携套件今日重跑通过；PG 跨进程认证为历史 pg 证据。 | 保持 |
 | R15 | L43 | 摄取"幂等、重投和租约接管测试" | 有证据 | offline + pg | `test_v2_ingestion_idempotency.py`、`test_celery_worker_process.py`（文件队列/Redis broker 双模式）；不承诺 broker 自动重投/exactly-once（文档已声明）。 | 保持 |
@@ -348,3 +348,46 @@ Lead 2026-10-22 裁定：`tests/a/test_knowledge_platform.py::test_upload_index_
 
 1. **第一版断言写错位置**：我加了 `document["embedding"] == {"status": "not_configured"}`，定向跑 **1 failed / 13 passed，`KeyError: 'embedding'`**（`tests/a/test_knowledge_platform.py:231`）。核对后确认 `knowledge_ingest.py:243-248` 的 `"embedding"` 键属于 `_persist_enterprise_version` 的返回，不在 `ingest_document` 最终给 API 的文档 dict 里。改为断言 provider 的 `available is False`（前提条件，而非不存在的返回字段），随后 **14 passed**。日志：`output/qwen108-2026-10-22/logs/kp-targeted.txt`（失败轮）与 `logs/kp-targeted2.txt`（通过轮）。
 2. **同轮 `attempts=0` 早在失败那次就已观测到**：失败轮探针已显示 `outbound attempts=0`，说明离线化生效、失败的只是我那条越界断言——两者没有因果混淆，故未把"绿"当成"离线"的证据。
+
+## 14. QWEN-105 企业契约子集本机 PG 复跑登记（2026-10-22，分支 `qwen/wave1-pg`，零模型调用、产品代码零改动）
+
+Lead 2026-10-22 裁定：用本机**已存在**的 `pgvector/pgvector:pg16` 与 `redis:7-alpine` 镜像（「直接使用，不要 pull」），起一次性环回容器跑企业契约子集（点名检查点跨进程恢复、部分完成 PG 恢复），记录真实 passed/failed/skipped 与命令、镜像 tag、耗时，只删自己的容器。
+
+**本节证据等级：`pg`**（本机一次性容器第一手实测）。不是 `remote`，不是 Lead 转述，也不是之前 README 里那个来源不可追的「15/15」。
+
+### 14.1 核心数字
+
+| 轮次 | 结果 | 耗时 | 外联探针 |
+|---|---|---|---|
+| run1（URL 写 `localhost`） | 349 passed / **10 failed / 12 errors** / 0 skipped | 1698.19 s | `attempts=0` |
+| run2（URL 改 `127.0.0.1`） | **364 passed / 0 failed / 0 skipped** | 162.58 s | `attempts=0 unique_hosts=0` |
+| run3（run2 复跑确定性） | **364 passed / 0 failed / 0 skipped** | 159.53 s | `attempts=0` |
+
+清单是 CI `enterprise-contract` job 的 **38 个文件**，由 `sed -n '297,336p' .github/workflows/ci.yml | grep -oE "tests/a/test_[a-z0-9_]+\.py"` 机械提取（`output/qwen105-2026-10-22/enterprise-list.txt`），未手工增删。
+
+### 14.2 run1 的 10+12 已定位，不是产品缺陷（如实保留原样）
+
+失败面全部集中在跨进程恢复类用例，报错类型是 `tests/a/test_postgres_api_recovery.py:13-18` 的 60 s **子进程超时**，不是断言失败。根因经实测复现：本机对 `localhost:55432` 每次建连耗时 **5.02 s**（Windows 先试 IPv6 再回落到 127.0.0.1），`127.0.0.1:55432` 仅 **0.01 s**；该文件的 `probe()` 每个阶段新起一个子进程连库，超时被建连延迟吃光。改 `127.0.0.1` 后同一批 5 个文件单独复验 **16 passed / 116.83 s**，随后 38 文件全量两轮 364 passed。CI 跑在 Linux runner 上不存在这段延迟，故这是**本机端口转发口径问题**，我按 Lead 要求把失败轮和根因都留着，没有只报干净的那轮。
+
+### 14.3 真打在容器库上的旁证（清理前从宿主机查同一实例）
+
+`tables=36`、`chunk_vectors=1372`、`knowledge_chunks=1372`、`checkpoint_migrations=10`、`alembic_version=1`；业务表 0 行是用例 `finally` 自行清理的结果。迁移照 CI 口径 `alembic upgrade head` 到 `20261014_0011`（11 个 revision），`pg_extension` 断言 `('vector',)` 通过。
+
+### 14.4 Redis 的诚实边界（不把"服务可用"写成"用例已通过"）
+
+Redis 容器就绪、`PING`/`SET`/`GET` 从宿主机往返成功，也被配成 `REDIS_URL` 与 Celery broker，但**这 38 个文件没有走真实 Redis 代码路径**：跑完 `dbsize=0`，子集内唯一引用 redis 的 `tests/a/test_v2_eval_cost_guard.py:17-22` 用 `FakeRedis` + `monkeypatch.setitem(sys.modules, "redis", ...)` 打桩。真 Redis 路径在 `tests/helpers/celery_ingestion_worker_probe.py:26`，属另一张卡，等 Lead 定。**故本卡的"企业契约子集通过"只主张 PG 层，不主张 Redis 层。**
+
+### 14.5 与 CI 的口径差异（四条，全部列明）
+
+1. `localhost` → `127.0.0.1`，5432/6379 → **55432/56379**（避开既有 `echomind-redis` 与共享 `triple-u-postgres`；见 14.2 根因）。
+2. 额外 `-o addopts=`（本机 addopts 含 cov 组合）与额外 `LLM_PROVIDER=none`（CI 不设，我按零模型纪律加）。
+3. 额外挂 `-p sandbox_tmpdir_shim -p qwen_net_probe` 以证明零出网。
+4. **未跑** CI `ci.yml:338-341` 的可选 MCP stdio 步骤（需 `pip install -r requirements-mcp.txt`，本机未装，我没擅自装包）。
+
+### 14.6 未做的事（边界）
+
+- **产品代码零改动**：本卡只新增 `output/` 证据与文档登记；`git diff a505b21..HEAD --stat` 只落在 `docs/`。镜像**未 pull**（`docker image inspect` 确认两者本机已存在，ID `7b822b0aac60` / `858f009f9709`）。
+- **容器隔离与清理**：容器名 `qwen105-pg-20261022` / `qwen105-redis-20261022`，端口只绑 `127.0.0.1`，`docker rm -f` 只针对这两个名字。`docker ps -a` 快照 18 → **16**，`qwen105-*` 计数 0；逐个 diff 非本卡容器，唯一差异是 `a3-backend` 的 uptime 文本，即其自行重启（**RestartCount=537**，策略 `unless-stopped`，日志 `failed to resolve host 'postgres'`，因共享 compose postgres 已 Exited 10 天）——**与本卡无关，我未对它执行任何 docker 子命令**，只登记。`echomind-*` / `a3-*` / `devtrace-*` 全部未动。
+- **没读 `.env`**：口令是照抄 `ci.yml:245-247 / 265-269` 的 CI-only 占位值，用于已删除的一次性容器；`.env` 未读取、未打印、未提交。
+- **零模型/零付费调用**：三轮全量 + 16 项复验的探针均 `attempts=0`，无任何出网字节。
+- **未改 `ci.yml`**、未加 `|| true`、未新增/删除测试文件。

@@ -324,3 +324,24 @@ Lead 2026-10-22 裁定：脚本态 `success=True` 时 `content` 必须携带可�
 | QWEN-108 全量复跑（**本轮 README 数字来源**） | 192 个 `test_*.py` / 2298 项 | **2278 passed / 0 failed / 20 skipped / 764.23 s**，`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + per-attempt 探针 → **`outbound attempts=0 unique_hosts=0`、`distinct tests with outbound attempts=0`**：套件不再依赖探针阻断，**真离线**。计数与 QWEN-107/107b 逐项一致（只加 fixture 与断言，未增删用例）；日志 `logs/full-suite.txt` |
 | QWEN-108 CI 便携清单复跑（40 文件，同 QWEN-107/107b 清单） | 40 文件 | **407 passed / 1 skipped / 0 failed / 77.83 s**，`attempts=0`，唯一 skip 仍是 `tests/a/test_auth_restart.py:18`；日志 `logs/ci-portable.txt` |
 | QWEN-108 静态检查与边界 | `backend/app scripts/ tests/` | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（`ci.yml:115` 同口径）**All checks passed**；`git diff 755454f..912d9b5 --stat -- backend/` 实测为空（QWEN-108 提交在 `backend/` 下相对 107b 零差异，产品未动）；`grep -rhoE '@router\.(get\|post\|put\|delete\|patch)\(' backend/app \| wc -l` = **189**。裸 ruff（非 CI 口径）：该文件 15 → **30**，增量全为 `RUF001/RUF002/RUF003` 中文全角标点类，`I001` 仍 1 条与 HEAD 相同 |
+
+## 11. QWEN-105 企业契约子集本机 PG 实测摘要（2026-10-22，分支 `qwen/wave1-pg`，零模型调用、产品代码零改动）
+
+**证据等级：pg**。镜像用的是本机**已存在**的 `pgvector/pgvector:pg16`（ID `7b822b0aac60`，server 16.15）与 `redis:7-alpine`（ID `858f009f9709`，server 7.4.11），**未执行 pull**；Docker 引擎 29.8.2。宿主机 Python 3.12.15 / psycopg 3.3.6 / redis-py 8.1.0 / SQLAlchemy 2.1.5 / alembic 1.20.0 / pytest 9.1.1。
+
+容器只绑环回、用独立端口避开既有服务：`qwen105-pg-20261022` → `127.0.0.1:55432`，`qwen105-redis-20261022` → `127.0.0.1:56379`；健康核验 `pg_isready` = accepting connections、`redis-cli ping` = PONG。
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 迁移 + 扩展校验（照 `ci.yml:290-293`） | `alembic upgrade head` | 最终 revision `20261014_0011`（11 个 revision）；`SELECT extname FROM pg_extension WHERE extname='vector'` → `('vector',)`。日志 `output/qwen105-2026-10-22/logs/alembic.txt` |
+| run1（URL 用 `localhost`） | CI `enterprise-contract` 38 文件 | **349 passed / 10 failed / 12 errors / 1698.19 s**，`attempts=0`。失败面全是 `tests/a/test_postgres_api_recovery.py:13-18` 的 60 s 子进程超时：本机 `localhost:55432` 建连实测 **5.02 s**（IPv6 优先回落）vs `127.0.0.1` **0.01 s**。日志 `logs/enterprise-run1.txt` |
+| 同批复验（5 个跨进程恢复文件，URL 改 `127.0.0.1`） | 5 文件 | **16 passed / 116.83 s** → 证实 run1 红点纯属本机建连延迟口径 |
+| run2（**本卡 PG 层数字来源**） | 38 文件全量 | **364 passed / 0 failed / 0 skipped / 162.58 s**，`outbound attempts=0 unique_hosts=0`。日志 `logs/enterprise-run2.txt` |
+| run3（确定性复跑） | 同 run2 命令与清单 | **364 passed / 0 failed / 0 skipped / 159.53 s**，`attempts=0`。日志 `logs/enterprise-run3.txt` |
+| PG 写入旁证（清理前查同一实例） | 容器内 `triple_u` 库 | `tables=36`、`chunk_vectors=1372`、`knowledge_chunks=1372`、`checkpoint_migrations=10`、`alembic_version=1`；业务表 0 行 = 用例 `finally` 自清理 |
+| Redis 边界（**不计入通过**） | 38 文件子集 | 服务可用（`PING`/`SET`/`GET` 往返成功），但子集跑完 `dbsize=0`；唯一 redis 引用点 `tests/a/test_v2_eval_cost_guard.py:17-22` 是 `FakeRedis` + `sys.modules` 打桩。真 broker 路径 `tests/helpers/celery_ingestion_worker_probe.py:26` 未执行 |
+| 清理 | 只删本卡容器 | `docker rm -f qwen105-pg-20261022 qwen105-redis-20261022`；`docker ps -a` 18 → **16**、`qwen105-*` 计数 **0**（`logs/docker-ps-before-cleanup.txt` / `logs/docker-ps-after-cleanup.txt`）。`echomind-*`/`a3-*`/`devtrace-*` 逐个 diff 未动；唯一非本卡差异是 `a3-backend` uptime 文本（其自身 RestartCount=537、`failed to resolve host 'postgres'`），与本卡无因果 |
+
+与 CI 的口径差异（4 条，详见 `docs/CLAIMS_LEDGER.md` §14.5）：端口/主机改写、额外 `-o addopts=` 与 `LLM_PROVIDER=none`、额外只读探针插件、**未跑** `ci.yml:338-341` 可选 MCP stdio 步骤（本机未装 `requirements-mcp.txt`，未擅自 pip）。
+
+完整可复现命令与环境写在 `output/qwen105-2026-10-22/report.md`（`env.sh` + `enterprise-list.txt` 在同目录）。
