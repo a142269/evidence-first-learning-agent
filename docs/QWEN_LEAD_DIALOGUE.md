@@ -1102,3 +1102,76 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 
 — Lead
 
+### [2026-10-22 18:09] Qwen → Lead | [DONE] QWEN-105 企业契约子集本机 PG 复跑（证据等级 pg；零模型调用、未读 `.env`、镜像未 pull）
+
+**结论**：CI `enterprise-contract` 的 38 个文件在我本机一次性 `pgvector` 容器上两轮均 **364 passed / 0 failed / 0 skipped**（162.58 s、159.53 s，探针 `outbound attempts=0 unique_hosts=0`）。检查点跨进程恢复与部分完成 PG 恢复都在清单内且真跑在 PG 上。**证据等级：`pg`（本机第一手）**，不是 remote，也不是你转述的数字。
+
+分支 `qwen/wave1-pg`，提交 `65dd350`（只动 `README.md` + `docs/`，`backend/` 零差异）。产物 `output/qwen105-2026-10-22/`（`report.md` 全量可复现命令、`env.sh`、`enterprise-list.txt`、3 轮日志、`docker ps` 前后快照）。
+
+#### 1. 镜像：本机已存在，未 pull
+
+`pgvector/pgvector:pg16`（ID `7b822b0aac60`，server 16.15）、`redis:7-alpine`（ID `858f009f9709`，server 7.4.11）。Docker 引擎 29.8.2。宿主 Python 3.12.15 / psycopg 3.3.6 / SQLAlchemy 2.1.5 / alembic 1.20.0 / pytest 9.1.1。
+
+#### 2. 容器与命令（只绑环回、独立端口）
+
+```bash
+docker run -d --name qwen105-pg-20261022 \
+  -e POSTGRES_USER=triple_u -e POSTGRES_PASSWORD=ci-only-password -e POSTGRES_DB=triple_u \
+  -p 127.0.0.1:55432:5432 pgvector/pgvector:pg16
+docker run -d --name qwen105-redis-20261022 -p 127.0.0.1:56379:6379 redis:7-alpine
+export DATABASE_URL="postgresql+psycopg://triple_u:ci-only-password@127.0.0.1:55432/triple_u"
+python -m alembic upgrade head     # → 20261014_0011；pg_extension 断言 ('vector',) 通过
+pytest $(tr '\n' ' ' < output/qwen105-2026-10-22/enterprise-list.txt) \
+  -o addopts= --no-cov --benchmark-disable -p sandbox_tmpdir_shim -p qwen_net_probe -rs \
+  --basetemp output/qwen105-2026-10-22/base-run2 -q
+```
+
+38 文件清单是 `sed -n '297,336p' .github/workflows/ci.yml | grep -oE "tests/a/test_[a-z0-9_]+\.py"` 机械提取，未手工增删。口令照抄 `ci.yml:245-247 / 265-269` 的 CI-only 占位值，`.env` 全程未读取。
+
+#### 3. 三轮结果：第一轮是红的，我没删
+
+| 轮次 | 结果 | 耗时 |
+|---|---|---|
+| run1（URL 写 `localhost`） | 349 passed / **10 failed / 12 errors** | 1698.19 s |
+| run2（URL 改 `127.0.0.1`） | **364 / 0 / 0** | 162.58 s |
+| run3（复跑确定性） | **364 / 0 / 0** | 159.53 s |
+
+run1 的 10+12 **不是产品缺陷**，已实测定位：本机对 `localhost:55432` 每次建连耗时 **5.02 s**（Windows 先试 IPv6 再回落），`127.0.0.1` 只要 **0.01 s**；`tests/a/test_postgres_api_recovery.py:13-18` 的 `probe()` 每个阶段新起子进程连库，60 s 超时被建连延迟吃光——报错类型全是 `subprocess` 超时，没有一条是断言失败。改 `127.0.0.1` 后同一批 5 个文件单跑 **16 passed / 116.83 s**。CI 在 Linux runner 上无此延迟。失败轮日志 `logs/enterprise-run1.txt` 原样保留。
+
+#### 4. 真打在容器库上的旁证
+
+清理前从宿主机查同一实例：`tables=36`、`chunk_vectors=1372`、`knowledge_chunks=1372`、`checkpoint_migrations=10`、`alembic_version=1`。业务表 0 行是用例 `finally` 自清理，不是"没写进 PG"。
+
+#### 5. Redis：我只主张 PG 层，不主张 Redis 层
+
+Redis 容器就绪、`PING`/`SET`/`GET` 从宿主机往返成功，也配成了 `REDIS_URL` 与 Celery broker，但**这 38 个文件没有走真实 Redis 代码路径**：跑完 `dbsize=0`，子集里唯一引用 redis 的 `tests/a/test_v2_eval_cost_guard.py:17-22` 是 `FakeRedis` + `sys.modules` 打桩。真 broker 路径在 `tests/helpers/celery_ingestion_worker_probe.py:26`，要不要单开一张卡请你定；我没把"服务可用"写成"用例已通过"。
+
+#### 6. 与 CI 的口径差异（四条，全列）
+
+1. `localhost` → `127.0.0.1`，5432/6379 → **55432/56379**（避开既有 `echomind-redis` 与已 Exited 的共享 `triple-u-postgres`）。
+2. 额外 `-o addopts=`（本机 addopts 含 cov 组合）+ 额外 `LLM_PROVIDER=none`（CI 不设，我按零模型纪律加）。
+3. 额外挂 `-p sandbox_tmpdir_shim -p qwen_net_probe` 证明零出网。
+4. **未跑** `ci.yml:338-341` 的可选 MCP stdio 步骤（要 `pip install -r requirements-mcp.txt`，本机没装，我没擅自 pip）。
+
+#### 7. 清理证据（只删自己的）
+
+```
+docker rm -f qwen105-pg-20261022 qwen105-redis-20261022   # logs/docker-cleanup.txt 回显两个名字
+docker ps -a: 18 → 16，qwen105-* 计数 0
+```
+前后快照 `logs/docker-ps-before-cleanup.txt` / `logs/docker-ps-after-cleanup.txt` 逐个 diff 非本卡容器：`echomind-*`/`a3-*`/`devtrace-*` 全部未动，我未对它们执行任何 docker 子命令。唯一差异是 `a3-backend` 的 uptime 文本（"Up 33 seconds" → "Up 4 seconds"），即它**自行重启**：`RestartCount=537`、策略 `unless-stopped`、日志 `failed to resolve host 'postgres'`（它依赖的共享 compose postgres 已 Exited 约 10 天）。与本卡无因果，只登记知会。
+
+#### 8. 文档登记与一处口径提醒
+
+`docs/CLAIMS_LEDGER.md` §14、`docs/TEST_MATRIX.md` §11；台账 R3/R8/R12 的"需复跑 → QWEN-105"已按你原意改成指向 §14。**注意**：README 的 `PostgreSQL 专项 15 / 15` 我没有替换——我的复跑口径是 38 文件 / 364 项，不是按 15 项为单位复现那 15 个用例，所以 L57 保留 15/15 并加了一条 QWEN-105 注记。若你认为应当直接以新口径替换，我再改。
+
+#### 9. 待你裁定（本轮未动的两处）
+
+- QWEN-107b 遗留披露：脚本态现在交付 `content=metadata["generated_code"]`，但 `multi.py:2807` 的 `_enrich_with_safety_cov(str(content), ...)` 仍在对**空文本**做覆盖率/安全审计，即交付的讲稿本身未被 cov/safety 覆盖。
+- 可选 MCP stdio 步骤（第 6 节第 4 条）本机未跑。
+
+QWEN-108 你裁定的"保留模块级 autouse + 未来云分支用例须显式 `monkeypatch.setenv` 回来"这条限制已作为长期约束记进 `docs/CLAIMS_LEDGER.md` §13.2。
+
+现停手，等 QWEN-109 授权。
+
+— Qwen

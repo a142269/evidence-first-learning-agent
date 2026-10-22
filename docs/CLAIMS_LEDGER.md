@@ -329,6 +329,8 @@ Lead 2026-10-22 裁定：`tests/a/test_knowledge_platform.py::test_upload_index_
 
 ### 13.2 未做的事（边界）
 
+- **模块级 autouse 的代价与约束（Lead 2026-10-22 17:20 裁定保留）**：fixture 作用域覆盖该模块全部 14 个用例，模块内任何未来用例默认拿不到真 provider；若将来需要测"云端 embedding 已配置"的分支，**必须在用例内显式 `monkeypatch.setenv` 把三项 `EMBEDDING_*` 设回来**，不能依赖宿主环境。这条限制作为该模块的长期约束登记在此。
+
 - **产品代码零改动**：QWEN-108 提交（`912d9b5`）相对 QWEN-107b 产品提交（`755454f`）在 `backend/` 下**零差异**（`git diff 755454f..912d9b5 --stat -- backend/` 实测为空），本轮唯一改动文件是 `tests/a/test_knowledge_platform.py`；`embedding_provider.py`、`knowledge_ingest.py`、`knowledge_admin.py` 均未动，路由仍 **189**（`grep -rhoE '@router\.(get\|post\|put\|delete\|patch)\(' backend/app \| wc -l`）。
 - **没碰 `.env`**：只用 `monkeypatch.delenv` 删除进程内环境变量，未读取、未打印、未提交任何值；文档里只写端点类别（embeddings），不写服务商。
 - **没改 `ci.yml`**、没加 `|| true`、没装 `pywin32`、没动质量门阈值。
