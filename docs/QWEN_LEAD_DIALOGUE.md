@@ -908,3 +908,58 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 
 — Lead
 
+
+
+### [2026-10-22 15:55] Qwen → Lead | [DONE] QWEN-107 manim 方案②产品修正（零模型调用；那 6 次外联尝试已归属到底）
+
+**分支 `qwen/wave1-manim`（从 `5ffec8f`）→ `cde8e71` 产品+测试、`86255fe` 文档，已推送该分支；未碰 main、未碰 `.env`、未改 `ci.yml`、未动容器。证据等级全部 offline（本机实测），日志在 `output/qwen107-2026-10-22/logs/`。**
+
+**1. 实现（严格按 14:45 裁定②，一字未扩）**
+
+`backend/app/api/v1/artifacts/multi.py:2785-2880`（`_gen_manim` Level 2 收口）：
+
+- 新增 `render_requested = bool(req.manim_render or req.include_manim)`（`:2787`），原来内联在 `ManimRequest(render=...)` 的同一表达式，语义不变；
+- 脚本态分支（`not is_rendered_video`）里，**未请求渲染且 `generate_manim` 自身 `success` 为真**时返回 `success=True`、`video_status="script_only"`、`rendered=False`、`playback_status="unavailable"`、`downloads=[]`（`:2867-2880`）；
+- **请求了渲染**（`include_manim=true` 或 `manim_render=true`）时，脚本态与质量门拒绝态完全保持原样：`success=False` + 原 `error` 文案；
+- `fallback_assets.used=False` 不是新写的逻辑，是新 `success=True` 经 `_detect_manim_needs_fallback()`（`multi_with_fallback.py:68` 第一条触发器 `not envelope.success`，且 `rendered=False` 使后两条也不成立）的自然结果——**兜底模块一行未改**；
+- 质量门阈值 `MIN_PLAYABLE_VIDEO_SECONDS=3.0` / `MAX_AV_DURATION_DRIFT_SECONDS=2.00` 与 `_video_quality_gate` 本体**未动**；`mermaid/tts/document/quiz/pptx/code` 路径**零改动**；registry 清理与 `downloads=[]` 行为保持（不把"无视频的记录"当成可下载资源）。
+
+**2. 你指定的两条硬性回归都落地（`tests/integration/test_manim_fallback.py` 新增 `TestScriptOnlySemantics`，+5 用例，全部 monkeypatch 钉住 seam，不碰本机媒体链路、不出网）**
+
+- `include_manim=false` 确定性不触发 fallback：`test_script_only_is_success_when_render_not_requested`、`test_quality_gate_jitter_does_not_fail_unrequested_render`（复现历史抖动：Level-1 被判 rejected 仍 `success=True`、`used=False`，且 `metadata.agent_video_quality.status="rejected"` 保留可审计原因）。
+- `include_manim=true` 且质量门拒绝时仍失败/触发 fallback：`test_render_requested_and_gate_rejected_still_falls_back`（`success=False`、`video_status="rejected"`、`used=True`、`reason="manim_render_failed"`）、`test_render_requested_without_video_still_falls_back`（请求渲染却只拿到脚本 → 仍失败兜底）、`test_render_requested_and_gate_passed_still_succeeds`（正路未被削弱）。
+
+**3. 实测数字（先读日志后下结论）**
+
+| 运行 | 结果 |
+|---|---|
+| 定向 `test_manim_fallback.py` 第 1 轮（14 用例 = 9 既有 + 5 新增） | **14 passed / 277.40 s**，探针 `attempts=0` |
+| 定向第 2 轮（确定性复核） | **14 passed / 343.17 s**，探针 `attempts=0` |
+| 全量官方跑（README/导览数字来源） | **2278 passed / 0 failed / 20 skipped（1095.22 s，192 文件 / 2298 项）**，探针 `attempts=6 unique_hosts=2` 全部阻断 |
+| 全量第二跑（换 per-attempt 探针，只为归属） | **2278 passed / 20 skipped（1198.51 s）**，`attempts=6 unique_hosts=2` 逐项一致 → 增强探针未改变红绿 |
+| CI 便携清单（`ci.yml:164-220`，40 文件，未改清单） | **407 passed / 1 skipped / 0 failed**（95.54 s，`attempts=0`；`-rs` 点名唯一 skip 仍是 `test_auth_restart.py:18 Explicit disposable PostgreSQL required`）——与 QWEN-104 的 407/1 完全一致 |
+| 静态检查 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（CI `ci.yml:115` 同口径）**All checks passed**；`git diff --check` 干净 |
+| 口径复核 | 路由装饰器仍 **189**（本轮未加端点）；`find tests -name 'test_*.py'` 仍 **192**（只改既有用例文件，未新增文件） |
+
+对上一轮 2272/1/20 的账：既有红点转绿 → 2273，新增 5 项 → **2278**，与实测吻合（你预期的 2273/0/20 在"不加新回归"的前提下成立；本轮按你第 2 条要求补了回归，故 +5）。README:56、导览:106 已按实测刷新，`docs/TEST_MATRIX.md` §8、`docs/CLAIMS_LEDGER.md` §11 为新增章节，**旧数字一律作历史保留、未回改**。
+
+**4. 可选项 3 做完了：6 次外联尝试已归属，不再写"未知"**
+
+`output/qwen107-2026-10-22/qwen_net_probe_attempts.py`（只读工具，未进 `tests/`、未提交）在阻断处补记当前用例/阶段/线程/调用栈，并用 `test_probe_selfcheck.py`（2 passed）先自证"能记录且只归属到真正运行的用例"。全量第二跑结论：
+
+- **6 次全部来自同一个用例**：`tests/a/test_knowledge_platform.py::test_upload_index_hit_test_roundtrip`，`setup` 阶段，线程 `asyncio-portal-*`；两个 IP（`101.201.58.201`、`47.94.20.201`）各 3 次。
+- 探针记录的栈：`knowledge_admin.py:247:upload_document` ← `knowledge_ingest.py:384:ingest_document` ← `knowledge_ingest.py:191:_persist_enterprise_version` ← `embedding_provider.py:63:embed_documents`。已核对该处代码（`embedding_provider.py:55-70`）：是 `requests.post(f"{self.base_url}/embeddings", ...)`，外层 `attempts = max(1, min(max_attempts, 3))` 逐次重试 → **正好每地址 3 次**，与观测吻合。
+- **端点类别：embeddings（向量）接口，不是聊天/补全模型**；`base_url` 实值来自本机配置，本轮**未读 `.env`**，故不写服务商名。6 次 connect 全被阻断在 `socket.connect`（0 出网字节、无计费），用例仍 passed。
+- **本轮未动它**：没给该用例加离线开关、没改 `embedding_provider.py`。"套件之所以离线是靠探针挡的"是既有行为（QWEN-106、QWEN-104 都记过），要不要改成显式离线请你另裁，不属 QWEN-107 范围。
+
+**5. 三条如实交代（不追责，只求登记）**
+
+1. **`content` 仍是 `None`，脚本正文并没有随"成功"交付出去。** 实测：`generate_manim(render=False)` 返回 `type='manim_code'`、`filepath=''`、`success=True`，`ResourceResult` 顶层**没有** `script`/`code` 字段，讲稿只在 `metadata.generated_code`（存档读数 3002 字符，`logs/probe-manim-run3.txt`）。而 `_gen_manim` 取的是 `r_dict.get("script") or r_dict.get("code")` → 恒为空。裁定②只规定 success/`video_status`/`rendered`/`used`，**我没有顺手扩 `content`**；若产品真要以"可编辑讲稿"为交付物，需要你再裁一下 `content` 取哪个字段（另开卡或并入 QWEN-105 之后均可）。
+2. **取证存档不齐**：抖动取证同一脚本跑了 3 次，只有第 3 次落了盘；前两次的读数（`drift=2.25s`/`rejected` 与 `ready`）当时只打印在终端，现已写入 TEST_MATRIX §8/CLAIMS_LEDGER §11.4 并注明"未单独存档"。
+3. **裸 ruff 告警增加但不在 CI 口径**：`test_manim_fallback.py` 全文 `ruff check` 由 main 的 20 条增至 42 条，增量分解 RUF002 +15 / RUF003 +3 / RUF001 +3 / EM101 +1，全是中文全角标点与异常字面量风格类；未为此改写既有用例风格。
+
+**未做（避免越界）**：不改质量门阈值、不改 `multi_with_fallback.py`、不改其他产物语义、不加端点、不改 `ci.yml`（便携层沿用 QWEN-104 的 40 文件清单；慢的 manim 手工层未扩进 CI）、不动 `.env`、不推 main、不重启/创建容器、QWEN-105（PG/Redis 独立复跑）与 QWEN-108（评测战役成本视图）均未启动。
+
+**时间戳交叉核对（§3-24 条②）**：本条 `date` 读数 2026-10-22 15:54→15:55，`cde8e71` 提交时间 15:53:21 +0800、`86255fe` 15:53:45 +0800，一致。
+
+— Qwen
