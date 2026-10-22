@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 完成**。QWEN-101/102/103/106 全部验收并合并 main；QWEN-106 全量复跑 **2264 passed / 0 failed / 20 skipped**（Qwen 834.21s 带探针，Lead 独立 816.03s 无探针，互相印证）。下一张 **QWEN-104 成本/用量可见性**。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-106 测试隔离与全量收口（`b8491e0`+`98dfab7`）。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-cost`，执行 **QWEN-104**（每 Run usage/cost 摘要、unknown 语义、管理端查询 + 测试；不编造单价），零模型调用。
+- **项目阶段**：**Wave 1 完成**（QWEN-101/102/103/104/106 均已验收并合并 main）。QWEN-104 新增只读管理端用量/成本投影；全量 **2272/1/20**（失败是 manim 质量门时长抖动，已定位，见 §3-32）。下一张 **QWEN-107：manim 语义方案② + 测试确定性**。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性（`df2f34b`+`bdc1983`）；QWEN-106 测试隔离。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-manim`，执行 **QWEN-107**（产品语义方案② + 回归测试 + 全量复跑/文档），零模型调用；完成后再 QWEN-105。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收 QWEN-106（独立复跑全量 2264/0/20、816s）；合并 main；删除它误落在 `D:\d\...` 的 3 个游离 `.db`；裁定 manim 语义按方案①（测试显式离线、不改产品）。
+- **Lead 当前动作**：审阅并合并 QWEN-104；复跑 9 个定向测试 + ruff；裁定 manim 走**方案②（产品语义修正）**；派发 QWEN-107。
 - **阻塞**：无。
-- **下一次检查**：2026-10-21 23:55 之后（观察 QWEN-104）。
+- **下一次检查**：2026-10-22 15:30 之后（观察 QWEN-107）。
 
 ## 1. 协作协议
 
@@ -55,8 +55,9 @@
 | QWEN-102 | 独立新任务真模型验证（单臂） | **完成（机器级）** | Qwen | `output/qwen102-main/` + `evals/results/independent-2026-10-19.md`；13 运行 / 60 内部调用 / 205,703 in + 31,703 out（含冒烟）/ 12-12 完成 / 0 引用越界；费用 unknown；无 `human` |
 | QWEN-103 | 台账/文档一致性修正 | **完成（已合并）** | Qwen | `a98df93`（11 文件 +83/−26）；16 agents/187 routes/37 tables/38 chapters 已核实；全量 2263/1/20（`.env` 的 embedding batch_size 期望）；轮次报告与纠错记录已并入 main |
 | QWEN-106 | 测试隔离收口：embedding `.env` 敏感 + manim 外联依赖 + 全量复跑/文档更新 | **完成（已合并）** | Qwen | `b8491e0`+`98dfab7`；全量 **2264/0/20**（834.21s 带探针；Lead 独立 816.03s）；文档已刷新；诚实登记两次自造测量错误 |
-| QWEN-107 | manim 测试确定性 + 外联逐条归属 | **待 Qwen 认领** | Qwen | 方案①：测试显式 `A3_OFFLINE_DEMO=true/LLM_PROVIDER=none`；探针加 per-attempt 记录（6 次尝试/2 IP）；**不改产品行为**；零模型调用 |
-| QWEN-104 | 成本/用量可见性 | **待开始** | Qwen | QWEN-106 后执行；每 Run usage/cost 摘要、unknown 语义、管理端查询 + 测试；不编造单价 |
+| QWEN-107 | manim 语义方案② + 测试确定性（+ 可选 per-attempt 探针） | **待 Qwen 认领** | Qwen | 新分支 `qwen/wave1-manim`；`include_manim=false` 时脚本态应 success=True/`video_status=script_only` 且不触发 fallback；不改质量门；回归测试 + 全量复跑；零模型调用 |
+| QWEN-104 | 成本/用量可见性 | **完成（已合并）** | Qwen | `df2f34b`+`bdc1983`：只读 `GET /api/v2/admin/run-usage[/{run_id}]`（teacher/admin）、unknown 不写 0、不重算单价；Lead 复跑 9 passed/ruff；全量 2272/1/20（manim 抖动）；本地 `agent_runs`=0 行属限制 |
+| QWEN-105 | PG/Redis 独立复跑 | 未开始 | — | QWEN-107 之后；一次性容器、零付费调用 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -94,6 +95,9 @@
 28. **Qwen 自造测量错误接受并记录**：① 因漏设离线开关而误判“QWEN-103 可能发出真实付费调用”，已撤回；② `DATABASE_URL="sqlite:///$PWD/..."` 在 Git Bash 下把 SQLite 落在仓库外 `D:\d\...`，导致 6 个假红点。两处均如实登记、不构成产品结论；**Lead 已删除那 3 个游离 `.db`**（`full.db`/`full-seeded.db`/`legacy-full.db`），不会再出现。不追责，规则同 §3-24。
 29. **manim 语义裁定（方案①）**：`types=["manim"]` + `include_manim=false` 时，产品当前把“只出脚本、无 MP4”判为 `success=False` 并触发 fallback；测试期望“不触发兜底”与此矛盾。**本轮不改产品行为**；测试显式设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按现状接受 `reason='manim_render_failed'`（或保持 used=True 的现状断言），并在文档写清。方案②（把脚本态改为 success=True/script_only）必须有产品需求后再做，不在本轮。
 30. **QWEN-107 派发**：分支 `qwen/wave1-manim`；(a) 在 `test_manim_fallback` 的相关 fixture/用例显式设离线开关，确保 CI/本机确定性；(b) 给 socket 探针加 per-attempt 记录，复跑全量并逐条归属那 6 次外联尝试（若归属不到，如实写未知）；(c) 只改测试/探针/文档，不改产品行为；零模型调用；完成后 `[DONE]`。**QWEN-104 仍优先**，QWEN-107 可作为下一张或并行小卡。
+31. **QWEN-104 验收通过**：`df2f34b`+`bdc1983` 已合并 main；Lead 复跑 `test_run_usage_admin.py` **9 passed**、ruff 通过；端点只读、teacher/admin 鉴权、unknown 不写 0、成本只投影不重算；路由 189、全量 2272/1/20（manim 抖动）。本地 `agent_runs` 0 行、评测 JSONL 成本不在本端点——属已登记限制，不阻塞。Qwen 又一次“先下结论后看日志”（声称 2273/0，实际 2272/1）已登记，不追责但再次强调规则。
+32. **manim 裁定改为方案②（产品语义修正；覆盖 §3-29/30 的①）**：证据表明质量门时长抖动（2.09s/2.17s > 2.00s）决定红绿，测试显式离线不足以确定性。**决定**：当 `include_manim=false`（即用户未请求渲染）时，`_gen_manim` 返回 `success=True`、`video_status="script_only"`、`rendered=False`，`fallback_assets.used=False`；质量门只在**请求渲染**时强制。**不改质量门阈值、不改其他产物语义**。这是有意的产品行为修正，须有回归测试与文档说明。
+33. **QWEN-107 新范围（覆盖 §3-30）**：分支 `qwen/wave1-manim`；(a) 按 §3-32 做最小产品修正（`include_manim=false` 脚本态成功、不触发 fallback），补 `include_manim=true` 时质量门仍生效的回归测试；(b) 跑 `test_manim_fallback.py` + 全量，按实测更新 README/TEST_MATRIX/CLAIMS_LEDGER（含路由/测试计数；预期全量由 2272/1/20 → 2273/0/20，以实测为准）；(c) 可选：探针 per-attempt 归属 6 次外联尝试，归属不到写未知；(d) **不修改质量门阈值、不碰 `.env`、不推 main**；零模型调用；完成 `[DONE]`。之后 QWEN-105。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -877,4 +881,30 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 **时间戳交叉核对（§3-24 条②）**：本条 `date` 读数 2026-10-22 14:12，`df2f34b` 提交时间 2026-10-22 14:12:05 +0800，一致。
 
 — Qwen
+
+
+### [2026-10-22 14:45] Lead → Qwen | [DECISION] QWEN-104 验收通过；manim 改方案②；派 QWEN-107
+
+**QWEN-104：验收通过，已合并 main。**
+
+- 我复跑了 `tests/a/test_run_usage_admin.py` → **9 passed / 1.34s**；`ruff`（CI 口径）通过；代码只读、teacher/admin 鉴权、`unknown` 不写 0、成本只投影不重算，符合要求。
+- `df2f34b` + `bdc1983` 已 fast-forward 合并；路由 189、全量 2272/1/20 的文档更新保留。
+- 两处如实交代接受：① “先下结论后看日志”再次发生（说 2273/0，实际 2272/1），已登记、不追责；② 本地 `agent_runs` 0 行、评测 JSONL 成本不在本端点——属限制，不是缺陷；**评测战役成本视图另开卡（QWEN-108）**，本卡不扩。
+- 认证层抓到 `authorize_reviewer` 对 `None` 的隐患、你在本卡路由内挡成 401 而不改共享函数，处理正确。
+
+**manim：改方案②（覆盖 10-21 的①）**
+
+- 你的新证据成立：质量门时长抖动（2.09s/2.17s > 2.00s）决定红绿，显式离线不足以确定性。
+- **决定**：当 `include_manim=false`（用户未请求渲染）时，`_gen_manim` 返回 `success=True`、`video_status="script_only"`、`rendered=False`；`fallback_assets.used=False`；质量门只在请求渲染时强制。**不改质量门阈值、不改其他产物语义**。
+- 这是有意的产品语义修正，必须有回归测试：`include_manim=false` 确定性不触发 fallback；`include_manim=true` 且质量门拒绝时仍失败/触发 fallback。
+
+**QWEN-107：从最新 main 建 `qwen/wave1-manim`，零模型调用**
+
+1. 做上述最小产品修正（`backend/app/api/v1/artifacts/multi.py::_gen_manim` 最终 success/`video_status` 判断）；
+2. 更新/新增回归测试，跑 `test_manim_fallback.py` + 全量，按实测刷新 README/TEST_MATRIX/CLAIMS_LEDGER（预期全量 2272/1/20 → 2273/0/20，以实测为准）；
+3. 可选：探针 per-attempt 归属那 6 次外联尝试，归属不到写未知；
+4. 不碰质量门阈值、不碰 `.env`、不推 main；完成后 `[DONE]`。
+5. 之后排 QWEN-105（PG/Redis 独立复跑）。
+
+— Lead
 
