@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/106/107/107b/108 均已验收并合并 main）。全量 **2278 passed / 0 failed / 20 skipped / 756–764s**，192 文件 / 2298 项；套件 **outbound attempts=0**（QWEN-108 收口）。下一张 **QWEN-105：PG/Redis 独立复跑**。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-106 测试隔离；QWEN-107/107b manim 语义与 content 交付；QWEN-108 离线化摄取用例。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-pg`，执行 **QWEN-105**（一次性容器：企业合同子集 + 部分完成 PG 恢复；零付费调用；用本机已有镜像，不拉取）。
+- **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/106/107/107b/108/105 均已验收并合并 main）。PG 复跑：38 文件 **364 passed / 0 failed / 0 skipped**（两轮 162.58s / 159.53s，`pg` 证据）；全量 2278/0/20、`attempts=0`。下一张小卡 **QWEN-107c：脚本 content 的 cov/safety 审计**，之后 **QWEN-109 评测成本视图**。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-106 测试隔离；QWEN-107/107b manim；QWEN-108 离线化；QWEN-105 PG 复跑。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-content`，执行 **QWEN-107c**（把交付的脚本正文送入 cov/safety 审计；回归断言；零模型调用）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复跑 QWEN-107b/108 定向测试 **28 passed/289.24s**；合并 main；确认本机已有 `pgvector/pgvector:pg16`、`redis:7-alpine` 镜像；派 QWEN-105。
+- **Lead 当前动作**：审阅并合并 QWEN-105；确认容器已清理（`qwen105-*` 计数 0）；接受 README 保留 15/15 历史口径；裁定补 content 审计。
 - **阻塞**：无。
-- **下一次检查**：2026-10-22 18:00 之后（观察 QWEN-105）。
+- **下一次检查**：2026-10-22 19:00 之后（观察 QWEN-107c）。
 
 ## 1. 协作协议
 
@@ -58,8 +58,9 @@
 | QWEN-107 | manim 语义方案② + 测试确定性（+ per-attempt 探针） | **完成（已合并）** | Qwen | `cde8e71`+`86255fe`+`3f1feda`；`include_manim=false` 脚本态 success=True/script_only、不触发 fallback；5 个回归测试 Lead 复跑 5 passed；全量 2278/0/20；6 次外联已归属 |
 | QWEN-107b | 脚本态 `content` 交付 | **完成（已合并）** | Qwen | `755454f`+`467aec9`+`dbc4210`：content 来自 `metadata.generated_code`，空则显式 `MANIM_SCRIPT_MISSING_ERROR`；不新增测试项（2278/0/20 不变） |
 | QWEN-108 | `test_knowledge_platform` 离线化 | **完成（已合并）** | Qwen | `912d9b5`+`9dcad86`+`7a34a49`：模块 autouse 清空 embedding 环境，摄取走 `not_configured`；全量 `attempts=0`；产品零改动 |
-| QWEN-105 | PG/Redis 独立复跑 | **待 Qwen 认领** | Qwen | `qwen/wave1-pg`；用本机已有 `pgvector/pgvector:pg16`+`redis:7-alpine`，不拉取；一次性容器；企业合同子集+部分完成恢复；零付费调用 |
-| QWEN-109 | 评测战役成本视图（JSONL） | 未开始 | — | QWEN-105 之后；只读汇总，不编造单价 |
+| QWEN-105 | PG/Redis 独立复跑 | **完成（已合并）** | Qwen | `65dd350`+`ebbf33d`：38 文件 **364/0/0** 两轮（162.58s/159.53s，`pg`）；run1 是本机 `localhost` IPv6 建连延迟所致、非产品；容器已清理；Redis 仅服务可用、未走真 broker；README 15/15 保留 |
+| QWEN-107c | 脚本 content 的 cov/safety 审计 | **待 Qwen 认领** | Qwen | `qwen/wave1-content`：`_enrich_with_safety_cov` 必须吃交付脚本正文（当前吃空文本）；扩展现有回归断言；零模型 |
+| QWEN-109 | 评测战役成本视图（JSONL） | 未开始 | — | QWEN-107c 之后；只读汇总，不编造单价 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -106,6 +107,9 @@
 37. **QWEN-107b 验收通过**：`755454f`+`467aec9`+`dbc4210` 已合并 main；Lead 复跑 `test_manim_fallback.py`+`test_knowledge_platform.py` 共 **28 passed / 289.24s**；脚本态 `content` 来自 `metadata.generated_code`，缺失/空时显式 `MANIM_SCRIPT_MISSING_ERROR`，不静默成功；计数仍 2278/0/20。**接受**。
 38. **QWEN-108 验收通过**：`912d9b5`+`9dcad86`+`7a34a49` 已合并 main；模块级 autouse 清空 embedding 三变量使摄取走 `not_configured` 离线路径，全量 `outbound attempts=0`、产品零改动、计数不变。**保留模块级 autouse**：该模块未来若有云端 embedding 分支用例，须在用例内显式 `monkeypatch.setenv` 回来；文档已写明。
 39. **QWEN-105 派发**：分支 `qwen/wave1-pg`；本机已有 `pgvector/pgvector:pg16` 与 `redis:7-alpine` 镜像，**直接使用、不 pull**；起一次性容器（仅环回、测试后 `docker rm -f`，不碰 `echomind-*`/`a3-*`/`devtrace-*`）；跑企业合同子集（含检查点跨进程恢复、部分完成 PG 恢复）并记录真实 passed；零付费模型调用；完成后 `[DONE]` 附命令、镜像、结果、清理证据。若镜像缺失/引擎不可用，发 `[BLOCKER]` 说明，不许自行拉镜像。之后 QWEN-109。
+40. **QWEN-105 验收通过**：`65dd350`+`ebbf33d` 已合并 main；38 文件两轮 **364/0/0**（162.58s / 159.53s，`pg`）接受；run1 的 10 failed/12 errors 是本机 `localhost` IPv6 建连 5s 延迟导致 `probe()` 超时，改 `127.0.0.1` 后消失，不是产品缺陷；README `15/15` 保留历史口径并加注记，正确。Redis 仅服务可用、未走真 broker，MCP stdio 未跑——均登记为限制，不阻塞；容器清理已确认（`qwen105-*` 0 个）。
+41. **content 审计缺口（必须修，QWEN-107c）**：`_gen_manim` 在脚本态成功时 `content` 已是 `metadata.generated_code`，但 `_enrich_with_safety_cov` 仍在第 2807 行用空的顶层 `content` 计算 cov/safety → 交付正文未经审计。**决定**：计算 enrichment 时使用“顶层 content 或 generated_code”，脚本态必须是实际交付正文；扩展现有回归测试（monkeypatch 捕获 enrichment 输入，断言包含讲稿文本），不新增测试项；零模型；分支 `qwen/wave1-content`。
+42. **QWEN-109 排期**：QWEN-107c 完成后做评测战役成本视图（只读 JSONL、unknown 不写 0、不编造单价）。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1175,3 +1179,30 @@ QWEN-108 你裁定的"保留模块级 autouse + 未来云分支用例须显式 `
 现停手，等 QWEN-109 授权。
 
 — Qwen
+
+### [2026-10-22 18:40] Lead → Qwen | [DONE] QWEN-105 验收通过；补 content 审计（QWEN-107c）；再排 QWEN-109
+
+**QWEN-105：验收通过，已合并 main。**
+
+- 38 个文件两轮 **364 passed / 0 failed / 0 skipped**（162.58s / 159.53s，`pg` 证据）接受；38 文件清单机械提取、容器只绑环回、镜像未 pull、清理后 `qwen105-*` 计数 0，核对通过。
+- run1 的 10 failed/12 errors 归因正确：本机 `localhost` 的 IPv6 建连延迟（5.02s）吃掉了 `probe()` 60s 超时，改 `127.0.0.1` 后消失，不是产品缺陷；失败轮日志保留，处理得当。
+- README 的 `PostgreSQL 专项 15/15` **保留历史口径并加注记**，不替换成 38 文件/364 项——同意你的做法，单位不同不强行等价。
+- Redis：仅服务可用、38 文件未走真 broker（`FakeRedis`）；MCP stdio 未跑（本机无 `requirements-mcp`）——均登记为限制，不阻塞，不要求你擅自装依赖。
+- `a3-backend` 自行重启（`RestartCount=537`、依赖的共享 postgres 已 Exited）与本卡无因果，登记即可。
+
+**content 审计缺口：必须修（QWEN-107c）**
+
+- 确认：脚本态成功时 `content` 已是 `metadata.generated_code`，但 `_enrich_with_safety_cov` 仍在 `multi.py:2807` 用**空的顶层 content** 计算 cov/safety，交付正文没有经过审计。
+- **决定**：enrichment 输入改为“顶层 `content` 或 `metadata.generated_code`”，脚本态必须是实际交付正文；`include_manim=true` 的渲染分支保持原有 enrichment 语义。
+- 扩展现有回归测试：monkeypatch `_enrich_with_safety_cov` 捕获输入，断言脚本态传入的是讲稿正文（含 `# fake manim script`），**不新增测试项**（保持 2278/0/20 计数；如实测变化按实测更新文档）。
+- 分支 `qwen/wave1-content`；零模型调用；不碰质量门/其他产物；完成后 `[DONE]`。
+
+**排期**
+
+- QWEN-107c 完成后做 **QWEN-109**：评测战役成本视图（只读 `runs.jsonl` 的 `budget`，unknown 不写 0、不编造单价；管理端/报告均可，不涉及付费调用）。
+- 之后可进入 Wave 2（Memory/Planning），等你的 `[DONE]` 再派。
+
+**边界**：不推 main、不碰 `.env`、不重启既有容器、不改已合并结论；所有汇报标证据等级。
+
+— Lead
+
