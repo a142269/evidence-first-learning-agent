@@ -1283,3 +1283,67 @@ QWEN-109 未启动，等你 `[DONE]` 验收后再派。
 
 — Lead
 
+### [2026-10-22 23:37] Qwen → Lead | [DONE] QWEN-109 评测用量/成本只读汇总（证据等级 offline；零模型调用、零外联、产品代码零改动）
+
+**交付物**（分支 `qwen/wave1-evalcost`，commit `7bf82de`，4 files / +802，**纯新增**，未改任何既有产品/测试代码、未新增对外端点）
+
+- `scripts/report_eval_cost.py`（新增 461 行）——只读聚合器。**不 `import os`**，结构上读不到环境变量或 `.env`；不套用任何单价；`--out` 强制落在 `output/` 下且拒绝覆盖已存在文件。
+- `docs/EVAL_USAGE_COST_REPORT_2026-10-22.md`（新增 257 行）——脱敏报告，与 `output/qwen109-2026-10-22/eval-cost-report.md` **逐字节相同**（`cmp` 通过；因为 `output/` 是 gitignored，报告正文另存一份进 tracked 目录供你直接看）。首屏即写明生成命令、数据来源、样本量与未知项。
+- 登记：`docs/CLAIMS_LEDGER.md` §16、`docs/TEST_MATRIX.md` §13（两处均为**追加**，`git diff --stat` = 84 insertions / 0 deletions，未动任何已合并结论）。
+
+**命令**（可复现）
+
+```
+PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/qwen109-2026-10-22/eval-cost-report.md
+```
+
+本机实测是套 fail-closed 探针跑的（复用 QWEN-106/107 那套，副本 `output/qwen109-2026-10-22/qwen_net_probe.py`）：`PYTHONUTF8=1 python output/qwen109-2026-10-22/run_report_guarded.py output/qwen109-2026-10-22/eval-cost-report.md` → `sources=8 records=127 arms=14 cases=127 cost_status=unknownx127 runs_without_token_data=1 excluded_fixtures=122`，探针 **`outbound attempts=0 unique_hosts=0 blocked=[]`**。`--source LABEL=PATH` 可限定单来源（实测 12 条 / 1 臂）。
+
+**口径**：记账**不自己另写一套**——每条记录经产品 `backend/app/services/run_usage.py` 的 `summarize_run_usage` 投影、按组交给 `aggregate_run_usage` 聚合，`cost_status` / `usage_status` / `runs_without_token_data` / `runs_without_estimated_cost` / `cost.reason` 全是产品自己的词汇。
+
+**数据来源与样本量**：扫描根 `output/` 下含 `result.budget` 的 `.jsonl` 共 **130** 份 → 计入 **8 份真实评测产物 / 127 条记录**（`ablation-full/smoke/smoke-budget-20261017`、`qwen102-main/smoke`、`retry-development-20261017`、`stability-20261018` 的 dev-retest 与 holdout-retest）；按"路径组件以 `test_` 开头"整份排除 pytest `--basetemp` 夹具 **122 份 / 304 条**，逐目录计数写进报告第 1 节。
+
+**真实汇总**（合计，括号内为有值条数）
+
+| 维度 | 实测 |
+|---|---|
+| 调用数 | **442**（127/127） |
+| 输入 token | **1321838**（126/127） |
+| 输出 token | **276031**（126/127） |
+| input_chars | **2797092**（127/127） |
+| latency_ms | 中位数 **14101.54**，区间 **2302.41~40332.14**（127/127） |
+| cost | `cost_status unknown×127`、`estimated×0`；**金额一律显示"未记录"**，无 estimated 成本 127 条 |
+| usage_status | `measured×126, unknown×1` |
+| 分组 | 每臂 **14** 个（来源×臂）组合；每题 **127** 行明细 |
+
+三臂对照（`ablation-full-20261017`，各 24 题、`deepseek-flash`；`completed=True` 数 / 调用数合计 / 输入 / 输出 token / latency 中位数）：`single` **23** / **24** / 76613 / 23866 / **5803.27 ms**；`without_reviewer` **13** / **86** / 234392 / 57479 / **15912.39 ms**；`full` **13** / **119** / 389382 / 72926 / **21411.53 ms** → 调用量与 token 量按约 **1 : 3.6 : 5.0** 递增。这是本次汇总里**唯一可支撑的跨臂结论，不含质量判断**（原始记录里质量通过率为空，本卡不重算、不代填）。
+
+**未知项与缺失样本**（单列计数，一律不补 0）
+
+- 成本维度 **127/127 全为 `unknown`**：`cost.reason=no_cost_amount_recorded` 126 条 + `cost_not_recorded` 1 条（`single/ab-019`，`completed=False`，budget 里只有 `input_chars`/`model_calls`/`output_token_limit`，token 与 `cost` 对象都不存在）。`amount_cny`、`measured_portion_cny`、顶层 `cost_cny` 有值均 **0** 条 → 报告**不给任何折算金额**，`unknown` 也没写成 0 元。
+- 无 token 数据 **1** 条（同上），按产品聚合器口径不参与 token 求和；`usage_unknown_calls` 合计 0。
+- `arm` / `config.model` 未标注 **36** 条（`retry-development` 与两份 `stability` 复测产物顶层 schema 更窄，latency 与调用数只在 `result` 下）→ 报告显示 `未标注`，不猜臂别。
+- `result.error` 有值 **28** 条（运行本身失败，token 可能不完整）。
+- **跨来源合计只是记录求和，不是去重题数**：25 个题号跨来源重复（如 `ab-001`~`ab-012` 同时出现在 ablation-full / retry-development / dev-retest），且各来源 `dataset_sha256` 不同或缺失 → 合计只能当**调用量上界**，不能当作一次评测的结果；报告第 5 节明写这条警告。
+
+**自检**（不用脚本自证）
+
+1. **独立复算**：`output/qwen109-2026-10-22/crosscheck_independent.py` 刻意走另一条代码路径（不复用产品模块、不复用聚合器、不复用发现规则）→ 14 行每臂数字**逐行一致**，日志把两侧并排留档（`logs/crosscheck.txt`）。计数口径的唯一差异（我报 `unknown×127`，独立复算报"unknown 126 + cost 对象缺失 1"）源于产品 `_cost_of` 把缺失 cost 归为 `unknown` 且带 `reason=cost_not_recorded`，报告第 2 节把那 1 条单列，不矛盾。
+2. **与已接受的 cloud 级结论交叉验证**：§2 **E3** 行（`evals/results/ablation-fixed-evidence-20261017.md`）的"任务完成 23/24、13/24、13/24"= 实测 `completed=True` 23/13/13；"平均模型调用 1.00/3.58/4.96"= 24/86/119 ÷ 24 题；"P50 5.80/15.91/21.41 秒"= 5803.27/15912.39/21411.53 ms；正文"有 1 次运行缺少 token 用量"= `runs_without_token_data` 1；"费用为未知"= `cost_status unknown×127`——**逐项一致**（该表 P95 本卡未算，三者都落在实测 max 之内，不矛盾）。§2 **E5** 行"44/43 次调用；输出 25,384/25,286 tokens"= `dev-retest` 44/25384、`holdout-retest` 43/25286——**一致**。
+3. **CLI 错误路径**：`--out` 不在 `output/` 下、`--out` 已存在、`--source` 缺 `=`、`--source` 路径不存在 → **4 种均 exit 2 且不写出任何文件**（`logs/cli-branches.txt`）。
+4. **提交前复现核对**：把已交付报告挪到 `tmp/eval-cost-report-run5-final.md` 后，用**待提交的同一份脚本**在同一路径重新生成 → 摘要行逐字段相同、`cmp` 三方（存档 / 重新生成 / `docs/` 副本）**全部逐字节相同**、探针仍 `attempts=0`（`logs/run6-reproducibility.txt`）。脚本无 `datetime`/`time` 依赖，输出确定。
+
+**静态检查与脱敏**：CI 口径 `ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（`ci.yml:115` 同口径）**All checks passed**；裸 ruff（`pyproject` 全集）对新文件 **0 findings**（未给 `scripts/` 既有 2382 条基线再添）；`git diff --check` 干净。对报告全文 grep `sk-`/`api_key`/`bearer`/`password`/`secret`/URL/≥32 位十六进制/`deepseek.com` → **仅命中我自己那句"不读取 .env"**；出现的只有模型名 `deepseek-flash`、路径与计数，`dataset_sha256`/`evidence_sha256` 取值一律不复现。
+
+**登记一条产品侧观察（只登记，本卡未改产品代码）**：`backend/app/services/run_usage.py:22-26` 的 `_count` **只接受非负整数**（docstring 即"Accept only a real non-negative integer"），而评测记录里的 `result.latency_ms` 是小数 → `summarize_run_usage` 对这 **127/127** 条全部返回 `reported_latency_ms=None`（`model_calls` 记成整数，实测被丢弃 **0** 条）。影响：任何直接消费该投影的用量视图都会把延迟显示成"未记录"。本卡的处理是报告直接读原始 `result.latency_ms` 并在首屏与第 2 节单列该偏差条数（127），**未修改 `run_usage.py`**。**归属 QWEN-104（成本/用量可见性）**，是否放宽 `_count` 或另存整数毫秒请你裁定。
+
+**边界**（未做的事，如实登记）
+
+- **未新增测试项、未重跑全量**：新脚本不被任何测试 `import`，也无用例枚举 `scripts/` 或 `docs/`（全仓核查：`tests/a/test_human_eval_toolkit.py:111-113` 与 `tests/a/test_diagnosis_reporter.py:293` 枚举 `tmp_path`，`tests/a/test_campus_assets.py:9` 枚举前端 assets，`tests/b/test_contract_document.py:9` 只断言 `docs/API-CONTRACT.md` 存在）→ README 的 **2278 / 0 / 20** 按构造不变；按"已交付数字不为好看而重跑"的既定约束**没有**为此重跑全量。
+- **成本无法折算**：没有任何单价来源（环境变量未配置、记录里无金额），报告不给金额；若你要金额，需要先授权单价来源，届时 `cost.status` 会由产品自己变成 `estimated`。
+- 未推 main、未重启任何容器、未装 `requirements-mcp`、未碰 `.env`。迭代过程产物 7 份按不删原则留档 `output/qwen109-2026-10-22/tmp/`，日志 `logs/run1~run6`、`logs/cli-branches.txt`、`logs/crosscheck.txt`。
+
+已推 `qwen/wave1-evalcost`（**只推这一条分支**）。Wave 2（QWEN-201 Memory → QWEN-211 Planning）**等你的派卡**，在此之前 hold。
+
+— Qwen
+
