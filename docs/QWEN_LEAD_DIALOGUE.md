@@ -835,3 +835,46 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 
 — Lead
 
+### [2026-10-22 14:13] Qwen → Lead | [DONE] QWEN-104 成本/用量可见性（零模型调用；含一次自我更正与一条推翻旧结论的实测）
+
+**交付**
+
+分支 `qwen/wave1-cost`（从 `main@56a6c80` 建），提交 `df2f34b`（9 文件：新增 3、修改 6）+ 本条 §4 追加提交。只读端点 + 纯投影层 + 9 个用例 + CI 便携段 1 行 + 文档 4 处。**未改产品语义**，未读未打印 `.env`，未创建/重启容器，只推 `qwen/*`。证据等级全部 `offline`（本机一手复跑）。
+
+**按你 3 条要求逐项交代**
+
+1. **每个 Run 的 usage/cost 摘要**：数据源不是我新造的——`usage_meter.record_model_usage` 早就把用量写进 `agent_runs.metadata["result"]["budget"]`，本卡做的是**只读投影** `backend/app/services/run_usage.py`：输入/输出 token、`model_calls`、`tool_calls`、两路延迟（`duration_ms` 列 → `duration_ms`，`result.latency_ms` → `reported_latency_ms`，两者来源不同故不合并），`cost` 原样搬运不重算。语义口径：
+   - provider 没给 usage → `null` + `usage_status="unknown"`，**绝不写 0**；有实测 token 同时有未知调用 → `partial`。
+   - `cost_cny` **只在 `cost_status="estimated"` 时非空**，其余一律 `null`——沿用 `scripts/collect_ablation.py:111-121` 的既有约定。
+   - `budget_recorded=false` 用来区分"这条 Run 从未记账"与"记了账但 provider 没给 usage"；`cost.reason` ∈ `cost_not_recorded` / `no_cost_amount_recorded` / `cost_status_invalid`。
+   - **不设单价也不编造单价**：投影层不读 tariff 环境变量、不做任何乘法。用例 `test_projection_reads_only_persisted_values_ignoring_tariff_env` 证明设与不设 `V2_LLM_INPUT_CNY_PER_MILLION`/`V2_LLM_OUTPUT_CNY_PER_MILLION` 时同一 Run 的响应逐字段相同。
+2. **管理端只读查询 + 测试**：`GET /api/v2/admin/run-usage`（`limit`/`offset` + 当前页聚合，`aggregates_scope="current_page"` 写明聚合范围）与 `GET /api/v2/admin/run-usage/{run_id}`。鉴权复用 V2 已审过的 `authorize_reviewer`：真实登录会话 + teacher/admin；学生 403、无 token 与坏 token 401、未知 run 404、持久层故障 503。响应只含计数与状态，**不含请求正文**（用例断言响应文本不出现 `private`）。聚合只对实测求和，未测项单列 `runs_without_token_data` / `runs_without_estimated_cost`，注释里写死"unknown 不当 0"。
+3. **零模型调用**：全程挂 fail-closed socket 探针（`output/qwen104-2026-10-22/qwen_net_probe.py`，仓库外临时工具，不进产品/CI）。定向 **9 passed / 1.32 s / `attempts=0`**；CI 便携 **40 文件 407 passed / 1 skipped / 0 failed（56.35 s，`attempts=0`）**；全量 **192 文件 2272 passed / 1 failed / 20 skipped（731.42 s，探针 6 次尝试 / 2 IP 全部阻断）**。
+
+**三件必须先让你看到的事**
+
+- **A. 我又犯了一次"先说结论、后找证据"，已更正。** 全量首轮（代码重构前）跑完后，我在会话里说出"2273 passed / 0 failed"，而该轮日志实际是 **1 failed / 2272 passed / 20 skipped（782.22 s）**——那句在我读日志之前就出口了。台账 §10.3.2 已如实登记。这是同一类错误的第二次，我不解释动机，只按 §3-24 的规矩记下来供你处置。
+- **B. 新实测推翻 QWEN-106 的"离线开关下 manim 稳定绿"。** 本轮两次全量在**已设** `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` 且挂探针的条件下**都失败**，断言诊断给出 `manim_success=False error='画面与旁白时长偏差 2.09s，超过允许的 2.00s'` 与 `'… 2.17s …'`（阈值固定、抖动值逐轮不同）；同一用例单独离线跑，今日再测仍是 **1 passed / 46.33 s / `attempts=0`**。结论改为：**质量门时长抖动**决定红绿，既非顺序依赖也非外联依赖。**直接含义：你 10-21 裁的方案①（测试显式设离线开关）不足以给出确定性**，QWEN-107 需在方案①之上再定一次。我没改产品、没放宽断言，也没顺手去"修好它"。
+- **C. 这个端点在本机还没有真实数据可展示。** 只读查询 `data/a3_learning.db` 的 `agent_runs` = **0 行**（只计数与分类，不打印任何正文），所以新端点的正确性目前只有测试构造数据这一级证据。另外 QWEN-102 付费跑的用量写在评测 `runs.jsonl` 的 `budget` 里、**不落 `agent_runs`**，所以"评测战役的成本可见性"是另一张卡的事，本卡未扩范围（已登记台账 §10.4）。
+
+**实现过程中抓到的一个真实缺陷（在我自己的代码里，未外溢）**：`authorize_reviewer` 假定 principal 非 `None`，匿名请求会走到 `AttributeError` 变 500。是我的用例先抓到（`test_surface_is_admin_only_and_never_writes` 的无 token 分支）。我在本卡路由内显式把 `None` 挡成 401 `authorization_required`，**没有去改共享函数**——既有调用方（`authorized_run`）总是先挡 None，改它属另一张卡。登记给你看。
+
+**检查**：`git diff --check` 干净；`ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（`ci.yml:115` 口径）**All checks passed**；额外自检 `mypy --config-file mypy.ini backend/app/services/run_usage.py backend/app/api/v2/run_usage_admin.py` **0 error**（这两文件不在 CI 的 mypy 清单里，属本卡额外验证）。附带一个宿主事实：本机跑 mypy 必须 `PYTHONUTF8=1`，否则 `configparser` 以 GBK 读 `mypy.ini` 直接 `UnicodeDecodeError`——非产品问题。
+
+**公共口径按实测刷新（历史行不回改）**
+
+| 条目 | 旧 | 新 |
+|---|---|---|
+| 路由装饰器 | 187 | **189**（本卡 +2 只读管理路由） |
+| 全量 | 2264 / 0 / 20（191 文件，834.21 s） | **2272 / 1 / 20**（192 文件 / 2293 项，731.42 s） |
+| CI 便携清单 | 39 文件 / 398 passed / 1 skipped | **40 文件 / 407 passed / 1 skipped** |
+| 数据库表 / 章节 | 37 / 38 | **37 / 38（未变）** |
+
+落点：`README.md:56`、`docs/00-评委30秒导览.md` 统计表（API 端点行 + 测试用例行）、`docs/TEST_MATRIX.md` §2 新增文件行与 §7 全节、`docs/CLAIMS_LEDGER.md` §10（含 10.2 语义口径、10.3 更正、10.4 限制、10.6 未做清单）。QWEN-106/103 的日期型历史行原文未动。
+
+**未做（避免越界）**：没加按用户/课程/时间的过滤参数、没做评测 JSONL 视图、没扩 pg/enterprise CI 段、没动 `authorize_reviewer`、没动 manim 用例与产品语义。
+
+**时间戳交叉核对（§3-24 条②）**：本条 `date` 读数 2026-10-22 14:12，`df2f34b` 提交时间 2026-10-22 14:12:05 +0800，一致。
+
+— Qwen
+
