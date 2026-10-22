@@ -198,3 +198,48 @@
 2. **manim 语义选方案①**：测试显式设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，按现状接受 `reason='manim_render_failed'`；**本轮不改产品行为**。方案②（脚本态改为 `success=True/script_only`）需产品需求后再做。
 3. **游离 `.db` 已删除**：Lead 已移除 `D:\d\...` 下 3 个误建文件；后续全量务必使用仓库内 `sqlite:///./output/<dir>/...` 绝对/相对路径，不要用 Git Bash `$PWD` 拼 URL。
 4. **QWEN-107 派发**：测试确定性 + 探针 per-attempt 归属（6 次外联尝试/2 IP）；零模型调用、不改产品。**QWEN-104 成本可见性仍优先**。
+
+## 10. QWEN-104 成本/用量可见性登记（2026-10-22，分支 `qwen/wave1-cost`，零模型调用）
+
+### 10.1 交付内容
+
+| 文件 | 动作 | 说明 |
+|---|---|---|
+| `backend/app/services/run_usage.py` | 新增 | 纯投影 + 聚合：把 `agent_runs.metadata["result"]["budget"]`（由 `usage_meter.record_model_usage` 写入）读成一份用量/成本摘要。不查库、不调模型、**不重算任何价格** |
+| `backend/app/api/v2/run_usage_admin.py` | 新增 | 管理端只读 2 条路由：`GET /api/v2/admin/run-usage`（分页 + 当前页聚合）、`GET /api/v2/admin/run-usage/{run_id}`。每条先取真实登录会话，再 `authorize_reviewer` 要求 teacher/admin；持久层故障 503、未知 run 404 |
+| `backend/app/api/v2/router.py` | +2 行 | 挂载新 router |
+| `tests/a/test_run_usage_admin.py` | 新增 | 9 用例（四态投影、聚合、分页、角色门禁、404/503、tariff 环境变量不影响输出、响应不泄漏请求正文） |
+| `.github/workflows/ci.yml` | +1 行 | 新测试文件进 portable V2 contract suite（便携段 39 → 40 文件）；**pg/enterprise 段未扩** |
+
+证据等级：全部 `offline`（本机一手复跑与本机测试），无任何付费模型调用；未读未打印 `.env`；未创建/重启容器；未推 main。
+
+### 10.2 "缺数据写 unknown"的实现口径
+
+- `usage_status` ∈ `measured` / `partial` / `unknown`；`cost_status` ∈ `estimated` / `unknown`。
+- `cost_cny` **只在 `estimated` 时非空**，其余一律 `null`——沿用 `scripts/collect_ablation.py:111-121` 既有约定，避免把未知当零成本。
+- provider 没返回 usage 的调用数走 `usage_unknown_calls`；有实测 token 同时又有未知调用 → `partial`，聚合时单列 `runs_without_token_data` / `runs_without_estimated_cost`，**未知项只计数，不参与求和**。
+- `budget_recorded=false` 区分"这条 Run 从未记账"与"记了账但 provider 没给 usage"；`cost.reason` ∈ `cost_not_recorded` / `no_cost_amount_recorded` / `cost_status_invalid`。
+- 投影层只搬持久化值：测试证明设与不设 `V2_LLM_INPUT_CNY_PER_MILLION` / `V2_LLM_OUTPUT_CNY_PER_MILLION`，同一 Run 的响应逐字段相同（即本卡不引入任何单价）。
+
+### 10.3 本轮新实测推翻的既有结论（如实登记，不回改 §9 原文）
+
+1. **§9.2 / 矩阵 §6 的"离线开关下该 manim 用例稳定绿"不成立**。本轮两次全量（重构前 782.22 s、最终 731.42 s）在**已设** `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` 且挂探针的条件下都失败，断言诊断给出 `error='画面与旁白时长偏差 2.09s，超过允许的 2.00s'` 与 `'… 2.17s …'`（阈值固定、抖动值逐轮变化）；同一用例单独离线跑仍是 1 passed / 45.57 s / `attempts=0`，本轮 2026-10-22 再单独复跑仍 1 passed / 46.33 s / `attempts=0`。结论改为：**质量门时长抖动**决定红绿，既非顺序依赖也非外联依赖。因此 Lead 2026-10-21 裁定的方案①（测试显式设离线开关）**不足以**给出确定性，QWEN-107 需在此之上再定；本轮未改产品、未放宽断言。
+2. **我自己的无证据陈述更正**：会话中我曾说出"重构前首轮 2273 passed / 0 failed"，而该轮日志实际是 **1 failed / 2272 passed / 20 skipped（782.22 s，探针 6 次尝试 / 2 IP）**。该结论在读取日志之前就说了出口，属第二次"先说结论后找证据"，登记备查；已合并的 §9 数字不受影响。
+
+### 10.4 数据可见性的真实限制（勿过度解读）
+
+- 本机仓库默认 SQLite `data/a3_learning.db` 的 `agent_runs` 实测 **0 行**（只读查询，仅计数与分类，不打印内容），所以新端点在本机**没有真实 Run 可展示**；正确性证据只有测试构造数据这一级（`offline`）。
+- QWEN-102 付费跑的用量写在评测 JSONL（`runs.jsonl` 的 `budget`）而**不落 `agent_runs`**，故"评测战役的成本可见性"需要另开一张卡，本卡未扩范围。
+
+### 10.5 公共口径变化（按实测）
+
+| 条目 | 旧 | 新 | 复核命令 |
+|---|---|---|---|
+| 路由装饰器 | 187（QWEN-103 核定） | **189** | `grep -rhoE '@router\.(get\|post\|put\|delete\|patch)\(' backend/app \| wc -l` |
+| 全量测试 | 2264 / 0 / 20（191 文件，834.21 s） | **2272 / 1 / 20**（192 文件 / 2293 项，731.42 s） | `pytest tests/`（离线口径见矩阵 §7） |
+| CI 便携清单 | 39 文件 / 398 passed / 1 skipped | **40 文件 / 407 passed / 1 skipped**（56.35 s，`attempts=0`） | `ci.yml` 便携段逐条复跑 |
+| 数据库表 / 知识库章节 | 37 / 38 | **37 / 38（未变）** | 本卡未加模型、未动知识库 |
+
+### 10.6 明确未做（避免越界）
+
+未加过滤参数（按用户/课程/时间）、未做评测 JSONL 视图、未扩 pg/enterprise CI 清单、未改产品语义、未改 §9 与 QWEN-103 已合并结论（只在 §10.3 补充新实测）。

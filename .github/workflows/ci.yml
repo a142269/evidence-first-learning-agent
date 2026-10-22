@@ -206,6 +206,7 @@ jobs:
             tests/a/test_embedding_provider_resilience.py \
             tests/a/test_conversation_memory_v2.py \
             tests/a/test_run_leases.py \
+            tests/a/test_run_usage_admin.py \
             tests/a/test_persistent_auth.py \
             tests/a/test_auth_restart.py \
             tests/a/test_deployment_policy.py \

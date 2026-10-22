@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（191）
+## 2. Python 测试文件矩阵（192）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -122,6 +122,7 @@
 | tests/a/test_resource_ownership.py |  |  |  | ✓ |  |
 | tests/a/test_run_lease_migration.py |  | E |  | s |  |
 | tests/a/test_run_leases.py | F | E |  | ✓ |  |
+| tests/a/test_run_usage_admin.py | F |  |  | ✓ | QWEN-104 新增（管理端只读用量/成本摘要，9 用例）；仅进 portable V2 contract suite，未扩 pg/enterprise 清单 |
 | tests/a/test_seed_extended.py |  |  |  | ✓ |  |
 | tests/a/test_smart_tutoring.py |  |  |  | ✓ |  |
 | tests/a/test_spaced_repetition.py |  |  |  | ✓ |  |
@@ -273,3 +274,15 @@
 | QWEN-106 全量复跑（**本轮 README 数字来源**） | 191 个 `test_*.py` / 2284 项 | **2264 passed / 0 failed / 20 skipped**（834.21 s，offline；`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 默认 SQLite + `--basetemp output/qwen106-2026-10-21/base-official` + TEMP/TMP 迁入 `output/` + socket 探针）；探针汇总 **6 次外联尝试 / 2 个 IP（101.201.58.201、47.94.20.201）全部阻断**，本轮无失败用例，**未逐条归属这 6 次尝试的调用方**（探针只在会话末尾汇总，需逐条归属时应加 per-attempt 记录再跑）。对 QWEN-103 的 2263/1/20：+1 passed 恰为 ① 的修复，0 红点；679.38 s → 834.21 s 为探针阻断等待所致，非用例增减。日志 `output/qwen106-2026-10-21/logs/pytest-full-official-guarded.log` |
 | QWEN-106 静态检查 | `backend/app scripts/ tests/` | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（CI `ci.yml:115` 同口径）**All checks passed**；`git diff --check` 干净。附带事实：`test_manim_fallback.py` 全文裸 `ruff check` 有 20 条 RUF002/RUF003/I001/B007/EM101 历史告警，**均不在 CI 口径内且不在本轮新增行上** |
 | QWEN-106 CI 便携清单复跑（`ci.yml`  portable V2 contract suite，39 文件） | 39 文件 | **398 passed / 1 skipped / 0 failed**（83.92 s，offline；`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 探针 **`outbound attempts=0`**；skip 仍是 `test_auth_restart.py`）；与 QWEN-102 后的 398/1 逐项一致，本轮两处测试改动未使既有用例转红 |
+
+## 7. QWEN-104 成本/用量可见性实测摘要（2026-10-22，分支 `qwen/wave1-cost`，零模型调用）
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| QWEN-104 定向（新增 `tests/a/test_run_usage_admin.py`） | 1 文件 / 9 用例 | **9 passed**（1.33 s；`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 探针 `output/qwen104-2026-10-22/qwen_net_probe.py`，**`outbound attempts=0`**）。覆盖：measured/partial/unknown/not-recorded 四态投影、聚合只加实测并单列未测数、分页窗口与 `total`、teacher/admin 200 / 学生 403 / 无 token 与坏 token 401、未知 run 404、持久层故障 503、响应不含请求正文 |
+| QWEN-104 全量复跑（**本轮 README 数字来源**） | 192 个 `test_*.py` / 2293 项 | **2272 passed / 1 failed / 20 skipped**（731.42 s，offline；`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen104-2026-10-22/base-official` + TEMP/TMP 迁入 `output/` + 探针）。日志 `output/qwen104-2026-10-22/logs/pytest-full-official-final.log`。对 QWEN-106 的 2264/0/20：**+9 项全绿**（2264+9=2273，本轮 2272+1=2273 一致），唯一红点是既有的 manim 用例（见下一行），**与本轮代码改动无关** |
+| manim 红点复核（**推翻 QWEN-106 的"离线开关下稳定绿"结论**） | `test_manim_fallback.py::TestFallbackAssets::test_code_only_skips_fallback` | 本轮两次全量（重构前 782.22 s、最终 731.42 s）**在已设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` 且挂探针的情况下都失败**，断言诊断给出 `manim_success=False error='画面与旁白时长偏差 2.09s，超过允许的 2.00s'` 与 `'… 2.17s …'`（阈值固定 2.00 s，抖动值逐轮变化）；而同一用例单独离线复跑是 **1 passed / 45.57 s / attempts=0**（QWEN-106 §6），**本轮 2026-10-22 再单独复跑仍 1 passed / 46.33 s / `attempts=0`**（两次独立取证同结论）。结论：该用例由**质量门时长抖动**决定，既不是顺序依赖也不是外联依赖；Lead 2026-10-21 裁定的方案①（测试显式设离线开关）**不足以**给出确定性，QWEN-107 需要额外处理（本轮未改产品、未放宽断言，如实登记） |
+| QWEN-104 CI 便携清单复跑（`ci.yml` portable V2 contract suite，**40 文件**，含本轮新增文件） | 40 文件 | **407 passed / 1 skipped / 0 failed**（56.35 s，offline，探针 `attempts=0`；skip 仍是 `test_auth_restart.py`）；398+9=407 与定向数逐项吻合，新增文件已进 CI 清单（`ci.yml` 便携段 +1 行；pg/enterprise 段**未扩**） |
+| QWEN-104 静态检查 | `backend/app services scripts tests` | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/`（CI `ci.yml:115` 同口径）**All checks passed**；`mypy --config-file mypy.ini backend/app/services/run_usage.py backend/app/api/v2/run_usage_admin.py` **0 error**（注意：本机 mypy 需 `PYTHONUTF8=1`，否则 `configparser` 以 GBK 读 `mypy.ini` 直接 UnicodeDecodeError；该两文件未进 CI 的 mypy 清单，属本轮额外自检）；`git diff --check` 干净 |
+| QWEN-104 口径重测（公共文档数字来源） | 路由装饰器 / 表 / 章节 | `grep -rhoE '@router\.(get\|post\|put\|delete\|patch)\(' backend/app \| wc -l` = **189**（QWEN-103 核定的 187 + 本轮 `/api/v2/admin/run-usage` 只读 2 条）；`__tablename__` 仍 **37**、章节仍 **38**（本轮未加模型、未动知识库） |
+| QWEN-104 数据可见性事实（重要限制） | 本机仓库默认 SQLite `data/a3_learning.db` | 只读查询 `agent_runs` = **0 行**，因此新端点在本机**没有任何真实 Run 可展示**；其正确性目前只有测试构造数据这一级证据（offline）。QWEN-102 付费跑的用量写在评测 JSONL（`runs.jsonl` 的 `budget`）而非 `agent_runs`，故评测战役的成本可见性需要另做一张卡，本轮未扩范围 |

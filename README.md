@@ -53,7 +53,7 @@ V1 调度器按优先级分组并行执行；`depends_on` 是未执行的兼容�
 | 事实题 Hit@5 | **95.83%** |
 | 事实题 Recall@5 | **94.79%** |
 | 引用存在率 / 有效率 | **100% / 100%** |
-| 本地离线测试（全量 `pytest tests/`） | **2264 passed / 0 failed / 20 skipped**（2026-10-21 QWEN-106 复跑，Windows + Python 3.12.15，834.21 s，191 个测试文件；口径：`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 新 `--basetemp`，并挂 fail-closed socket 探针复核，探针记录 6 次外联尝试 / 2 个 IP 全部阻断，无任何计费模型端点，且无用例因阻断转红）。上一轮 **2263 passed / 1 failed / 20 skipped**（2026-10-19，679.38 s）的唯一失败是 `tests/a/test_embedding_provider.py` 断言默认 `batch_size=10`、却读到本机 `.env` 的 `20`，本轮已用一行 `monkeypatch.delenv` 隔离修复；更早一轮为 **2235 / 0 / 20**（612.61 s，189 文件），逐批评见 `docs/TEST_MATRIX.md` §6 与 `docs/CLAIMS_LEDGER.md` §9） |
+| 本地离线测试（全量 `pytest tests/`） | **2272 passed / 1 failed / 20 skipped**（2026-10-22 QWEN-104 复跑，Windows + Python 3.12.15，731.42 s，192 个测试文件 / 2293 项；口径：`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 新 `--basetemp`，并挂 fail-closed socket 探针复核，探针记录 6 次外联尝试 / 2 个 IP 全部阻断，无任何计费模型端点，无用例因阻断转红）。唯一失败是既有用例 `tests/integration/test_manim_fallback.py::TestFallbackAssets::test_code_only_skips_fallback`：Level-1 agent 视频被质量门以"画面与旁白时长偏差 2.09 s / 2.17 s，超过允许的 2.00 s"逐轮不同幅度地拒绝，脚本态因此触发兜底——属质量门与用例期望的语义冲突（Lead 2026-10-21 已裁定方案①，确定性处理排在 QWEN-107），**不是 QWEN-104 引入的回归**：本轮新增 9 项全绿，2264+9=2273 与实测总数一致。上一轮 **2264 passed / 0 failed / 20 skipped**（2026-10-21 QWEN-106，834.21 s，191 文件），再前 **2263 / 1 / 20**（2026-10-19，唯一失败是本机 `.env` 把 `EMBEDDING_BATCH_SIZE` 设为 20 而用例期望默认 10，已由一行 `monkeypatch.delenv` 隔离修复）与更早一轮 **2235 / 0 / 20**（612.61 s，189 文件），逐批评见 `docs/TEST_MATRIX.md` §7 与 `docs/CLAIMS_LEDGER.md` §10） |
 | PostgreSQL 专项测试 | **15 / 15** |
 | 学习包标准在线契约 | **13 / 13**（真实后端采集后的离线回放契约评测；不含人工内容质量评分） |
 
