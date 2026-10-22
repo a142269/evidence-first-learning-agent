@@ -28,6 +28,24 @@ def client() -> TestClient:
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def _offline_embedding_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    """QWEN-108：把摄取流水线钉成显式离线，套件不再靠 socket 探针才保持离线。
+
+    `OpenAICompatibleEmbeddingProvider.available` 由 `EMBEDDING_BASE_URL` /
+    `EMBEDDING_API_KEY` / `EMBEDDING_MODEL` 三者是否齐备决定
+    （`backend/app/services/embedding_provider.py:36-38`）。本机配置把它们配齐了，
+    所以下面 `test_upload_index_hit_test_roundtrip` 的上传会真的向 embeddings 端点
+    发起最多 3 次重试（QWEN-107 全量跑记录的 `attempts=6 / unique_hosts=2` 即来自
+    这里，`knowledge_ingest.py:191` → `embedding_provider.py:63`），只是被 fail-closed
+    探针挡在 `socket.connect`。显式清空后走 `knowledge_ingest.py:205-206` 的
+    `not_configured` 离线路径：文档仍 `indexed`、仍有 chunk、命中测试仍走本地 RAG，
+    既有断言与覆盖一项不减。
+    """
+    for name in ("EMBEDDING_BASE_URL", "EMBEDDING_API_KEY", "EMBEDDING_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture(scope="module")
 def teacher_headers(client: TestClient) -> dict[str, str]:
     response = client.post(
@@ -209,6 +227,12 @@ def test_upload_index_hit_test_roundtrip(
     assert document["audit"]["verdict"] in {"passed", "warning"}
     # 原件不得以 .md 形式进入 RAG 扫描范围
     assert document["raw_storage_key"].endswith(".orig")
+    # QWEN-108：本用例必须在离线 embedding 路径上运行（探针之外可自检的前提）
+    from backend.app.services.embedding_provider import get_embedding_provider
+
+    assert get_embedding_provider().available is False, (
+        "EMBEDDING_* 环境变量未被隔离，摄取会真的向 embeddings 端点出网"
+    )
 
     hits = client.post(
         "/api/v1/teacher/knowledge/hit-test",
