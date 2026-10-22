@@ -243,3 +243,44 @@
 ### 10.6 明确未做（避免越界）
 
 未加过滤参数（按用户/课程/时间）、未做评测 JSONL 视图、未扩 pg/enterprise CI 清单、未改产品语义、未改 §9 与 QWEN-103 已合并结论（只在 §10.3 补充新实测）。
+
+## 11. QWEN-107 manim 方案②产品语义修正登记（2026-10-22，分支 `qwen/wave1-manim`，零模型调用）
+
+### 11.1 交付内容（1 处产品代码 + 1 个既有用例文件）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/api/v1/artifacts/multi.py:2785-2880`（`_gen_manim` Level 2 收口） | 新增 `render_requested = bool(req.manim_render or req.include_manim)`（`:2787`）；在"没有可播放 MP4"的脚本态分支里，**未请求渲染且 `generate_manim` 自身成功**时（`:2867`）返回 `success=True`、`video_status="script_only"`、`rendered=False`、`playback_status="unavailable"`、`downloads=[]`；请求了渲染则保持原 `success=False` 与 `error` 文案不变 |
+| `tests/integration/test_manim_fallback.py`（+5 用例，`TestScriptOnlySemantics`） | 用 monkeypatch 钉住 Level 1/Level 2/质量门三条 seam，给出 5 项确定性回归（见 11.3），不依赖本机媒体链路、不产生任何网络/模型调用 |
+
+### 11.2 未做的事（边界）
+
+- **没改质量门阈值**：`MIN_PLAYABLE_VIDEO_SECONDS=3.0`、`MAX_AV_DURATION_DRIFT_SECONDS=2.00` 原文未动，`_video_quality_gate` 本体未动（测试里的 `rejected/passed` 返回值是 monkeypatch 伪造，不是产品实现）。
+- **没改其他产物语义**：`include_manim=true` 的渲染失败/质量门拒绝仍 `success=False` 并触发兜底；`mermaid`/`tts`/`document`/`quiz`/`pptx`/`code` 路径零改动。
+- **没加端点**：路由仍 **189**（`grep -rhoE '@router\.(get|post|put|delete|patch)\(' backend/app | wc -l` 实测）；没碰 `.github/workflows/ci.yml`、`.env`、质量门以外的降级逻辑。
+- **没动 registry 清理行为**：脚本态仍从 registry 移除无文件记录，`downloads` 仍为空，避免"没有视频的记录"被当成可下载资源。
+
+### 11.3 方案②的两条硬性回归（Lead 2026-10-22 指定）
+
+| 断言 | 用例 |
+|---|---|
+| `include_manim=false` 确定性不触发 fallback | `test_script_only_is_success_when_render_not_requested`（Level 1 不可用 + Level 2 只出脚本）；`test_quality_gate_jitter_does_not_fail_unrequested_render`（复现历史抖动：Level 1 被质量门判 rejected，仍 `success=True`、`used=False`，且 `metadata.agent_video_quality.status="rejected"` 保留可审计原因） |
+| `include_manim=true` 且质量门拒绝时仍失败/触发 fallback | `test_render_requested_and_gate_rejected_still_falls_back`（`success=False`、`video_status="rejected"`、`used=True`、`reason="manim_render_failed"`）；`test_render_requested_without_video_still_falls_back`（请求渲染却只拿到脚本 → 仍失败并兜底）；`test_render_requested_and_gate_passed_still_succeeds`（正路未被削弱：`success=True`、`rendered=True`、`used=False`） |
+
+### 11.4 本轮实测事实（不做过度推断）
+
+1. **抖动机器的第一手复现**：同一台机器、同一离线开关（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、同一段只读脚本三次直接调用 `_gen_manim(include_manim=False)`（`output/qwen107-2026-10-22/probe_manim_envelope.py`）——第 1 次（产品落地前）质量门判 `rejected`（`av_duration_drift=2.25s`，视频 94.19 s / 旁白 91.94 s）→ 脚本态 `success=False`；第 2、3 次质量门放行（第 3 次存档读数 `drift=1.61s`，`output/qwen107-2026-10-22/logs/probe-manim-run3.txt`）→ `video_status='ready'` + MP4。结论：红绿由**媒体时长抖动**决定，与顺序、外联无关——与 QWEN-104 §10.3 的实测一致。诚实标注：只有第 3 次落了盘，前两次读数当时在终端，未单独存档。
+2. **`generate_manim` 根本不返回 `script`/`code` 顶层字段**（`ResourceResult` 实测键集：`resource_id/type/filepath/data_uri/method/metadata/duration_ms/error/success`；讲稿正文只在 `metadata.generated_code`，本轮 3002 字符）。因此 `_gen_manim` 里 `content = r_dict.get("script") or r_dict.get("code") or ""` **恒为空**，脚本态的 `content` 改动前后都是 `None`。**本轮按 Lead 裁定只改 success/状态字段，没有顺手把讲稿塞进 `content`**——若要真正交付"可编辑讲稿"，需要另开一张卡决定 `content` 取哪个字段。
+3. **`success=True` 不会被下游当成"视频已生成"**：`backend/app/agents/resource_generator_agent.py:94-112` 对 `rtype == "manim"` 走严格判据——必须是 `.mp4` filepath 或视频类 download **且** `metadata.playback_status == "ready"`；脚本态这三项都不满足，因此仍不会写入 `generated_resources`。前端同理：`frontend/src/views/ChatView.vue:1868-1870` 在 `playback_status === "unavailable"` 时不生成可播放媒体卡片。即"成功"表达的是**脚本产物交付成功**，不是"有视频可看"。
+4. **全量数字**：2278 passed / 0 failed / 20 skipped（1095.22 s，192 文件 / 2298 项，探针 `attempts=6 unique_hosts=2` 全部阻断）。相对 QWEN-104 的 2272/1/20：既有红点转绿 + 新增 5 项 = 2278，逐项吻合。**证据等级：offline**。
+
+### 11.5 探针 per-attempt 归属（Lead 指定为可选项，本轮完成）
+
+`output/qwen107-2026-10-22/qwen_net_probe_attempts.py`（只读工具，未进 `tests/`、未提交）在阻断处补记"当前用例 + 阶段 + 线程 + 调用栈"，并用 `output/qwen107-2026-10-22/test_probe_selfcheck.py` 自检其归属能力（2 passed：能记录、且只归属到真正运行的用例）。全量第二跑用它复跑：
+
+- **结果与官方跑一致**：2278 passed / 20 skipped（1198.51 s，官方跑 1095.22 s），`outbound attempts=6 unique_hosts=2` 完全同数——增强探针没有改变任何用例红绿。
+- **6 次尝试全部归属到同 1 个用例**：`tests/a/test_knowledge_platform.py::test_upload_index_hit_test_roundtrip`，阶段 `setup`，线程 `asyncio-portal-*`（非 MainThread，说明发生在异步入口里）。两个 IP 各 3 次。
+- **探针记录的调用栈**：`knowledge_admin.py:247:upload_document` ← `knowledge_ingest.py:384:ingest_document` ← `knowledge_ingest.py:191:_persist_enterprise_version` ← `embedding_provider.py:63:embed_documents`。已核对 `embedding_provider.py:55-70`：该处是 `requests.post(f"{self.base_url}/embeddings", ...)`，外层 `attempts = max(1, min(max_attempts, 3))` 逐次重试，与"每个 IP 3 次"吻合（解析到两个地址，各跑满 3 次重试）。
+- **端点类别**：embeddings 接口，**不是聊天/补全模型端点**；探针只记录 host/IP 与栈，未记录 URL 全文与请求体。`base_url` 的实际值来自本机配置，本轮**未读取 `.env`**，因此不写服务商名。
+- **是否造成计费**：无。6 次 connect 全部被 fail-closed 探针阻断在 `socket.connect`（返回 `OSError`），出网字节数为 0，用例本身仍 passed。日志：`output/qwen107-2026-10-22/logs/pytest-full-attribution.log`。
+- **本轮未做的事**：没改这个用例、没改 `embedding_provider.py`、没给用例加离线开关。这条"套件靠探针才离线"的事实是**既有行为**（QWEN-104 §10.3 与 QWEN-106 均记录过同一现象），要否把它变成显式离线（例如用例内 mock embeddings 或设 `EMBEDDING_*` 桩）请 Lead 裁定，属另一张卡的范围。
