@@ -2782,13 +2782,16 @@ async def _gen_manim(req: MultiResourceRequest) -> ResourceEnvelope:
     from backend.app.api.v1.artifacts.generate import (
         ManimRequest, generate_manim,
     )
+    # 是否真正请求渲染，决定脚本态产物的成败语义：未请求渲染时交付可编辑
+    # 讲稿脚本本身就是成功产物，不该由渲染/质量门抖动决定红绿。
+    render_requested = bool(req.manim_render or req.include_manim)
     mreq = ManimRequest(
         topic=req.topic,
         template=req.manim_template,
         persona="serious",
         # Agent 工具链在用户明确请求视频时会设置 include_manim=True，
         # 因而真正渲染 MP4；底层 /multi 仍保留显式的代码预览开关。
-        render=req.manim_render or req.include_manim,
+        render=render_requested,
         session_id=req.session_id,
     )
     try:
@@ -2854,13 +2857,27 @@ async def _gen_manim(req: MultiResourceRequest) -> ResourceEnvelope:
         "fallback_reason": fallback_reason,
     }
     if not is_rendered_video:
-        # Manim 的代码脚本是调试中间产物，不是用户请求的教学视频。
-        # 清除无文件 registry 记录并返回明确失败，禁止继续伪装成文档。
+        # 无文件的 script-only registry 记录是调试中间产物，两种情况下都清除，
+        # 避免下载端点把「没有视频的记录」当成可交付资源。
         try:
             from backend.app.api.v1.artifacts.registry import get_artifact_registry
             get_artifact_registry().remove(artifact_id)
         except Exception:
             logger.exception("[multi] failed to remove script-only Manim artifact %s", artifact_id)
+        if not render_requested and bool(r_dict.get("success", True)):
+            # QWEN-107：用户没有请求渲染（include_manim/manim_render 均为 False）时，
+            # 交付的产物本就是可编辑讲稿脚本 → 成功。渲染/质量门只约束真正请求了
+            # 渲染的调用，否则其抖动会决定本用例红绿。
+            return ResourceEnvelope(
+                success=True,
+                type="manim",
+                content=None,
+                evidence=enrichment["evidence"],
+                cov=enrichment["cov"],
+                safety=enrichment["safety"],
+                downloads=[],
+                metadata=meta,
+            )
         return ResourceEnvelope(
             success=False,
             type="manim",

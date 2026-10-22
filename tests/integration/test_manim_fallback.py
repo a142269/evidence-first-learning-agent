@@ -215,6 +215,158 @@ class TestFallbackResilience:
         assert fallback["tts"]["type"] == "tts"
 
 
+# ============================================================
+# 6) QWEN-107 · 方案② — 未请求渲染时 script_only 即成功
+# ============================================================
+class TestScriptOnlySemantics:
+    """`include_manim=false` 交付的是可编辑讲稿脚本，红绿不该由渲染/质量门抖动决定；
+    `include_manim=true` 时质量门仍然强制。
+
+    这一组用 monkeypatch 钉住 Level 1/Level 2 的产出，因此不依赖本机媒体链路，
+    也不产生模型调用。
+    """
+
+    FAKE_VIDEO = "data/artifacts/video/qa_gate_fake.mp4"
+
+    def _no_level1(self, monkeypatch):
+        """Level 1 Agent 视频服务整体不可用 → 必然落到 Level 2 脚本态。"""
+        from backend.app.services.multimodal import video_xunfei
+
+        def boom():
+            raise RuntimeError("simulated agent video outage")
+
+        monkeypatch.setattr(video_xunfei, "get_video_service", boom)
+
+    def _reject_gate(self, monkeypatch):
+        """把质量门钉成 rejected（阈值与真实文案保持一致，但不改产品阈值）。"""
+        from backend.app.api.v1.artifacts import multi as multi_mod
+
+        monkeypatch.setattr(multi_mod, "_video_quality_gate", lambda *a, **k: {
+            "status": "rejected",
+            "reason": "画面与旁白时长偏差 2.25s，超过允许的 2.00s，已阻止发布",
+            "minimum_duration_seconds": 3.0,
+            "maximum_av_duration_drift_seconds": 2.0,
+            "video_duration_seconds": 94.19,
+            "audio_duration_seconds": 91.94,
+            "av_duration_drift_seconds": 2.25,
+        })
+
+    def _level1_rejected_by_gate(self, monkeypatch):
+        """Level 1 出了 MP4，但质量门判 rejected（复现历史抖动场景）。"""
+        from types import SimpleNamespace
+
+        from backend.app.services.multimodal import video_xunfei
+
+        svc = SimpleNamespace(
+            synthesize=lambda *args: SimpleNamespace(
+                success=True, filepath=self.FAKE_VIDEO, audio_path="",
+                agent_name="阿匠", method="animated_slides", video_size=0,
+            )
+        )
+        monkeypatch.setattr(video_xunfei, "get_video_service", lambda: svc)
+        self._reject_gate(monkeypatch)
+
+    def _level2(self, monkeypatch, *, filepath: str, success: bool = True):
+        """Level 2 generate_manim：filepath 为空 = 脚本态，.mp4 = 渲染态。"""
+        from backend.app.api.v1.artifacts import generate as generate_mod
+        from backend.app.api.v1.artifacts.generate import ResourceResult
+
+        seen: dict = {}
+
+        def fake(req):
+            seen["render"] = req.render
+            return ResourceResult(
+                resource_id="manim_qa_fake",
+                type="manim_video" if filepath else "manim_code",
+                filepath=filepath,
+                method="manim" if filepath else "code_only",
+                metadata={"generated_code": "# fake manim script"},
+                success=success,
+            )
+
+        monkeypatch.setattr(generate_mod, "generate_manim", fake)
+        return seen
+
+    def _gate_passed(self, monkeypatch):
+        from backend.app.api.v1.artifacts import multi as multi_mod
+
+        monkeypatch.setattr(multi_mod, "_video_quality_gate", lambda *a, **k: {
+            "status": "passed", "reason": "",
+            "video_duration_seconds": 60.0, "audio_duration_seconds": 60.0,
+            "av_duration_drift_seconds": 0.0,
+        })
+
+    # --- include_manim=false：脚本态即成功，且确定性不触发兜底 ---
+    def test_script_only_is_success_when_render_not_requested(self, client, monkeypatch):
+        self._no_level1(monkeypatch)
+        seen = self._level2(monkeypatch, filepath="")
+        r = _post_rich(client, include_manim=False)
+        assert r.status_code == 200
+        env = r.json()["results"]["manim"]
+        meta = env["metadata"]
+        assert seen["render"] is False, "未请求渲染时 Level 2 不应带 render=True"
+        assert env["success"] is True
+        assert meta["video_status"] == "script_only"
+        assert meta["rendered"] is False
+        assert meta["playback_status"] == "unavailable"
+        assert meta["fallback_assets"]["used"] is False
+        assert meta["fallback_assets"]["reason"] == ""
+
+    def test_quality_gate_jitter_does_not_fail_unrequested_render(self, client, monkeypatch):
+        """历史抖动场景：Level 1 被质量门拒绝 → 未请求渲染仍应 success=True 且不兜底。"""
+        self._level1_rejected_by_gate(monkeypatch)
+        self._level2(monkeypatch, filepath="")
+        r = _post_rich(client, include_manim=False)
+        env = r.json()["results"]["manim"]
+        meta = env["metadata"]
+        assert env["success"] is True
+        assert meta["video_status"] == "script_only"
+        assert meta["rendered"] is False
+        assert meta["agent_video_quality"]["status"] == "rejected", (
+            "质量门拒绝原因仍需保留，只是不再决定红绿"
+        )
+        assert meta["fallback_assets"]["used"] is False
+
+    # --- include_manim=true：质量门/渲染失败仍然失败并触发兜底 ---
+    def test_render_requested_and_gate_rejected_still_falls_back(self, client, monkeypatch):
+        self._no_level1(monkeypatch)
+        seen = self._level2(monkeypatch, filepath=self.FAKE_VIDEO)
+        self._reject_gate(monkeypatch)
+        r = _post_rich(client, include_manim=True)
+        env = r.json()["results"]["manim"]
+        meta = env["metadata"]
+        assert seen["render"] is True
+        assert env["success"] is False
+        assert meta["video_status"] == "rejected"
+        assert meta["fallback_assets"]["used"] is True
+        assert meta["fallback_assets"]["reason"] == "manim_render_failed"
+
+    def test_render_requested_without_video_still_falls_back(self, client, monkeypatch):
+        """请求了渲染却只拿到脚本 → 仍是失败，兜底照常触发。"""
+        self._no_level1(monkeypatch)
+        self._level2(monkeypatch, filepath="")
+        r = _post_rich(client, include_manim=True)
+        env = r.json()["results"]["manim"]
+        meta = env["metadata"]
+        assert env["success"] is False
+        assert meta["video_status"] == "script_only"
+        assert meta["fallback_assets"]["used"] is True
+        assert meta["fallback_assets"]["reason"] == "manim_render_failed"
+
+    def test_render_requested_and_gate_passed_still_succeeds(self, client, monkeypatch):
+        """正路未被削弱：请求渲染且质量门通过 → success=True、rendered=True。"""
+        self._no_level1(monkeypatch)
+        self._level2(monkeypatch, filepath=self.FAKE_VIDEO)
+        self._gate_passed(monkeypatch)
+        r = _post_rich(client, include_manim=True)
+        env = r.json()["results"]["manim"]
+        meta = env["metadata"]
+        assert env["success"] is True
+        assert meta["video_status"] == "ready"
+        assert meta["rendered"] is True
+        assert meta["fallback_assets"]["used"] is False
+
+
 def asyncio_run(coro):
     import asyncio
     return asyncio.run(coro)
