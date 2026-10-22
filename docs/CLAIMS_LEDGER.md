@@ -315,3 +315,36 @@ Lead 2026-10-22 裁定：脚本态 `success=True` 但 `content=None` 等于"成�
 | 裸 ruff（非 CI 口径，仅如实登记） | `test_manim_fallback.py` 42 → **49**（+7），`multi.py` 884 → **889**（+5），全部落在 `RUF001/RUF002/RUF003` 中文全角标点类，与 QWEN-107 同类，不在 CI 选择集内 |
 | 抖动说明 | 定向从动上两轮的 277.40 s / 343.17 s 变为本轮 451.60 s，全量 1095.22 s → 756.16 s；本机媒体/模型链路未变，属既有 run-to-run 时长抖动，与本轮改动无因果证据 |
 | 真链路（非 mock）交付验证 | `output/qwen107b-2026-10-22/probe_content_delivery.py` 一次运行：脚本态 `success=True` 且 `content` 为 **3002 字符** 的 `str`，`content == metadata.generated_code`；同轮日志第一手复现 Level-1 被质量门以 `drift=2.01s > 2.00s` 拒绝而脚本态仍成功。探针 `attempts=0 unique_hosts=0`（零出网）。日志 `logs/probe-content.txt`，详见 `docs/TEST_MATRIX.md` §9 |
+
+## 13. QWEN-108 摄取用例显式离线登记（2026-10-22，分支 `qwen/wave1-manim`，零模型调用、产品代码零改动）
+
+Lead 2026-10-22 裁定：`tests/a/test_knowledge_platform.py::test_upload_index_hit_test_roundtrip` 的 embedding 调用是 QWEN-107 全量跑那 6 次外联尝试的来源，"探针挡住才绿，属测试依赖环境"；要求显式 offline/mock（`embedding_provider` 不可用或 monkeypatch），保留既有覆盖与断言，只改测试/fixture/文档，不改产品。
+
+### 13.1 交付内容（1 个测试文件，+24 行）
+
+| 位置 | 改动 |
+|---|---|
+| `tests/a/test_knowledge_platform.py:31-48` | 新增 **模块内 autouse** fixture `_offline_embedding_provider(monkeypatch)`：`monkeypatch.delenv` 清空 `EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL`，使 `OpenAICompatibleEmbeddingProvider.available`（`backend/app/services/embedding_provider.py:36-38`）为 `False`，摄取走 `knowledge_ingest.py:205-206` 的 `not_configured` 离线路径 |
+| `tests/a/test_knowledge_platform.py:227-233` | 在既有 roundtrip 用例末尾加一条**自检前提**断言 `get_embedding_provider().available is False`，使离线不只在探针日志里可见。**未新增 `def test_`**，既有条目与断言一项未删 |
+
+### 13.2 未做的事（边界）
+
+- **产品代码零改动**：QWEN-108 提交（`912d9b5`）相对 QWEN-107b 产品提交（`755454f`）在 `backend/` 下**零差异**（`git diff 755454f..912d9b5 --stat -- backend/` 实测为空），本轮唯一改动文件是 `tests/a/test_knowledge_platform.py`；`embedding_provider.py`、`knowledge_ingest.py`、`knowledge_admin.py` 均未动，路由仍 **189**（`grep -rhoE '@router\.(get\|post\|put\|delete\|patch)\(' backend/app \| wc -l`）。
+- **没碰 `.env`**：只用 `monkeypatch.delenv` 删除进程内环境变量，未读取、未打印、未提交任何值；文档里只写端点类别（embeddings），不写服务商。
+- **没改 `ci.yml`**、没加 `|| true`、没装 `pywin32`、没动质量门阈值。
+- **没扩到全仓**：只钉这个模块。QWEN-107 的 per-attempt 归属已证明全量 `distinct tests with outbound attempts=1`，即外联来源只有这一处，所以本卡完成后整套 `attempts=0`（实测见 13.3），无需再改其他文件。
+
+### 13.3 本轮实测（证据等级：offline）
+
+| 项 | 结果 |
+|---|---|
+| 定向 `tests/a/test_knowledge_platform.py`（per-attempt 探针） | **14 passed / 22.21 s**，`outbound attempts=0 unique_hosts=0`，`per-attempt attribution: 0 record(s)`，用例数与改动前相同 |
+| 全量 `pytest tests/`（README 口径） | **2278 passed / 0 failed / 20 skipped / 764.23 s**，192 文件 / 2298 项 —— 计数与 QWEN-107/107b 逐项相同；**`outbound attempts=0 unique_hosts=0`、`distinct tests with outbound attempts=0`**（改动前同口径为 `attempts=6 unique_hosts=2`） |
+| CI 便携清单（40 文件同清单） | **407 passed / 1 skipped / 0 failed / 77.83 s**，`attempts=0`，唯一 skip 仍是 `tests/a/test_auth_restart.py:18 Explicit disposable PostgreSQL required` |
+| CI 口径 lint | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed** |
+| 裸 ruff（非 CI 口径） | `tests/a/test_knowledge_platform.py` 15 → **30**（+15，全部 `RUF001/RUF002/RUF003` 中文全角标点类；`I001` 仍 1 条与 HEAD 相同），HEAD 对照在 `output/qwen108-2026-10-22/tmp/kp_head.py` |
+
+### 13.4 过程中的两次实测纠错（如实登记）
+
+1. **第一版断言写错位置**：我加了 `document["embedding"] == {"status": "not_configured"}`，定向跑 **1 failed / 13 passed，`KeyError: 'embedding'`**（`tests/a/test_knowledge_platform.py:231`）。核对后确认 `knowledge_ingest.py:243-248` 的 `"embedding"` 键属于 `_persist_enterprise_version` 的返回，不在 `ingest_document` 最终给 API 的文档 dict 里。改为断言 provider 的 `available is False`（前提条件，而非不存在的返回字段），随后 **14 passed**。日志：`output/qwen108-2026-10-22/logs/kp-targeted.txt`（失败轮）与 `logs/kp-targeted2.txt`（通过轮）。
+2. **同轮 `attempts=0` 早在失败那次就已观测到**：失败轮探针已显示 `outbound attempts=0`，说明离线化生效、失败的只是我那条越界断言——两者没有因果混淆，故未把"绿"当成"离线"的证据。
