@@ -439,3 +439,67 @@ Lead 的字面要求是"输入改为顶层 `content` 或 `metadata.generated_cod
 
 - §12.2（QWEN-107b 的未修披露）"`evidence`/`cov`/`safety` 的输入未动……CoV/Safety 校验的对象**不是**新交付的讲稿正文……若要'对交付的讲稿做安全/一致性校验'，需另开卡裁定"——**已由 Lead 18:40 开卡（QWEN-107c）并按本节实施**，该行文字按不回填原则保留为当时状态。
 - §14 之后交接给 Lead 的三项待定中，本卡解决第一项；`ci.yml:338-341` 可选 MCP stdio 步骤仍未在本机跑（未擅自 `pip install`），README 的 `PostgreSQL 专项 15/15` 已按你 18:40 的裁定保留历史口径。
+
+## 16. QWEN-109 评测用量/成本只读汇总（2026-10-22，分支 `qwen/wave1-evalcost`，零模型调用、产品代码零改动）
+
+Lead 2026-10-22 23:05 开卡：数据源为评测产物 `runs.jsonl` 的 `budget`，**只读汇总**每臂/每题的调用数、输入/输出 token、latency、cost；`unknown` 不写 0、缺失样本单列计数；不编造单价、不读 `.env`；形式为脚本 + 脱敏报告，不新增对外端点、不改产品。
+
+### 16.1 交付物（2 个新文件，均为新增，未改任何既有产品/测试代码）
+
+| 文件 | 说明 |
+|---|---|
+| `scripts/report_eval_cost.py`（新增 461 行） | 只读聚合器。**不 `import os`**（结构上无法读环境变量或 `.env`）；不套用任何单价；`--out` 强制落在 `output/` 下且拒绝覆盖已存在文件；`--source LABEL=PATH` 可限定来源，缺省则扫描 `--scan-root`（默认 `output/`）并按"路径组件以 `test_` 开头"整份排除 pytest 夹具 |
+| `docs/EVAL_USAGE_COST_REPORT_2026-10-22.md`（新增 257 行） | 脱敏报告，与 `output/qwen109-2026-10-22/eval-cost-report.md` **逐字节相同**（`cmp` 通过）。报告首屏即写明生成命令、数据来源、样本量与未知项 |
+
+记账口径**不自己另写一套**：每条记录经产品代码 `backend/app/services/run_usage.py` 的 `summarize_run_usage` 投影、按组交给 `aggregate_run_usage` 聚合（该模块只 `import typing`，无重依赖，实测可离线导入）。`cost_status` / `usage_status` / `runs_without_token_data` / `runs_without_estimated_cost` / `cost.reason` 全部是产品自己的词汇，与 §10.2 登记的口径一致。
+
+### 16.2 实测汇总（证据等级：offline；对本机既有产物的只读再汇总，无任何模型调用）
+
+样本：**8 份真实评测产物 / 127 条记录**；扫描根 `output/` 下含 `result.budget` 的 `.jsonl` 共 **130 份**，排除 pytest 夹具 **122 份 / 304 条记录**（排除规则与逐目录计数写进报告第 1 节）。
+
+| 维度 | 实测 |
+|---|---|
+| 调用数合计 | **442**（127/127 条有值） |
+| 输入 token 合计 | **1321838**（126/127 条有值） |
+| 输出 token 合计 | **276031**（126/127 条有值） |
+| input_chars 合计 | **2797092**（127/127） |
+| latency_ms | 中位数 **14101.54**，区间 **2302.41~40332.14**（127/127） |
+| cost | `cost_status: unknown×127`、`estimated×0`；**金额一律显示"未记录"**，无 estimated 成本 127 条 |
+| usage_status | `measured×126, unknown×1` |
+| 分组 | 每臂 **14** 个（来源×臂）组合；每题 **127** 行明细 |
+
+三臂对照（`output/ablation-full-20261017/runs.jsonl`，各 24 题、模型 `deepseek-flash`；`completed=True` 数 / 调用数合计 / 输入 / 输出 token / latency 中位数）：`single` **23** / **24** / 76613 / 23866 / **5803.27 ms**；`without_reviewer` **13** / **86** / 234392 / 57479 / **15912.39 ms**；`full` **13** / **119** / 389382 / 72926 / **21411.53 ms**。调用量与 token 量按约 **1 : 3.6 : 5.0** 递增——这是本次汇总里唯一可支撑的跨臂结论，**不含质量判断**（质量通过率在原始记录里为空，本卡不重算、不代填）。
+
+### 16.3 未知项与缺失样本（单列计数，一律不补 0）
+
+- **成本维度 127/127 全为 `unknown`**：其中 `cost.reason=no_cost_amount_recorded` **126** 条、`cost_not_recorded` **1** 条（`single/ab-019`，`completed=False`，budget 里只有 `input_chars`/`model_calls`/`output_token_limit`，token 与 `cost` 对象都不存在）；`amount_cny`、`measured_portion_cny`、顶层 `cost_cny` 有值均为 **0** 条。因此报告不给任何折算金额，`unknown` 也不写成 0 元。
+- 无 token 数据 **1** 条（同上），按产品聚合器口径**不参与 token 求和**；`usage_unknown_calls` 合计 **0**。
+- `arm` / `config.model` 未标注 **36** 条：`retry-development-20261017.jsonl` 与两份 `stability-20261018` 复测产物的顶层 schema 更窄（只有 `case_id`/`evidence_sha256`/`result`[+`traces`]），latency 与调用数只在 `result` 下——报告按组显示为 `未标注`，不猜臂别。
+- `result.error` 有值 **28** 条（运行本身失败，token 可能不完整），已在报告第 2 节单列。
+- **跨来源合计只是记录求和，不是去重题数**：25 个题号出现在多个来源（如 `ab-001`~`ab-012` 同时出现在 ablation-full、retry-development、dev-retest），且各来源 `dataset_sha256` 不同或缺失，所以合计只能当**调用量上界**，不能当作一次评测的结果。报告第 5 节明写这条警告。
+
+### 16.4 登记的产品侧观察（只登记，本卡不改产品代码）
+
+`run_usage.py:22-26` 的 `_count` **只接受非负整数**（docstring 即"Accept only a real non-negative integer"），而评测记录里的 `result.latency_ms` 是小数，于是 `summarize_run_usage` 对这 **127/127** 条全部返回 `reported_latency_ms=None`（`model_calls` 因记成整数，实测被丢弃 **0** 条）。影响：任何直接消费该投影的用量视图都会把延迟显示成"未记录"。本卡的处理是**报告改为直接读原始 `result.latency_ms`**，并在报告首屏与第 2 节单列该偏差条数（127），未修改 `run_usage.py`。**归属：QWEN-104（成本/用量可见性）**，是否放宽 `_count` 或另存整数毫秒由 Lead 裁定。
+
+### 16.5 自我校验（不用脚本自证）
+
+| 校验 | 结果 |
+|---|---|
+| **独立复算**（`output/qwen109-2026-10-22/crosscheck_independent.py`，刻意不复用产品模块/聚合器/发现规则，走另一条代码路径） | 127 / 442 / 1321838 / 276031 / 2797092 / 有 token 126 无 1 / `result.error` 28 / 跨来源题号 25 / 14 个来源×臂组合，**14 行每臂数字逐行一致**；`logs/crosscheck.txt` 把两侧数字并排留档 |
+| 与已接受结论交叉验证 ①（§2 的 **E3** 行 / `evals/results/ablation-fixed-evidence-20261017.md`，cloud 级） | 该表"任务完成 **23/24、13/24、13/24**" = 本汇总实测 `completed=True` **single 23 / without_reviewer 13 / full 13**；"平均模型调用 **1.00 / 3.58 / 4.96**" = 本汇总调用数合计 **24 / 86 / 119 ÷ 24 题**；"P50 耗时 **5.80 / 15.91 / 21.41 秒**" = 本汇总 latency 中位数 **5803.27 / 15912.39 / 21411.53 ms**；该文档正文"有 **1** 次运行缺少 token 用量" = 本汇总 `runs_without_token_data` **1**；"费用为**未知**" = `cost_status unknown×127`。**逐项一致**。该表的 P95（7.20 / 24.54 / 35.35 秒）本报告未计算（分位数方法不同，本卡不需要），但三者都落在我实测的 max（8542.39 / 25447.86 / 40332.14 ms）之内，不矛盾 |
+| 与已接受结论交叉验证 ②（§2 的 **E5** 行 / `structured-output-20261018.md`） | 该行"**44/43** 次调用；输出 **25,384/25,286** tokens"与本汇总 `stability-20261018/dev-retest` **44 / 25384**、`holdout-retest` **43 / 25286** 完全一致 |
+| 计数口径差异说明 | 独立复算报"cost unknown 126 + cost 对象缺失 1"，报告报"cost_status unknown 127"；两者不矛盾：产品 `_cost_of` 把缺失的 cost 对象**归为 `unknown` 且带 `reason=cost_not_recorded`**，报告第 2 节把该 1 条单列 |
+| CLI 分支与错误路径 | `--source` 限定单来源 → 12 条 / 1 臂（排除清单仍报 122 份）；`--out` 不在 `output/` 下、`--out` 已存在、`--source` 缺 `=`、`--source` 路径不存在 → **均 exit 2 且不写出任何文件**；`logs/cli-branches.txt` |
+| 零外联 | 复用 QWEN-106/107 的 fail-closed 探针（副本 `output/qwen109-2026-10-22/qwen_net_probe.py`）包住整次运行：`outbound attempts=0 unique_hosts=0`；最终版 `logs/run6-reproducibility.txt`（前几轮 `logs/run1~run5`） |
+| **可复现性**（提交前的最后一道核对） | 把已交付报告挪到 `tmp/eval-cost-report-run5-final.md` 后，用**待提交的同一份脚本**在同一路径重新生成一次（同样套探针）：`sources=8 records=127 arms=14 cases=127 cost_status=unknownx127 runs_without_token_data=1 excluded_fixtures=122` 与 run5 逐字段相同，`cmp` 三方（run5 存档 / 重新生成 / `docs/` 里的脱敏副本）**全部逐字节相同**，探针仍 `attempts=0 unique_hosts=0`。脚本不含任何时间戳/随机源（未 `import` `datetime`/`time`），故输出确定。日志 `logs/run6-reproducibility.txt` |
+| lint | CI 口径 `ruff check --select=F821,F823,E9 scripts/` → **All checks passed**；裸 ruff（`pyproject` 全集）对新文件 → **All checks passed / 0 findings**（未给 `scripts/` 既有 2382 条基线再添）；`git diff --check` 干净 |
+| 脱敏复核 | 对报告全文 grep `sk-`/`api_key`/`bearer`/`password`/`secret`/URL/32 位以上十六进制/`deepseek.com` → **仅命中我自己那句"不读取 .env"**；出现的只有模型名 `deepseek-flash`、路径与计数；`dataset_sha256`/`evidence_sha256` 取值一律不复现 |
+
+### 16.6 边界（未做的事，如实登记）
+
+- **不新增测试项、未重跑全量**：本卡只新增 1 个脚本 + 1 份文档，未改任何产品/测试代码，新脚本不被任何测试 `import`，也无用例枚举 `scripts/` 或 `docs/`（全仓核查：`tests/a/test_human_eval_toolkit.py:7` 只导入 `scripts.human_eval` 包，其 `:111-113` 枚举的是 `tmp_path`；`tests/a/test_campus_assets.py:9` 枚举 `frontend/public/integrated-map/assets`；`tests/a/test_diagnosis_reporter.py:293` 枚举 `tmp_path`；无用例扫描 markdown 文档，`tests/b/test_contract_document.py:9` 只断言 `docs/API-CONTRACT.md` 存在）。故 README 的 **2278 / 0 / 20** 口径按构造不变；按"已交付数字不为好看而重跑"的既定约束未重跑全量，覆盖 `scripts/` 的 CI lint 门已在本机跑过并通过。
+- **成本无法折算**：没有任何单价来源（环境变量未配置、记录里无金额），报告不给金额；若 Lead 要金额，需要先授权单价来源，届时 `cost.status` 会变成 `estimated` 而由产品自己算。
+- **未新增端点、未改产品**：`git status` 仅 2 个未跟踪新文件；`backend/`、`tests/`、`ci.yml`、README 均未改动。
+- 迭代过程产物按不删原则留档在 `output/qwen109-2026-10-22/tmp/`：`report_eval_cost-v1-parallel-accounting.py`（v1 自写一套成本判定，已弃用）、`eval-cost-report-run1-buggy-grouping.md`（排除清单归并键错写成 `output/...`）、`eval-cost-report-v1-parallel-accounting.md`、`eval-cost-report-v2-latency-lost.md`（改走产品投影后 latency 全部丢失的中间版，即 §16.4 的发现来源）、`eval-cost-report-v3-no-completed-column.md`（补 `completed` 列之前）、`eval-cost-qwen102-main-only.md`（`--source` 分支验证）、`eval-cost-report-run5-final.md`（重新生成前的已交付副本，供 run6 逐字节比对）。日志 `logs/run1~run4`（迭代过程）、`logs/run5-final.txt`（交付数字来源）、`logs/run6-reproducibility.txt`（提交前复现核对）、`logs/cli-branches.txt`、`logs/crosscheck.txt`。
+- run5 之后对脚本做过一次**纯删死代码**的收尾：删掉 `Bucket.cases` 及其两行赋值（题号分组用的是 `main()` 里的 `per_case` 键，`Bucket` 内那份集合从未被读取）。删后两个 lint 门复跑仍 All checks passed，报告按 §16.5 的可复现性一行重新生成并逐字节相同——**未改动任何交付数字**。

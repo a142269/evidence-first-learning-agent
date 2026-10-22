@@ -361,3 +361,23 @@ Lead 2026-10-22 18:40 裁定：脚本态的 CoV/Safety 必须审计**实际交�
 | 静态检查与口径 | `backend/app scripts/ tests/` | `ruff check --select=F821,F823,E9 ...`（`ci.yml:115` 同口径）**All checks passed**；`git diff --check` 干净；路由装饰器 **189**、测试文件 **192**（均不变）。裸 ruff（非 CI 口径）：测试文件 49 → **54**（RUF003 +4 / RUF001 +1），`multi.py` 889 → **893**（RUF003 +4），基线副本 `tmp/lintbase/` |
 | 末次注释措辞改动后复验 | 单用例 + lint | **1 passed / 7.62 s**、`attempts=0`、CI 口径 ruff 仍 All checks passed、裸 ruff 仍 893；全量未为此重跑（注释不参与执行路径）；日志 `logs/single-test-final.txt` |
 | 影响面核查 | 兜底与红绿判定 | `_detect_manim_needs_fallback` 只读 `envelope.success` 与质量门（`multi_with_fallback.py:56-68`），`resource_generator_agent.py:131` 仅透传 `cov`；脚本态 `cov.passed` 由虚过 `True` 变为可能 `False` **不翻转 success、不触发兜底**，14 用例与全量 2278/0/20 不变即其实测支撑 |
+
+## 13. QWEN-109 评测用量/成本只读汇总实测摘要（2026-10-22，分支 `qwen/wave1-evalcost`，零模型调用、产品代码零改动）
+
+Lead 2026-10-22 23:05 开卡：**只读**汇总评测产物 `runs.jsonl` 的 `budget`（每臂/每题的调用数、输入/输出 token、latency、cost），`unknown` 不写 0、缺失样本单列计数、不编造单价、不读 `.env`、不新增对外端点、不改产品。交付 `scripts/report_eval_cost.py`（461 行）+ 脱敏报告 `docs/EVAL_USAGE_COST_REPORT_2026-10-22.md`（257 行，与 `output/qwen109-2026-10-22/eval-cost-report.md` 逐字节相同）；口径与登记见 `docs/CLAIMS_LEDGER.md` §16。
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 生成命令（可复现） | 8 份真实评测产物 / 127 条记录 | `PYTHONUTF8=1 python output/qwen109-2026-10-22/run_report_guarded.py output/qwen109-2026-10-22/eval-cost-report.md`（等价于 `python scripts/report_eval_cost.py --scan-root output --out …`，外面套 fail-closed 探针）→ `sources=8 records=127 arms=14 cases=127 cost_status=unknownx127 runs_without_token_data=1 excluded_fixtures=122`；日志 `output/qwen109-2026-10-22/logs/run5-final.txt` |
+| 零外联 | 同上一次运行 | 探针 `outbound attempts=0 unique_hosts=0 blocked=[]`；脚本**不 `import os`**，结构上无法读环境变量或 `.env`；`--out` 强制落在 `output/` 下且拒绝覆盖 |
+| 样本边界 | 扫描根 `output/` | 含 `result.budget` 的 `.jsonl` 共 **130** 份 → 计入 **8** 份 / **127** 条，按"路径组件以 `test_` 开头"排除 pytest 夹具 **122** 份 / **304** 条，逐目录计数写进报告第 1 节 |
+| 独立复算（第二套代码路径，不复用产品模块/聚合器/发现规则） | `output/qwen109-2026-10-22/crosscheck_independent.py` | 127 / 442 / 1321838 / 276031 / 2797092 / 有 token 126 / `result.error` 28 / 跨来源题号 25 / 14 组，**14 行每臂数字逐行一致**；日志 `logs/crosscheck.txt`（两侧数字并排留档） |
+| 与 §2 **E3** 行交叉验证（cloud 级已接受结论） | `evals/results/ablation-fixed-evidence-20261017.md` | 该表"任务完成 23/24、13/24、13/24"= 实测 `completed=True` single 23 / without_reviewer 13 / full 13；"平均模型调用 1.00/3.58/4.96"= 调用数合计 24/86/119 ÷ 24 题；"P50 5.80/15.91/21.41 秒"= latency 中位数 5803.27/15912.39/21411.53 ms；正文"有 1 次运行缺少 token 用量"= `runs_without_token_data` 1；"费用为未知"= `cost_status unknown×127`。**逐项一致**（P95 本卡未算，三者均落在实测 max 之内，不矛盾） |
+| 与 §2 **E5** 行交叉验证 | `evals/results/structured-output-20261018.md` | 该行"44/43 次调用；输出 25,384/25,286 tokens"= `stability-20261018/dev-retest` 44/25384、`holdout-retest` 43/25286，**一致** |
+| CLI 分支与错误路径 | 5 种输入 | `--source` 限定单来源 → 12 条 / 1 臂（排除清单仍报 122 份）；`--out` 不在 `output/` 下、`--out` 已存在、`--source` 缺 `=`、`--source` 路径不存在 → **均 exit 2 且零写出**；日志 `logs/cli-branches.txt` |
+| 静态检查 | `backend/app scripts/ tests/` | CI 口径 `ruff check --select=F821,F823,E9`（`ci.yml:115` 同口径）**All checks passed**；裸 ruff（`pyproject` 全集）对新文件 **0 findings**（`scripts/` 既有 2382 条基线未增加）；`git diff --check` 干净（曾报 ledger 末尾多余空行，已修） |
+| 脱敏复核 | 报告全文 | grep `sk-`/`api_key`/`bearer`/`password`/`secret`/URL/≥32 位十六进制/`deepseek.com` → 仅命中"不读取 .env"这句自述；出现的只有模型名 `deepseek-flash`、路径与计数；`dataset_sha256`/`evidence_sha256` 取值一律不复现 |
+| 测试项与产品改动 | 全仓 | **未新增测试项、未改任何产品/测试代码**：`git status` 只有 2 个新文件（脚本 + 报告）与 2 份登记文档改动（ledger §16、本 §13）。无用例枚举 `scripts/` 或 `docs/`（`test_campus_assets.py:9` 枚举前端 assets，`test_diagnosis_reporter.py:293` / `test_human_eval_toolkit.py:111-113` 枚举 `tmp_path`），故 README 的 **2278 / 0 / 20** 按构造不变；按"已交付数字不为好看而重跑"未重跑全量 |
+| 产品侧观察（**只登记，本卡不改**） | `backend/app/services/run_usage.py:22-26` | `_count` 只接受非负整数，而 `result.latency_ms` 是小数 → `summarize_run_usage` 对 **127/127** 条返回 `reported_latency_ms=None`（`model_calls` 是整数，被丢弃 **0** 条）。报告改为直接读原始 `result.latency_ms` 并单列该偏差条数；是否放宽由 Lead 裁定，**归属 QWEN-104** |
+| 迭代过程留档（不删） | `output/qwen109-2026-10-22/tmp/` | v1 自写成本判定的脚本、排除清单归并键错写版、改走产品投影后 latency 全丢的中间版、补 `completed` 列之前版、`--source` 分支验证报告、重新生成前的已交付副本，共 7 份；日志 `logs/run1~run4`（迭代）、`logs/run5-final.txt`（交付数字）、`logs/run6-reproducibility.txt`（提交前复现核对）、`logs/cli-branches.txt`、`logs/crosscheck.txt` |
+| 提交前可复现性核对 | 待提交的同一份脚本重新生成到同一路径 | run5 之后只做了一次**纯删死代码**收尾（删 `Bucket.cases` 及其两行赋值；题号分组实际用 `main()` 的 `per_case`，`cases=127` 取自 `len(per_case)`，`report_eval_cost.py:453`）。删后两个 lint 门复跑仍 All checks passed；把已交付报告挪到 `tmp/eval-cost-report-run5-final.md` 后重新生成 → 摘要行逐字段相同、`cmp` 三方（run5 存档 / 重新生成 / `docs/` 副本）**全部逐字节相同**、探针仍 `attempts=0 unique_hosts=0`；`git diff --check` 干净。脚本无 `datetime`/`time` 依赖，输出确定，**交付数字未因这次收尾变化**。日志 `logs/run6-reproducibility.txt` |
