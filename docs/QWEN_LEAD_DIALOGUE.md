@@ -1035,3 +1035,40 @@ QWEN-101 的 `prepare_packets` 要求每个案例三臂齐全（缺臂 → `RUNS
 **文档已刷新**：`README.md:56`、`docs/00-评委30秒导览.md:106` 各加 QWEN-107b 一句并指向最新小节；`docs/CLAIMS_LEDGER.md` §12、`docs/TEST_MATRIX.md` §9 新增（含取代关系与真链路探针行）。旧数字一律作历史保留。产物全在 `output/qwen107b-2026-10-22/`（`reports/` 未动）。
 
 **球在您那边**：QWEN-107b 验收。您 16:10 那条把 **QWEN-108 定义改成"离线化 `test_upload_index_hit_test_roundtrip` 的 embedding 外联"**、评测战役成本视图挪为 **QWEN-109**、顺序变为 **108 → 105**（我早前接手记录里的"108=成本视图、顺序 105→108"是旧快照，已作废）。我已只读完不改地预研了 QWEN-108：出网条件在 `embedding_provider.py:36-38`（`EMBEDDING_BASE_URL/API_KEY/MODEL` 三者齐备才 `available`），而 `knowledge_ingest.py:205-206` 对未配置有显式 `not_configured` 离线路径且 `status` 仍 `indexed`，该用例现有断言（`indexed` / `chunk_count>=1` / `audit.verdict` / `.orig` / 命中 `total>=1`）都不依赖真 embedding —— 因此在测试模块内用 `monkeypatch.delenv` 钉离线即可零出网、不改产品。**未开工，等您一声**。
+
+### [2026-10-22 17:00] Qwen → Lead | [DONE] QWEN-108 摄取用例显式离线（零模型调用；全量 `outbound attempts=0`）
+
+**证据等级：offline**（本机 Windows + Git Bash + Python 3.12.15；`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + fail-closed per-attempt 探针；无 remote/pg/cloud/human/prod 结论）。
+
+**提交**（`qwen/wave1-manim`，`main` 未动）：`912d9b5` 16:59:24 测试改动、`9dcad86` 17:00:03 文档。前序 QWEN-107b 交付见 `dbc4210`（16:37，已在上一条 `[DONE]` 报过，等您验收）。
+
+**1. 改了什么（只动 1 个测试文件，产品零改动）**
+- `tests/a/test_knowledge_platform.py:31-48` 新增**模块内 autouse** fixture `_offline_embedding_provider(monkeypatch)`：`monkeypatch.delenv` 清空 `EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL`，使 `OpenAICompatibleEmbeddingProvider.available`（`backend/app/services/embedding_provider.py:36-38`，三者齐备才 `True`）为 `False`，摄取因此走 `knowledge_ingest.py:205-206` 的 `not_configured` 离线路径。
+- `:227-233` 在同一既有用例末尾加一条前提自检断言 `get_embedding_provider().available is False`。**未新增 `def test_`、未删任何既有条目或断言**（用例数仍 14）。
+- **产品代码零改动可核验**：`git diff 755454f..912d9b5 --stat -- backend/` 实测为空。`embedding_provider.py`、`knowledge_ingest.py`、`knowledge_admin.py`、`.github/workflows/ci.yml` 均未动；路由仍 **189**。
+- **没读 `.env`**：只删进程内环境变量，未读取/未打印/未提交其值；文档只写端点类别（embeddings），不写服务商。
+
+**2. 实测数字（本轮全部重跑）**
+
+| 运行 | 结果 |
+|---|---|
+| 改动前基线（同口径，引用本轮已有存档） | 全量 `outbound attempts=6 unique_hosts=2`，`distinct tests=1`，全部归属这个 roundtrip 用例的 `setup` |
+| 定向 `tests/a/test_knowledge_platform.py` | 第 1 轮 **1 failed / 13 passed / 25.99 s**（我的新断言写错位置，见第 4 条）；第 2 轮修正后 **14 passed / 22.21 s**，`attempts=0 unique_hosts=0` |
+| 全量 `pytest tests/`（README 口径） | **2278 passed / 0 failed / 20 skipped / 764.23 s**，192 文件 / 2298 项，**`outbound attempts=0 unique_hosts=0`、`distinct tests with outbound attempts=0`** —— 套件不再依赖探针阻断，是真离线 |
+| CI 便携清单（同 40 文件） | **407 passed / 1 skipped / 0 failed / 77.83 s**，`attempts=0`；唯一 skip 仍是 `tests/a/test_auth_restart.py:18 Explicit disposable PostgreSQL required` |
+| CI 口径 lint | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed**；裸 ruff（非 CI 口径）该文件 15 → **30**，增量全是 `RUF001/RUF002/RUF003` 中文全角标点类，`I001` 仍 1 条与 HEAD 相同 |
+
+计数与 QWEN-107/107b 逐项一致（2278/0/20、192 文件、2298 项、CI 层 407/1）——本轮只加 fixture 与断言，未增删用例。
+
+**3. 这单卡关掉了什么**：QWEN-104 §10.3、QWEN-106、QWEN-107 §11.5 都登记过同一事实——"离线开关生效下套件仍有 6 次 embeddings 外联尝试，靠探针挡在 `socket.connect` 才没出网"。现在来源已显式离线，**同一探针在全量跑里读到的尝试数为 0**，这条长期遗留收口。
+
+**4. 过程中的实测纠错（如实登记，不粉饰）**
+- 我第一版把断言写成 `document["embedding"] == {"status": "not_configured"}`，定向跑 **1 failed / `KeyError: 'embedding'`**（`test_knowledge_platform.py:231`）。核对源码后确认 `knowledge_ingest.py:243-248` 的 `embedding` 键属于 `_persist_enterprise_version` 的返回，不在 `ingest_document` 交给 API 的最终文档 dict 里；改成断言 provider 的 `available is False` 后 14 passed。
+- 值得留意的细节：**失败那一轮探针已经报 `attempts=0`**，说明离线化当时就生效了，红的只是我的越界断言——我没有把"绿"当成"离线"的证据，也没有因为红就回退改动。
+- 这两轮的完整数字都进了文档（`docs/TEST_MATRIX.md` §10 逐行列出失败轮），没有只报成功轮。
+
+**5. 一处副作用请您知悉**：fixture 是 autouse、作用域覆盖该模块全部 14 个用例，所以本模块内任何未来用例都默认拿不到真 provider；若哪天需要测"云端 embedding 已配置"的分支，必须在用例内显式 `monkeypatch.setenv` 回来。我判断这正是您"显式 offline"要求的本意，没有擅自缩到单个用例，若您希望改成按需 fixture，一句话我 5 分钟内改完并重跑定向+全量。
+
+**文档已刷新**：`README.md:56`、`docs/00-评委30秒导览.md:106` 各加 QWEN-108 一句并指向最新小节；`docs/CLAIMS_LEDGER.md` §13、`docs/TEST_MATRIX.md` §10 新增。旧的 `attempts=6` 数字按约定全部作历史保留、未回改。产物在 `output/qwen108-2026-10-22/`（`reports/` 未动）。
+
+**球在您那边**：QWEN-107b（`dbc4210`）与 QWEN-108（`9dcad86`）两张卡验收。按您 16:03（`c26d9a4`）的字面排序，之后是 **QWEN-105**（PG/Redis 独立复跑，一次性容器，零付费调用），评测战役成本视图为 **QWEN-109** 不插队——这两张我都没开工，等您指令。另需提醒：本机只有 Docker Hub 拉不动的限制，QWEN-105 若要在本机跑容器，我可能需要先报 `[BLOCKER]` 请您指定镜像来源或改到远端口径。
