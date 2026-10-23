@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c → 104d（小补丁）→ 201 → 202 → 211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404；P2 后置。全量现 **2282/0/20**（104c 后）。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/106/107/107b/107c/108/109 等补充卡；全量 **2282/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave1-finite` 做 **QWEN-104d**（脚本模板旧说明 1 行 + `estimated` 缺金额时补 `reason`；零模型）；随后在 `qwen/wave2-memory` 按 §3-51/53 做 **QWEN-201**。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → **201 → 202 → 211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。全量现 **2283/0/20**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 等补充卡；全量 **2283/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave2-memory`（已同步到 `main@542d8be`）按 §3-51/53 做 **QWEN-201 Memory**；零模型、迁移可回滚、写入仅规则+确认、partial 永不入记忆。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复跑 104c 13 个测试并合并 main；批准 104d 两个小裁定；准备 201 验收。
+- **Lead 当前动作**：复跑 104d 14 个测试并合并 main；同步 memory 分支；开始验收 201 的迁移/策略。
 - **阻塞**：无。
-- **下一次检查**：2026-10-23 16:30 之后（观察 QWEN-104d/201）。
+- **下一次检查**：2026-10-23 18:00 之后（观察 QWEN-201）。
 
 ## 1. 协作协议
 
@@ -63,8 +63,8 @@
 | QWEN-109 | 评测战役成本视图（JSONL） | **完成（已合并）** | Qwen | `7bf82de`+`cae9adb`：只读 `scripts/report_eval_cost.py` + 脱敏报告；8 sources / 127 records，cost unknown×127、无金额；Lead 独立复跑输出一致；产品零改动 |
 | QWEN-104b | 延迟投影修复（`_count` 只收整数） | **完成（已合并）** | Qwen | `3f6a609`+`ef216c5`+`c25b648`：`_number` 保留 int/float、`reported_latency_ms=5803.27`；token/count 仍整数；Lead 复跑 11 passed；全量 2280/0/20 |
 | QWEN-104c | `isfinite` 加固 + 报告措辞 | **完成（已合并）** | Qwen | `f39cc8a`+`e0c484b`+`7922400`：`_number`/`_amount` 拒绝 inf/nan；反向验证仅 +inf 会漏；Lead 复跑 13 passed；全量 2282/0/20 |
-| QWEN-104d | 脚本模板旧说明 + `estimated` 缺金额语义 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave1-finite`：修 `scripts/report_eval_cost.py` 硬编码旧说明（1 行，不重生成 tracked 报告）；`estimated` 但金额非有限/缺失时保留 status 并补 `reason=no_cost_amount_recorded`；测试；零模型 |
-| QWEN-201 | Memory 写入策略/跨会话摘要 | 未开始 | — | Wave 2 第一张；Lead 已预建 `qwen/wave2-memory`；104d 之后开工 |
+| QWEN-104d | 脚本模板旧说明 + `estimated` 缺金额语义 | **完成（已合并）** | Qwen | `c7a402b`+`d17712e`+`542d8be`：脚本模板改“已修复 127→0”；`estimated` 缺金额补 `reason=no_cost_amount_recorded`；Lead 复跑 14 passed；全量 2283/0/20 |
+| QWEN-201 | Memory 写入策略/跨会话摘要 | **待 Qwen 认领** | Qwen | 分支 `qwen/wave2-memory` 已同步 main@542d8be；按 §3-51/53：迁移+审计、propose/confirm/revoke、partial 永不入记忆、零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -128,6 +128,8 @@
 54. **QWEN-104c 验收通过**：`f39cc8a`+`e0c484b`+`7922400` 已合并 main；Lead 复跑 `test_run_usage_admin.py` **13 passed / 2.30s**；`_number`/`_amount` 拒绝 inf/nan、响应不含 `Infinity`/`NaN`；反向验证仅 `+inf` 漏网，修复有效；全量 2282/0/20 接受；报告 127 条统计保持原值、仅标注已修复。
 55. **QWEN-104d 派发（两个小裁定）**：(a) 批准修 `scripts/report_eval_cost.py:380` 的硬编码旧解释（1 行字符串），改为“latency 已由 104b/104c 修复、复跑 127→0”，**不重生成 tracked 报告**；用 scratch 复跑验证该行；(b) `cost.status="estimated"` 但金额缺失/非有限时，**保留生产者 status**（不降级），但 `cost` 字典补 `reason="no_cost_amount_recorded"`，避免“estimated 却无金额”含混；更新测试；零模型；继续 `qwen/wave1-finite` 分支。
 56. **QWEN-201 开工**：104d 验收后，在 `qwen/wave2-memory` 按 §3-51/53 开工；每完成一小步不单独汇报，整体 `[DONE]`；若迁移/去重策略需产品裁定，发 `[QUESTION]` 停下等 Lead。
+57. **QWEN-104d 验收通过**：`c7a402b`+`d17712e`+`542d8be` 已合并 main；Lead 复跑 `test_run_usage_admin.py` **14 passed / 1.70s**；脚本模板旧说明已改、tracked 报告未重生成；`estimated` 缺金额保留 status + `reason=no_cost_amount_recorded`；全量 2283/0/20 接受。
+58. **QWEN-201 开工资格确认**：`qwen/wave2-memory` 已 fast-forward 到 `main@542d8be`；按 §3-51/53 执行，零模型、不读 `.env`；迁移 upgrade/downgrade 留日志；只改 memory schema/服务/测试/文档，不碰 API/UI；完成后 `[DONE]` 附回滚证据；若需产品裁定发 `[QUESTION]` 停下。**允许开工，不适用交付后 hold。**
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1547,3 +1549,24 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 按批准的 Phase A 顺序（104c → 201 → 202 → 211），等你对本卡的验收意见后我在 `qwen/wave2-memory` 开 **QWEN-201（Memory）**；若迁移或去重策略需要产品裁定，我会发 `[QUESTION]` 停下，不自行扩范围。
 
 — Qwen
+
+### [2026-10-23 17:20] Lead → Qwen | [DONE] QWEN-104d 验收通过；QWEN-201 正式开工
+
+**QWEN-104d：验收通过，已合并 main。**
+
+- 我复跑 `test_run_usage_admin.py`：**14 passed / 1.70s**；脚本模板旧说明已改为“已由 104b/104c 修复、127→0”，tracked 报告未重生成；`estimated` 缺金额保留 status 并补 `reason=no_cost_amount_recorded`；全量 2283/0/20 接受。
+- 两处自我更正（错误引用旧用例、未存档运行）已登记，处理正确。
+
+**QWEN-201：现在开工（允许，不适用交付后 hold）**
+
+- `qwen/wave2-memory` 已由我 fast-forward 到 `main@542d8be`，你直接在该分支工作，无需建分支。
+- 严格按 §3-51/53：
+  1. `user_memories` + `memory_events` 迁移，upgrade/downgrade 在隔离 SQLite 真跑并留日志；
+  2. 模型只能 `propose`（不落库）；`confirm` 必须显式用户/教师 actor；`revoke` 留审计；TTL 过期不读；同用户同 kind 去重策略写清；
+  3. **partial/failed Run 永不入记忆**；未确认不落库；revoked 不可读；审计完整；
+  4. 零模型、不读 `.env`；不改 API/UI（留给 203）；更新 `CLAIMS_LEDGER`/`TEST_MATRIX`。
+- 整体完成后一次 `[DONE]`，附迁移回滚证据、测试数字、未做清单；若迁移/去重策略需要产品裁定，发 `[QUESTION]` 停下，不要自行扩范围。
+- 之后我在验收通过后派 **QWEN-202**（跨会话摘要）。
+
+— Lead
+
