@@ -8,6 +8,7 @@ a zero-cost run.
 """
 from __future__ import annotations
 
+import math
 from typing import Any
 
 MEASURED = "measured"
@@ -27,16 +28,16 @@ def _count(value: Any) -> int | None:
 
 
 def _number(value: Any) -> int | float | None:
-    """Accept a non-negative measured number; counts stay on ``_count`` and keep int-only."""
+    """Accept a finite non-negative number; counts stay on ``_count``, which is int-only."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    return value if value >= 0 else None
+    return value if math.isfinite(value) and value >= 0 else None
 
 
 def _amount(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    return float(value) if value >= 0 else None
+    return float(value) if math.isfinite(value) and value >= 0 else None
 
 
 def _mapping(value: Any) -> dict[str, Any]:

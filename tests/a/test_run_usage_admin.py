@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from backend.app.api.v2 import access, run_usage_admin
 from backend.app.core import database
 from backend.app.core.models import AgentRunRecord
+from backend.app.services import run_usage
 
 LIST_PATH = "/api/v2/admin/run-usage"
 
@@ -229,6 +230,57 @@ def test_counts_stay_integer_only_while_latency_gains_precision(api):
     assert run["usage_status"] == "unknown"
     assert run["reported_latency_ms"] == 5803.27
     assert run["duration_ms"] == 1200 and run["tool_calls"] == 0
+
+
+def test_non_finite_numbers_are_rejected_before_they_reach_the_wire(api):
+    """QWEN-104c: inf/nan are not measurements, and they would serialize as invalid JSON."""
+    assert [run_usage._number(value) for value in (float("inf"), float("-inf"), float("nan"))] \
+        == [None, None, None]
+    assert [run_usage._amount(value) for value in (float("inf"), float("-inf"), float("nan"))] \
+        == [None, None, None]
+    # Real measurements still pass untouched, including the type-preserving behaviour of 104b.
+    assert run_usage._number(900) == 900 and run_usage._number(5803.27) == 5803.27
+    assert run_usage._amount(0.0042) == 0.0042
+
+    client, factory = api
+    for index, latency in enumerate((float("inf"), float("-inf"), float("nan"))):
+        add_run(factory, f"run-non-finite-{index}", created_at=1_700.0 + index,
+                budget=None, latency_ms=latency)
+    listed = client.get(LIST_PATH, headers={"Authorization": "Bearer admin"})
+    assert all(run["reported_latency_ms"] is None for run in listed.json()["runs"])
+    assert all(run["usage_status"] == "unknown" for run in listed.json()["runs"])
+    # Python's json encoder writes Infinity/NaN unquoted; neither may appear in the body.
+    assert "Infinity" not in listed.text and "NaN" not in listed.text
+    detail = client.get(f"{LIST_PATH}/run-non-finite-0", headers={"Authorization": "Bearer admin"})
+    assert detail.json()["reported_latency_ms"] is None
+    assert "Infinity" not in detail.text
+
+
+def test_non_finite_cost_amount_is_never_reported_as_money(api):
+    """A price that is not a finite number stays unrecorded instead of entering the totals."""
+    client, factory = api
+    add_run(factory, "run-inf-cost", created_at=1_700.0, latency_ms=1500.5,
+            budget={"model_calls": 1, "actual_input_tokens": 100, "actual_output_tokens": 10,
+                    "usage_unknown_calls": 0,
+                    "cost": {"status": "estimated", "currency": "CNY", "amount_cny": float("inf")}})
+    add_run(factory, "run-nan-portion", created_at=1_699.0, latency_ms=1000,
+            budget={"model_calls": 1,
+                    "cost": {"status": "unknown", "currency": "CNY",
+                             "measured_portion_cny": float("nan")}})
+    run = client.get(f"{LIST_PATH}/run-inf-cost", headers={"Authorization": "Bearer admin"}).json()
+    assert run["cost_cny"] is None
+    # The status the run recorded is kept as-is; only the unusable amount is dropped.
+    assert run["cost"] == {"status": "estimated", "currency": "CNY"}
+    assert run["reported_latency_ms"] == 1500.5 and run["input_tokens"] == 100
+    unknown = client.get(f"{LIST_PATH}/run-nan-portion",
+                         headers={"Authorization": "Bearer admin"}).json()
+    assert unknown["cost"] == {"status": "unknown", "currency": "CNY",
+                               "reason": "no_cost_amount_recorded"}
+    totals = client.get(LIST_PATH, headers={"Authorization": "Bearer admin"}).json()["aggregates"]
+    assert totals["cost_status"] == {"estimated": 1, "unknown": 1}
+    assert totals["cost_cny_estimated_sum"] == 0
+    assert totals["runs_without_estimated_cost"] == 2
+    assert totals["input_tokens"] == 100 and totals["output_tokens"] == 10
 
 
 def test_unknown_run_returns_404_and_persistence_failure_returns_503(api, monkeypatch):
