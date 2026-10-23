@@ -6,7 +6,7 @@
 - 记账口径: 直接调用产品代码 `backend/app/services/run_usage.py` 的 `summarize_run_usage` + `aggregate_run_usage`, 脚本不自己另写一套成本/用量判定
 - 成本口径: 逐条照抄记录里的 `result.budget.cost`; 不套用任何单价, `unknown` 原样输出, 绝不写成 0; 无 estimated 记录时金额一律显示为未记录
 - 字段来源: `model_calls`/token/cost/usage_status 全部走产品投影; `latency_ms` 是唯一例外, 按原始 `result.latency_ms` 读 (原因见下一行与第 2 节); `input_chars` 取 budget
-- 与产品投影的偏差: latency_ms 有 127 条被投影判为未记录, model_calls 有 0 条
+- 与产品投影的偏差: latency_ms 有 127 条被投影判为未记录, model_calls 有 0 条 (2026-10-22 已交付实测; 该投影已由 QWEN-104b 修复为接受非负 int/float, 同一条命令复跑此计数为 127→0, 本报告统计数字不改)
 - 跨副本一致性: model_calls 不一致 0 条, latency_ms 不一致 0 条 (record / result / budget 三处副本互相校验)
 - 记录总数 127 条, 来源 8 个, 无法解析的行 0 行
 
@@ -74,7 +74,7 @@
 | actual_output_tokens 缺失 | 1 | 输出 token 无值 |
 | model_calls 缺失 | 0 | 调用数无值 |
 | latency_ms 缺失 | 0 | 延迟无值 |
-| latency_ms 被产品投影判为未记录 | 127 | run_usage.py:22-26 的 `_count` 只接受非负整数, 小数 latency 全被丢弃; 本报告按原始值读, 偏差单列 (只登记, 本卡不改产品代码) |
+| latency_ms 被产品投影判为未记录 | 127 | 2026-10-22 实测: `run_usage.py` 的 `_count` 只接受非负整数, 小数 latency 全被丢弃; 本报告按原始值读, 偏差单列 (只登记, 本卡不改产品代码)。**该说明已过期**: QWEN-104b 把 `reported_latency_ms` 改走接受非负 int/float 的 `_number`, 复跑此计数为 127→0; QWEN-104c 再给 `_number`/`_amount` 加 `math.isfinite`。本行数字与全篇统计保持已交付口径, 不回改 |
 | model_calls 被产品投影判为未记录 | 0 | 同一规则; 实测 0 条, 说明调用数都记成了整数 |
 | arm 未标注 | 36 | 重跑/复测产物没有写臂标签 |
 | config.model 未标注 | 36 | 重跑/复测产物没有写模型名 |
