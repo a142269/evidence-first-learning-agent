@@ -9,11 +9,11 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/105/106/107/107b/107c/108/109/104b 均已验收并合并 main）。全量 **2280/0/20**；延迟投影已修复（浮点保留、计数仍整数；管理端示例 `5803.27`）。下一张小卡 **QWEN-104c：isfinite + 报告措辞**，之后 **QWEN-201 Memory** 进入 Wave 2。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104/104b 成本与延迟可见性；QWEN-105 PG 复跑；QWEN-106 测试隔离；QWEN-107/107b/107c manim 与审计；QWEN-108 离线化；QWEN-109 评测成本视图。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-finite`（Lead 已预建并推送），执行 **QWEN-104c**：`_number`/`_amount` 加 `math.isfinite`（拒绝 inf/nan）+ 测试；更正 `EVAL_USAGE_COST_REPORT` 中过期的"latency 被丢弃"说明（数字不动）；零模型调用。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。**用户 2026-10-23 批准推荐执行顺序**：104c → 201 → 202 → 211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404；P2（203/212/232/302/323/331/332/333/342）后置。真人盲评、许可法务、生产部署由用户侧并行推进。
+- **Qwen 已完成**：Wave 0/1 主线 + QWEN-104b/106/107/107b/107c/108/109 等补充卡；全量 **2280/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave1-finite` 上完成 **QWEN-104c**；随后在 `qwen/wave2-memory` 上按 §3-51/53 做 **QWEN-201**（零模型、迁移可回滚、写入仅规则+确认、partial 永不入记忆）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复跑 QWEN-104b 11 个测试；合并 main；确定 104c 与 QWEN-201 范围；预建两条分支。
+- **Lead 当前动作**：记录用户批准的执行顺序；细化 QWEN-201 DoD；预建分支已推送；按阶段验收。
 - **阻塞**：无。
 - **下一次检查**：2026-10-23 14:30 之后（观察 QWEN-104c）。
 
@@ -122,6 +122,8 @@
 49. **QWEN-104b 验收通过**：`3f6a609`+`ef216c5`+`c25b648` 已合并 main；Lead 复跑 `test_run_usage_admin.py` **11 passed / 2.00s**；`_number` 保留 int/float、`reported_latency_ms` 线上返回 `5803.27`、token/count 仍整数；反向验证有效；全量 2280/0/20（+2 为本卡用例）；端点语义与成本口径未变。**接受**。
 50. **QWEN-104c 派发（加固 + 报告措辞）**：Lead 已预建 `qwen/wave1-finite`；(a) `_number` 与 `_amount` 增加 `math.isfinite` 检查（inf/nan 一律 `None`，与 `golden_set.py`/`learning_package.py` 的同类过滤对齐）；补测试（inf/-inf/nan 拒绝，同时 int/float 正常返回）；(b) 更新 `docs/EVAL_USAGE_COST_REPORT_2026-10-22.md` 中已过期的"latency 全被丢弃"说明为"已修复、127→0"，**统计数字与结论不变**；(c) 零模型、只改投影/测试/文档；完成后 `[DONE]`。
 51. **QWEN-201 范围（104c 之后开工）**：Lead 已预建 `qwen/wave2-memory`；实现 Memory 写入策略：新增 `user_memories` 表（kind/source/confidence/ttl/created/updated/revoked）+ 可回滚迁移 + 审计事件；**写入仅允许规则提取 + 用户确认/教师审核，模型只能提议**；partial/failed Run 永不入记忆（测试）；不做跨会话摘要（QWEN-202）与 UI（QWEN-203）；零模型、不读 `.env`、隔离 SQLite/PG 测试；完成 `[DONE]` 附迁移回滚证据。
+52. **执行顺序批准（用户 2026-10-23）**：按推荐的最小可发布路径执行——**Phase A**：104c → 201 → 202 → 211；**Phase B**：221 → 231 → 301 → 311/312 → 321/322/324 → 341/343；**Phase C**：401/402/403 → 404。P2（203/212/232/302/323/331/332/333/342）后置或按时间裁掉。每张卡完成 `[DONE]`、Lead 验收合并后才开下一张；不并行抢写同一模块。
+53. **QWEN-201 DoD（细化）**：(a) 迁移新增 `user_memories`（id、user_id、kind、content、source_type、source_run_id、confidence、expires_at、status active/revoked、created_at、updated_at）与 `memory_events`（id、memory_id、action、actor、reason、created_at）；upgrade/downgrade 在 SQLite 真实执行并留日志。(b) 服务层：模型只能 `propose`（不落库）；`confirm` 需显式用户/教师 actor；`revoke` 保留审计；TTL 过期不参与读取；同用户同 kind 去重策略明确。(c) 测试：未确认不落库、partial/failed Run 永不入记忆、revoked 不可读、审计事件完整、迁移回滚后表消失。(d) 零模型调用、不读 `.env`；不改 API/UI（QWEN-203）；更新 CLAIMS_LEDGER/TEST_MATRIX。(e) 完成后 `[DONE]` 附迁移回滚证据、测试数字与未做清单。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1436,6 +1438,30 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 完成后 `[DONE]`，附迁移回滚证据与测试数字。
 
 **权限**：QWEN-104b 的“交付后 hold”误解已由 §3-48 纠正；这两张新卡同样按 §4 白纸黑字执行，不适用 hold。
+
+— Lead
+
+
+### [2026-10-23 13:45] Lead → Qwen | [DECISION] 用户批准推荐执行顺序；QWEN-201 DoD 细化
+
+**用户已批准我建议的最小可发布路径，按下面顺序执行（每张 `[DONE]` + Lead 验收后再开下一张）：**
+
+- **Phase A**：**104c**（进行中）→ **201** → **202** → **211**
+- **Phase B**：**221** → **231** → **301** → **311/312** → **321/322/324** → **341/343**
+- **Phase C**：**401/402/403** → **404**
+- **P2 后置/可裁**：203、212、232、302、323、331、332、333、342。
+
+**QWEN-201 详细 DoD（104c 完成后在 `qwen/wave2-memory` 开工；分支已预建）**
+
+1. 迁移新增 `user_memories`（id、user_id、kind、content、source_type、source_run_id、confidence、expires_at、status=active/revoked、created_at、updated_at）与 `memory_events`（id、memory_id、action、actor、reason、created_at）；upgrade/downgrade 在隔离 SQLite 真跑并留日志。
+2. 服务层：模型只能 `propose`（**不落库**）；`confirm` 必须显式用户/教师 actor；`revoke` 保留审计；TTL 过期不参与读取；同用户同 kind 去重策略写清。
+3. 测试：未确认不落库；**partial/failed Run 永不入记忆**；revoked 不可读；审计事件完整；迁移回滚后表消失。
+4. 零模型调用、不读 `.env`；不改 API/UI（留给 QWEN-203）；更新 `CLAIMS_LEDGER`/`TEST_MATRIX`。
+5. 完成 `[DONE]` 附迁移回滚证据、测试数字、未做清单。
+
+**分工并行（不需要你做）**：真人盲评（QWEN-101 工具已就绪）、许可/素材法务、公网生产部署、Release 材料由用户侧推进；你只在需要时提供只读证据/清单。
+
+**边界**：不推 main、不重启容器、不改已合并结论；新卡同样不适用“交付后 hold”（§3-48）。
 
 — Lead
 
