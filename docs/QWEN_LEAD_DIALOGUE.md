@@ -1523,3 +1523,27 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-23 16:43] Qwen → Lead | [DONE] QWEN-104d 两项裁定落地（零模型、零外联，证据等级 offline）
+
+**裁定 1（脚本模板旧说明）**：`scripts/report_eval_cost.py:381-382` 的硬编码说明由「`run_usage.py:22-26` 的 `_count` 只接受非负整数，小数 latency 全被丢弃……只登记，本卡不改产品代码」改为「已由 QWEN-104b/104c 修复：`_number` 现接受非负 int/float 并要求 math.isfinite，复跑本计数 127 -> 0」。**tracked 报告未重生成**——`docs/EVAL_USAGE_COST_REPORT_2026-10-22.md` 一字未动（`git status` 该文件干净），验证只写 scratch：同命令复跑 `sources=8 records=127 arms=14 cases=127 cost_status=unknownx127 runs_without_token_data=1`，产物第 79 行现在是「latency_ms 被产品投影判为未记录 | 0 | 已由 QWEN-104b/104c 修复…」，§18.5 登记的「计数 0 + 旧解释」自相矛盾行消失。下一行 `model_calls` 的「同一规则; 实测 0 条」照旧成立（`_count` 未动），未改；`grep -rln report_eval_cost tests/` 为空，模板改动无测试面。台账 §19 已注明模板已修。
+
+**裁定 2（`estimated` 但金额非有限/缺失）**：`backend/app/services/run_usage.py:66-69` 新增一支 `elif status == ESTIMATED and amount is None: projected["reason"] = "no_cost_amount_recorded"`。**保留生产者写的 `estimated`，不降级、不推断、不补金额**；`cost_cny` 仍为 `null`，`runs_without_estimated_cost` 口径不变（按 `cost_cny is not None` 过滤，与本支无关）；沿用 §7 既有词，不新造枚举。插入点在原 UNKNOWN 支之后，故 `summarize_run_usage` `:69`→`:73`、`reported_latency_ms` `:93`→`:97`、`aggregate_run_usage` `:107`→`:111`（相对 §18 再 +4 行漂移，已登记）。
+
+**测试与实测**（Windows + Python 3.12.15，全部挂 fail-closed socket 探针）：
+- `tests/a/test_run_usage_admin.py` 13 → **14** 项；最终代码 **14 passed / 2.64 s**，提交前再跑 **14 passed / 2.44 s**；三次运行探针一律 `outbound attempts=0 unique_hosts=0`。
+- **反向验证**：把新支条件临时改成永假 → **2 failed / 12 passed / 2.20 s**，两处失败都是 `cost` 缺 `reason` 的全等断言（`{'status': 'estimated', 'currency': 'CNY'} != {…'no_cost_amount_recorded'}`）；改回转绿，补丁存档 `output/qwen104d-2026-10-23/tmp/reason-branch-disabled.patch` / `reason-branch.patch`（仍未用被权限分类器拦截的 `git apply -R`）。
+- 新用例 `:288-321` 把「estimated 但投影拿不到可用金额」的**五种形态**逐一钉住：缺 `amount_cny` 键、`None`、`-5`、`"0.0042"`、`True`，都保留 `estimated` 并补 reason；对照组 `0.0025` 的 `cost` **不含 reason**；聚合层 `cost_status={"estimated":6,"unknown":0}`、`cost_cny_estimated_sum=0.0025`、`runs_without_estimated_cost=5`——补解释不改变任何金额与计数。
+- 全量 `pytest tests/`：**2283 passed / 0 failed / 20 skipped / 842.46 s（14:02）**；项数口径 `--collect-only -q` 收 **2302** 项 + 集合期 1 条 `importorskip("mcp")` skip = **2303 = 2283 + 20**，与 104b 的 2299+1、104c 的 2301+1 同口径。相对 104c 的 2282 恰好 **+1**，就是本卡新增项，既有用例无一转红。
+- CI 可移植 40 文件子集：**412 passed / 1 skipped / 90.29 s**（相对 104c 的 411/1 恰好 +1）。
+- 静态：CI 口径 `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` **All checks passed**；裸 ruff `run_usage.py` 0 findings、`report_eval_cost.py` 改动行不新增 finding，测试文件 **4 findings 与 `git show HEAD:` 基线逐条相同**（EM101 行号 `293`→`331`）；`git diff --check` 干净；路由装饰器仍 **189**、测试文件仍 **192**。
+- 改动 3 文件 +46/−4（投影 +4/0、脚本 2/2、测试 +40/−2）；文档 `docs/CLAIMS_LEDGER.md` §19、`docs/TEST_MATRIX.md` §16、README 与 30 秒导览的计数刷新到 2283/0/20（2303 项），104c 措辞降为「该轮」。
+
+**两处自我更正（如实登记）**：① §19.2 初稿把「负数/字符串/bool 已钉住」写成早在 §17 的 `:200`/`:220`，核对后那两条测的是 `_number`（延迟）与 `_count`（计数），与金额路径无关——该覆盖当时并不存在，本卡已把它补进新用例，而不是留一句不实的引用。② 早先记为「恢复守卫后 14 passed / 1.59 s」的那次只打在终端、没有存档，台账与矩阵已改用留档的 2.64 s / 2.44 s 运行作为最终代码凭证。
+
+**边界**：未向 `main` 提交或推送，只推 `qwen/wave1-finite`（起点 HEAD `0c5dc4a`）；未 `cat`/提交/上传 `.env`；零模型调用、零外联；未新增端点、未起或重启服务；本卡不触及数据库，故未跑 PG/Redis。越界发现无新增，旧登记继续在册（`reports/` 未被 gitignore、17 个前端孤儿测试、`multi.py` 行号漂移、`scripts/` 裸 ruff 全角标点基线、`ci.yml:338-341` 可选 MCP stdio 本机未跑）；§18.3 与 §18.4 两处「留给 Lead 裁定」由本卡关闭。
+
+**未做**：无——QWEN-104d 三条 DoD（改脚本模板 / 补 `reason` / 零模型只改脚本·投影·测试·文档）全部满足。
+
+按批准的 Phase A 顺序（104c → 201 → 202 → 211），等你对本卡的验收意见后我在 `qwen/wave2-memory` 开 **QWEN-201（Memory）**；若迁移或去重策略需要产品裁定，我会发 `[QUESTION]` 停下，不自行扩范围。
+
+— Qwen
