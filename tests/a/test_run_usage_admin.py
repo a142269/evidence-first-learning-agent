@@ -269,8 +269,10 @@ def test_non_finite_cost_amount_is_never_reported_as_money(api):
                              "measured_portion_cny": float("nan")}})
     run = client.get(f"{LIST_PATH}/run-inf-cost", headers={"Authorization": "Bearer admin"}).json()
     assert run["cost_cny"] is None
-    # The status the run recorded is kept as-is; only the unusable amount is dropped.
-    assert run["cost"] == {"status": "estimated", "currency": "CNY"}
+    # QWEN-104d: the status the run recorded is kept as-is, and the missing amount is spelled
+    # out instead of leaving "estimated" ambiguous.
+    assert run["cost"] == {"status": "estimated", "currency": "CNY",
+                           "reason": "no_cost_amount_recorded"}
     assert run["reported_latency_ms"] == 1500.5 and run["input_tokens"] == 100
     unknown = client.get(f"{LIST_PATH}/run-nan-portion",
                          headers={"Authorization": "Bearer admin"}).json()
@@ -281,6 +283,42 @@ def test_non_finite_cost_amount_is_never_reported_as_money(api):
     assert totals["cost_cny_estimated_sum"] == 0
     assert totals["runs_without_estimated_cost"] == 2
     assert totals["input_tokens"] == 100 and totals["output_tokens"] == 10
+
+
+def test_estimated_status_without_a_usable_amount_explains_the_absence(api):
+    """QWEN-104d ruling 2: keep the producer's ``estimated``, label every unusable amount."""
+    client, factory = api
+    add_run(factory, "run-estimated-bare", created_at=1_702.0,
+            budget={"model_calls": 1, "cost": {"status": "estimated", "currency": "CNY"}})
+    add_run(factory, "run-estimated-null", created_at=1_701.0,
+            budget={"model_calls": 1,
+                    "cost": {"status": "estimated", "currency": "CNY", "amount_cny": None}})
+    add_run(factory, "run-estimated-negative", created_at=1_700.0,
+            budget={"model_calls": 1,
+                    "cost": {"status": "estimated", "currency": "CNY", "amount_cny": -5}})
+    add_run(factory, "run-estimated-string", created_at=1_699.0,
+            budget={"model_calls": 1,
+                    "cost": {"status": "estimated", "currency": "CNY", "amount_cny": "0.0042"}})
+    add_run(factory, "run-estimated-bool", created_at=1_698.5,
+            budget={"model_calls": 1,
+                    "cost": {"status": "estimated", "currency": "CNY", "amount_cny": True}})
+    add_run(factory, "run-estimated-real", created_at=1_698.0,
+            budget={"model_calls": 1,
+                    "cost": {"status": "estimated", "currency": "CNY", "amount_cny": 0.0025}})
+    for run_id in ("run-estimated-bare", "run-estimated-null", "run-estimated-negative",
+                   "run-estimated-string", "run-estimated-bool"):
+        run = client.get(f"{LIST_PATH}/{run_id}",
+                         headers={"Authorization": "Bearer admin"}).json()
+        assert run["cost_status"] == "estimated" and run["cost_cny"] is None
+        assert run["cost"] == {"status": "estimated", "currency": "CNY",
+                               "reason": "no_cost_amount_recorded"}
+    real = client.get(f"{LIST_PATH}/run-estimated-real",
+                      headers={"Authorization": "Bearer admin"}).json()
+    assert real["cost"] == {"status": "estimated", "currency": "CNY", "amount_cny": 0.0025}
+    totals = client.get(LIST_PATH, headers={"Authorization": "Bearer admin"}).json()["aggregates"]
+    assert totals["cost_status"] == {"estimated": 6, "unknown": 0}
+    assert totals["cost_cny_estimated_sum"] == 0.0025
+    assert totals["runs_without_estimated_cost"] == 5
 
 
 def test_unknown_run_returns_404_and_persistence_failure_returns_503(api, monkeypatch):

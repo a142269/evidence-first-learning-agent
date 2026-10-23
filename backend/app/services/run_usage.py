@@ -63,6 +63,10 @@ def _cost_of(budget: dict[str, Any]) -> dict[str, Any]:
     if projected["status"] == UNKNOWN and amount is None and portion is None:
         projected["reason"] = ("cost_status_invalid" if raw.get("status") not in COST_STATUSES
                                else "no_cost_amount_recorded")
+    elif status == ESTIMATED and amount is None:
+        # The producer claimed an estimate but no usable amount survived ``_amount``; the
+        # status is theirs to keep, so the absence is spelled out instead of left implicit.
+        projected["reason"] = "no_cost_amount_recorded"
     return projected
 
 

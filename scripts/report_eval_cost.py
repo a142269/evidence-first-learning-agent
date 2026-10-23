@@ -378,8 +378,8 @@ def main() -> int:
         ["model_calls 缺失", str(total.records - len(total.calls)), "调用数无值"],
         ["latency_ms 缺失", str(total.records - len(total.latency)), "延迟无值"],
         ["latency_ms 被产品投影判为未记录", str(total.projection_dropped["latency_ms"]),
-         "run_usage.py:22-26 的 `_count` 只接受非负整数, 小数 latency 全被丢弃; 本报告按原始值读, "
-         "偏差单列 (只登记, 本卡不改产品代码)"],
+         "已由 QWEN-104b/104c 修复: `run_usage.py` 的 `_number` 现接受非负 int/float 并要求 "
+         "math.isfinite, 复跑本计数 127 -> 0; 本报告仍按原始值读, 本行由产品投影实时算出"],
         ["model_calls 被产品投影判为未记录", str(total.projection_dropped["model_calls"]),
          "同一规则; 实测 0 条, 说明调用数都记成了整数"],
         ["arm 未标注", str(sum(bucket.records for (_label, arm), bucket in per_arm.items()
