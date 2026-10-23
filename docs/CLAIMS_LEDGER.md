@@ -599,3 +599,48 @@ Lead 2026-10-23 13:40 验收 §17（自行复跑 `test_run_usage_admin.py` **11 
 | 报告复跑（只写 scratch，**不改已交付报告**） | `python scripts/report_eval_cost.py --scan-root output --out output/qwen104c-2026-10-23/tmp/eval-cost-report-final.md` | stdout `sources=8 records=127 arms=14 cases=127 cost_status=unknownx127 runs_without_token_data=1 excluded_fixtures=138`；复跑产物第 9 行 `latency_ms 有 **0** 条被投影判为未记录`、第 79 行同为 **0** ——**§18.3 那句"复跑此计数为 127→0"在最终代码上成立**，不是推断。与已交付报告 `diff` = **6 hunk / 23 行**（`logs/report-rerun-delta.txt`），除命令行 `--out` 路径、这两处偏差值、夹具普查随轮次增长（含 `result.budget` 的 jsonl 130→146 份、排除夹具 122→138 份 / 304→344 条、归并表新增 104b/104c 两行各 20 条）之外**逐字节相同**：127 条记录、442 次调用、1321838/276031 token、2797092 `input_chars`、中位数 14101.54 [2302.41~40332.14]、`cost_status unknown×127` 全部不变 |
 | 复跑暴露的模板自相矛盾（登记，未擅自修） | 复跑产物第 79 行 | 计数已算成 **0**，但同一行说明仍是硬编码的"`_count` 只接受非负整数, 小数 latency 全被丢弃 …… 本卡不改产品代码"（模板在 `scripts/report_eval_cost.py:380`）——旧解释与新数字并排，自相矛盾。这是 §18.3 请 Lead 裁定"要不要一并改这 1 行模板字符串"的实证；(c) 范围限定为投影/测试/文档，脚本不在其中，故本卡只登记 |
 | 静态检查与口径 | `backend/app scripts/ tests/` | CI 口径 `ruff check --select=F821,F823,E9` **All checks passed**；裸 ruff：`run_usage.py` **0 findings**，`test_run_usage_admin.py` **4 findings 与 HEAD 基线逐条相同**（3×E501 + 1×EM101，行号 `35/107/173/241` → `36/108/174/293`，基线副本 `tmp/baseline_test.py`）；`git diff --check` 干净；路由装饰器仍 **189**、测试文件仍 **192** |
+
+
+## 19. QWEN-104d 两项裁定的落地 + 报告模板旧说明修正（2026-10-23，分支 `qwen/wave1-finite`，零模型调用）
+
+Lead 2026-10-23 16:05 验收 §18（自行复跑 `test_run_usage_admin.py` **13 passed / 2.30 s**、全量 2282/0/20 接受、104c 已合并 `main`），并把 §18 交回的两件裁定**全部批准**，落成小补丁 **QWEN-104d**（继续用 `qwen/wave1-finite`）：
+
+1. **脚本模板旧说明**——原文「批准改 `scripts/report_eval_cost.py:380` 的硬编码字符串，改为"latency 已由 QWEN-104b/104c 修复、复跑 127→0"；**不重生成 tracked 报告**；用 scratch 复跑验证该行，并在台账注明模板已修。」（关闭 §18.3 的待定）
+2. **`estimated` 但金额非有限/缺失**——原文「**保留生产者 `status="estimated"`，不降级**；在 `cost` 字典补 `reason="no_cost_amount_recorded"`，让"estimated 却无金额"不再含混；更新测试与台账。」（关闭 §18.4 的待定）
+3. 零模型、只改脚本/投影/测试/文档；完成后 `[DONE]`。
+
+Lead 同时确认 §18.4 报备的并发会话现象（HEAD 被切到 `qwen/wave1-finite`）是 Lead 自己预建分支/同步文档所致，不是异常、无需恢复——该登记就此关闭。
+
+### 19.1 改动（3 文件，+46/−4；投影 +4/0，脚本 2/2，测试 +40/−2）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/services/run_usage.py` | `_cost_of` 新增一支 `elif status == ESTIMATED and amount is None: projected["reason"] = "no_cost_amount_recorded"`（`:66-69`）。**只补解释、不动状态**：`cost["status"]` 仍是生产者写的 `estimated`，`cost_cny` 仍是 `null`，聚合的 `runs_without_estimated_cost` 口径不变（它按 `cost_cny is not None` 过滤，与本支无关）。插入点在原 UNKNOWN 支之后，故 `summarize_run_usage` `:69`→`:73`、`reported_latency_ms` 调用点 `:93`→`:97`、`aggregate_run_usage` `:107`→`:111`（自 §18 起再 **+4** 行漂移） |
+| `scripts/report_eval_cost.py` | `:381-382` 的硬编码说明由「`run_usage.py:22-26` 的 `_count` 只接受非负整数, 小数 latency 全被丢弃 ……（只登记, 本卡不改产品代码）」改为「已由 QWEN-104b/104c 修复: `_number` 现接受非负 int/float 并要求 math.isfinite, 复跑本计数 127 -> 0; 本报告仍按原始值读, 本行由产品投影实时算出」。**只改这一处模板**：下一行 `model_calls` 的「同一规则; 实测 0 条」照旧成立（`_count` 未动），未改；计数本身仍是 `total.projection_dropped["latency_ms"]` 实时算出 |
+| `tests/a/test_run_usage_admin.py` | 用例 13 → **14**。① `test_non_finite_cost_amount_is_never_reported_as_money`（`:259`）的 `cost` 全等断言加上 `"reason": "no_cost_amount_recorded"`；② 新增 `test_estimated_status_without_a_usable_amount_explains_the_absence`（`:288-321`）把"estimated 但投影拿不到可用金额"的**五种形态**逐一钉住——**缺 `amount_cny` 键**、`None`、**负数 `-5`**、**字符串 `"0.0042"`**、**`True`（bool）**——都保留 `estimated` 并补 reason；对照组 `amount_cny=0.0025` 的 `cost` **不含 reason**；聚合层 `cost_status={"estimated":6,"unknown":0}`、`cost_cny_estimated_sum=0.0025`、`runs_without_estimated_cost=5` |
+
+### 19.2 这次改的是什么语义（以及没改什么）
+
+- **改**：`cost` 字典里"estimated 却没有金额"这一格从**沉默**变成**带原因**。此前 `reason` 只在 `status=unknown` 且金额与 portion 全无时出现，于是同一个响应可以出现"`cost_status=estimated`、`cost_cny=null`、`cost` 里没有任何解释"——读数的人只能猜是投影丢了金额还是生产者漏写。现在这类记录统一带 `no_cost_amount_recorded`，与 §7 既有的 unknown 解释复用同一个词，不新造枚举。
+- **该 reason 的准确含义**（沿用 §7 既有口径，本卡不新造语义）：它说的是"**投影手上没有可用金额**"，不是"生产者一定没写"。`amount_cny` 缺键、为 `None`、非有限（inf/nan）、负数、字符串或 bool 都会走到这一支——后几种是生产者写了但被 `_amount` 判为不可用。这与原 UNKNOWN 支的 `no_cost_amount_recorded` 完全同口径（那里的判定同样来自 `_amount` 返回 `None`）。覆盖面：inf 在 `:259`（104c 已有），缺键/`None`/负数/字符串/bool 五种在本卡 `:288-321`。**一处自我更正要如实登记**：本节初稿把"负数/字符串/bool"写成"早在 §17 的 `:200`/`:220` 就钉住"，核对后发现那两条测的是 `_number`（延迟）与 `_count`（计数），**与金额路径无关**——该覆盖当时并不存在，于是本卡把它补进新用例，而不是留一句不实的引用。
+- **没改**：`COST_STATUSES` 仍是 `(estimated, unknown)`；不降级、不推断、不补任何金额；`cost_cny` 仍只在 `estimated` 且金额可用时非空。§7 第 219 行「`cost_cny` **只在 `estimated` 时非空**」这一**方向**的口径继续成立；其逆命题本来就不成立，本卡只是把逆命题的反例显式标注出来，§7 旧正文不回改，指认本节。
+- **没改**：`_count`/`_number`/`_amount` 三个投影函数、`aggregate_run_usage` 算法、端点与响应结构（`cost` 本就是自由字典，新增键不触及任何既有断言）。
+
+### 19.3 实测（证据等级 offline；零模型调用、零外联；Windows + Python 3.12.15）
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 定向（最终代码） | `tests/a/test_run_usage_admin.py` **14** 项（原 13 + 新 1） | 两处产品改动落地后首跑 **14 passed / 1.84 s**（`logs/targeted-run1.txt`，15:57）；反向验证撤支、恢复守卫后的即时复跑 **14 passed / 1.59 s** 当时只打在终端、没有单独存档，因此本卡把**用例补全后**的 **14 passed / 2.64 s**（`logs/targeted-final.txt`，16:14 > 测试文件 16:04）作为最终代码的留档凭证；提交前再跑 **14 passed / 2.44 s**（`logs/targeted-precommit.txt`，文档改动全部落地后的状态）；三次日志末尾都是探针 `outbound attempts=0 unique_hosts=0` |
+| **反向验证**（撤掉裁定 2 的新支） | 同上 14 项 | 把 `elif status == ESTIMATED and amount is None:` 临时改成永不为真（`and False`）→ **2 failed / 12 passed / 2.20 s**，两处失败都是 `cost` 字典缺 `reason` 键的全等断言（`{'status': 'estimated', 'currency': 'CNY'} != {...no_cost_amount_recorded}`）；改回后转绿，`git diff` 复核补丁存档 `tmp/reason-branch-disabled.patch`、`tmp/reason-branch.patch`。仍未用被权限分类器拦截的 `git apply -R`；日志 `logs/targeted-negative.txt` |
+| 模板修正的验证（**不重生成 tracked 报告**） | 同命令只写 scratch | `python scripts/report_eval_cost.py --scan-root output --out output/qwen104d-2026-10-23/tmp/eval-cost-report-after-template.md` → stdout `sources=8 records=127 arms=14 cases=127 cost_status=unknownx127 runs_without_token_data=1`；复跑产物第 79 行现在是「`\| latency_ms 被产品投影判为未记录 \| 0 \| 已由 QWEN-104b/104c 修复: … 复跑本计数 127 -> 0; … \|`」——§18.5 登记的"计数 0 + 旧解释"自相矛盾行**消失**；统计口径与 104c 复跑一致（127 条记录、`cost_status unknown×127`）。日志 `logs/eval-cost-rerun.txt` |
+| 全量回归（**最终代码，记录数**） | `pytest tests/`（**2303** 项 = `--collect-only -q` 收 **2302** 项 + 集合期 1 条 `tests/a/test_mcp_readonly_protocol.py:11` 的 `importorskip("mcp")` skip，与 104c 的 2301+1=2302、104b 的 2299+1=2300 同口径；收集用时 15.75 s，探针 `attempts=0`） | **2283 passed / 0 failed / 20 skipped / 842.46 s（14:02）**，`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen104d-2026-10-23/pytest-full-final`，探针 **`outbound attempts=0 unique_hosts=0`**、无用例因阻断转红；相对 104c 的 2282 恰好 **+1**，就是本卡新增的那一项，既有用例无一转红；日志 `logs/full-suite-final.log`、`logs/collect-quiet.txt` |
+| 全量回归（用例补全前，只作过程记录） | 同命令、同项数 | 2283 passed / 20 skipped / **807.42 s**（`logs/full-suite.txt`，16:13 结束）。该轮起跑时测试文件还是 16:04 之前的初版（新用例只覆盖缺键与 `None` 两种形态，后续只在一个测试函数内部加断言，测试函数个数不变），项数与最终一致但**不作为本卡记录数** |
+| CI 可移植子集 | `ci-portable-list.txt` 的 **40** 个文件（含 `tests/a/test_run_usage_admin.py`） | **412 passed / 1 skipped / 90.29 s**，`--basetemp output/qwen104d-2026-10-23/pytest-ci`，探针 `outbound attempts=0 unique_hosts=0`；相对 104c 的 411/1 恰好 +1，同为本卡新增项；quiet 输出无任何 `admin` 失败行（14 项全绿）；日志 `logs/ci-portable.txt` |
+| 静态检查与口径 | `backend/app scripts/ tests/` | CI 口径 `ruff check --select=F821,F823,E9` **All checks passed**；裸 ruff：`run_usage.py` **0 findings**、`report_eval_cost.py` 改动行不新增 finding（`scripts/` 全角标点基线不变），`test_run_usage_admin.py` 仍是 **4 findings**（3×E501 + 1×EM101，行号 `36/108/174` 不变、EM101 `293`→`331`），与 HEAD 基线（`git show HEAD:` 后单独 lint）逐条相同；路由装饰器仍 **189**、测试文件仍 **192**；`git diff --check` 干净 |
+
+### 19.4 边界与如实登记
+
+- 未向 `main` 提交或推送，只推 `qwen/wave1-finite`；零模型调用、零外联（所有运行挂 fail-closed 探针）；未 `cat`、未提交、未上传 `.env`；未新增端点；未起或重启服务。
+- **tracked 报告未重生成**：`docs/EVAL_USAGE_COST_REPORT_2026-10-22.md` 本卡**一字未动**（Lead 明令），模板修正只作用于将来的生成物；验证一律写 scratch。
+- 全仓消费方核查：`grep -rn '"cost"\|cost =='` 在 `tests/` 与 `backend/app/` 的命中只有 `tests/a/test_run_usage_admin.py` 的断言、`tests/a/test_v2_model_usage.py` 的 3 处（那是 `usage_meter` 写入的原始 budget，不经投影、不受本卡影响）与 `run_usage.py` 自身；`grep -rln report_eval_cost tests/` 为空，故脚本模板改动没有测试面。
+- 越界发现：无新增。旧登记继续在册——`reports/` 未被 gitignore、17 个前端孤儿测试、`multi.py` 行号漂移、`scripts/` 裸 ruff 全角标点基线 2382 项、可选 MCP stdio 步骤（`ci.yml:338-341`）本机未跑。**§18.3 与 §18.4 两处"留给 Lead 裁定"由本卡关闭。**
