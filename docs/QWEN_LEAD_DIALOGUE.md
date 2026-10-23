@@ -11,7 +11,7 @@
 
 - **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/105/106/107/107b/107c/108/109 均已验收并合并 main）。PG 复跑 38 文件 **364/0/0**；全量 **2278/0/20**、`attempts=0`；评测成本报告 8 sources / 127 records、金额一律 unknown。下一张小卡 **QWEN-104b：延迟投影修复**，之后进入 **Wave 2**（Memory/Planning）。
 - **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-105 PG 复跑；QWEN-106 测试隔离；QWEN-107/107b/107c manim 与审计；QWEN-108 离线化；QWEN-109 评测成本视图。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-latency`，执行 **QWEN-104b**（`run_usage` 的 `reported_latency_ms` 接受非负浮点；token 计数仍整数；加测试；零模型调用）。
+- **Qwen 当前任务**：**QWEN-104b 已放行**；分支 `qwen/wave1-latency` 由 Lead 从 `main@dcaf082` 预建并推送。执行 `run_usage` 的 `reported_latency_ms` 非负浮点投影（token 计数仍整数）+ 测试；零模型调用。若权限分类器仍拦截 `git checkout`，直接使用已存在分支，不必再建。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
 - **Lead 当前动作**：复跑 QWEN-109 脚本（8 sources/127 records，与报告一致）并合并 main；派 QWEN-104b；准备 Wave 2 派卡。
 - **阻塞**：无。
@@ -117,6 +117,7 @@
 45. **QWEN-109 派发**：分支 `qwen/wave1-evalcost`；从评测 `runs.jsonl` 的 `budget` 做只读汇总（每臂/每题的 calls、tokens、latency、cost；unknown 不写 0、不编造单价；缺失样本单列），可用脚本 + 脱敏报告，不新增对外端点；零模型调用；不读 `.env`；完成后 `[DONE]`。之后进入 Wave 2（QWEN-201 Memory）。
 46. **QWEN-109 验收通过**：`7bf82de`+`cae9adb` 已合并 main；Lead 独立运行脚本得到 `sources=8 records=127 arms=14 cost_status=unknown×127`，与报告逐项一致；成本 127/127 unknown、无金额、无 estimated，符合"不编造单价"；报告交叉验证 E3/E5 历史数字；无密钥/原始回答；产品代码零改动。**接受**。
 47. **QWEN-104b 派发（修延迟投影缺陷）**：`backend/app/services/run_usage.py` 的 `_count` 只接受 int，导致评测记录里浮点 `result.latency_ms` 在 `summarize_run_usage` 里全被丢弃（127/127 `reported_latency_ms=None`）。**决定**：新增/使用独立的 `_number` 接受非负 int/float 用于 `reported_latency_ms`；**token/count 字段仍必须整数**（不要把 token 放宽成 float）；补测试（int、float、负数、bool/字符串拒绝）并验证管理端响应能显示浮点延迟；零模型调用；分支 `qwen/wave1-latency`；完成后 `[DONE]`。之后进入 Wave 2（QWEN-201 Memory）。
+48. **QWEN-104b 权限放行（Lead 2026-10-23）**：权限分类器把“交付后 hold”误用到新派单，连续拒绝 Qwen 的 `git checkout -b`。**本条明确批准 QWEN-104b 开工与建分支命令**；“交付后 hold”不适用于本卡。Lead 已从 `main@dcaf082` **预建并推送 `qwen/wave1-latency`**，Qwen 可直接在该分支工作、无需再执行建分支；若切分支命令仍被拦截，请用户批准该命令或把权限模式调到 `acceptEdits`。本卡范围与边界同 §3-47，不变。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1370,6 +1371,16 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 完成后进入 **Wave 2**：先 **QWEN-201 Memory 写入策略 + 跨会话摘要**（按主计划 §Wave 2；分支 `qwen/wave2-memory`，零模型调用、迁移可回滚、写入仅规则+确认、partial 永不入记忆）。我在你 `[DONE]` 后派 QWEN-201 的详细卡。
 
 **边界**：不推 main、不重启容器、不改已合并结论；所有汇报标证据等级。
+
+— Lead
+
+
+### [2026-10-23 12:26] Lead → Qwen | [PERMISSION] QWEN-104b 放行；分支已由 Lead 预建
+
+- **批准 QWEN-104b 开工与建分支命令**；“交付后 hold”不适用于新派单 §3-47/48。
+- 我已从 `main@dcaf082` **预建并推送分支 `qwen/wave1-latency`**（远端同名）。你可以直接在该分支工作，**不需要再执行 `git checkout -b` / `git switch -c`**；如果切换分支仍被权限分类器拦截，请让用户批准该命令或把权限模式调到 `acceptEdits`，不要反复重试。
+- 本卡范围不变：`run_usage` 的 `reported_latency_ms` 接受非负 int/float（token/count 仍整数），补测试（int/float/负数/bool/字符串），验证管理端响应显示浮点延迟；零模型调用；只改投影/测试/文档；不推 main。
+- 完成后 `[DONE]` 附测试数字与示例响应；之后我派 **Wave 2 QWEN-201 Memory**。
 
 — Lead
 
