@@ -6,6 +6,8 @@ zero, and no environment tariff may turn into an invented price.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 import pytest
@@ -21,7 +23,7 @@ LIST_PATH = "/api/v2/admin/run-usage"
 
 def add_run(factory, run_id: str, *, budget: dict | None, created_at: float,
             status: str = "completed", duration_ms: int = 1200, tool_calls: int = 0,
-            latency_ms: int = 900, course_id: str = "artificial_intelligence") -> None:
+            latency_ms: Any = 900, course_id: str = "artificial_intelligence") -> None:
     result: dict = {"latency_ms": latency_ms}
     if budget is not None:
         result["budget"] = budget
@@ -192,6 +194,41 @@ def test_projection_reads_only_persisted_values_ignoring_tariff_env(api, monkeyp
     with_tariff = client.get(f"{LIST_PATH}/run-1", headers={"Authorization": "Bearer admin"}).json()
     assert with_tariff == without
     assert with_tariff["cost_status"] == "unknown" and with_tariff["cost_cny"] is None
+
+
+def test_reported_latency_keeps_measured_floats_and_rejects_non_numbers(api):
+    """QWEN-104b: latency is measured (``round(elapsed * 1000, 2)``), never counted."""
+    client, factory = api
+    cases = {"run-int": 900, "run-float": 5803.27, "run-negative": -1,
+             "run-bool": True, "run-string": "900", "run-null": None}
+    for index, (run_id, latency) in enumerate(cases.items()):
+        add_run(factory, run_id, created_at=1_700.0 + index, budget=None, latency_ms=latency)
+    body = client.get(LIST_PATH, headers={"Authorization": "Bearer admin"}).json()
+    projected = {item["run_id"]: item["reported_latency_ms"] for item in body["runs"]}
+    assert projected["run-float"] == 5803.27
+    assert projected["run-int"] == 900
+    assert all(projected[key] is None for key in ("run-negative", "run-bool", "run-string",
+                                                 "run-null"))
+    # Both real values keep the type they were measured in: nothing is coerced or truncated.
+    assert isinstance(projected["run-float"], float)
+    assert isinstance(projected["run-int"], int)
+    detail = client.get(f"{LIST_PATH}/run-float", headers={"Authorization": "Bearer admin"}).text
+    assert "5803.27" in detail
+
+
+def test_counts_stay_integer_only_while_latency_gains_precision(api):
+    """The QWEN-104b widening is scoped to latency: a fractional count is still not recorded."""
+    client, factory = api
+    add_run(factory, "run-fractional", created_at=1_700.0, latency_ms=5803.27,
+            budget={"model_calls": 3.0, "actual_input_tokens": 12.5, "actual_output_tokens": 1.0,
+                    "usage_unknown_calls": 0.5, "cost": {"status": "unknown", "currency": "CNY"}})
+    run = client.get(f"{LIST_PATH}/run-fractional",
+                     headers={"Authorization": "Bearer admin"}).json()
+    assert run["model_calls"] is None and run["usage_unknown_calls"] is None
+    assert run["input_tokens"] is None and run["output_tokens"] is None
+    assert run["usage_status"] == "unknown"
+    assert run["reported_latency_ms"] == 5803.27
+    assert run["duration_ms"] == 1200 and run["tool_calls"] == 0
 
 
 def test_unknown_run_returns_404_and_persistence_failure_returns_503(api, monkeypatch):

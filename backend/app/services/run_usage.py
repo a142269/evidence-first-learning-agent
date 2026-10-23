@@ -26,6 +26,13 @@ def _count(value: Any) -> int | None:
     return value if value >= 0 else None
 
 
+def _number(value: Any) -> int | float | None:
+    """Accept a non-negative measured number; counts stay on ``_count`` and keep int-only."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value if value >= 0 else None
+
+
 def _amount(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
@@ -82,7 +89,7 @@ def summarize_run_usage(row: Any) -> dict[str, Any]:
         "run_status": row.status,
         "created_at": row.created_at,
         "duration_ms": _count(row.duration_ms),
-        "reported_latency_ms": _count(result.get("latency_ms")),
+        "reported_latency_ms": _number(result.get("latency_ms")),
         "model_calls": _count(budget.get("model_calls")),
         "tool_calls": _count(row.tool_calls),
         "input_tokens": input_tokens,
