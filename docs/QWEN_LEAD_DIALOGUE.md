@@ -1646,4 +1646,47 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 **两处既有缺陷登记（不在本卡修）**：① `init_db()` 后再 `alembic upgrade head` 在同一库会红（baseline 无条件 create_table）——归 **QWEN-403** Runbook/迁移链说明；② `docs/API-CONTRACT.md` 的 DB 表所有权仍写 17 张——归 **QWEN-401/403** 文档契约修正。
 
 — Lead
+### [2026-10-23 21:56] Qwen → Lead | [DONE] QWEN-202 跨会话摘要：40 项新增、10 组反向验证、四种空态实测，全量 2376 passed / 0 failed / 20 skipped
 
+**证据等级：全部 offline（本机 Windows + Python 3.12.15 同形复跑）。remote 绿灯我没有，等你判读；PG 方言本卡零新表零迁移，不涉及。**
+
+分支 `qwen/wave2-summary`（起点 `c28aac4` = `origin/main`，工作树起点干净），2 个新文件、2 个 commit：`67da166` 产品+测试、`f24bb56` 文档，已推送 `origin/qwen/wave2-summary`。除这两个文件外零改动——没碰 `models.py`、没新迁移、没改 `user_memory.py`、没动 API/UI/前端。
+
+**DoD 逐条对照你 18:55 的派工原文（`docs/QWEN_LEAD_DIALOGUE.md:1640-1644`）与主计划 `:487`**
+
+- **只读 active 且未过期**：过滤条件一条不重写，直接调 201 的 `active_memories`（`session_summary.py:165`），201 改口径 202 自动跟。
+- **摘要不自动写回 `user_memories`**：三层同时成立——`build_summary` 是签名里没有 session 的纯函数（`:100`）；`cross_session_summary` 的 `with session_factory()` 块只跑两条 SELECT（`:170-174`）；返回体恒 `persisted: false`（`:88`）。用例把三次摘要前后 `user_memories`/`memory_events` 行数钉死 `(1, 1)`（`test_session_summary.py:85-93`），另有一条源码静态扫描禁止本模块出现 `.add(`/`.commit(`/`.delete(`/`update(`/`llm`/`provider`/`requests`/`openai`/`http`/`os.environ`/`.env`（`:300`）。
+- **无记忆返回明确空态**：`status="empty"` + `reason`，六个字段照常给，不返回 `None`、不抛异常。两类 reason：`no_active_memory` / `no_memory_fit_budget`。
+- **有界**（主计划的 token 预算）：窗口 `window` 默 3、上限 20（就是你要的「替代固定 3 条窗口的可配置版本」）+ 单项 80 token / 320 字裁剪（带 `…` 与 `truncated` 标记）+ 总预算 `token_budget` 默 600。被裁被跳的每条都有显式 `skipped` 原因（`outside_window`/`token_budget`/`content_missing`/`source_run_not_completed:<status>`），不静默丢。
+- **幂等**：`summary_sha256` 只覆盖输出正文行（`:87`），不含 `generated_at`、不含调用参数；`NOW` 与 `NOW+3600` 两次重建除时刻外逐字段相同、哈希相同；新增一条记忆即改哈希。
+- **不被 partial 污染**：201 有写侧闸门，本卡补**读侧复核**（`:127`）——记忆确认后源 run 又被改判成 `partially_completed`/`failed`/`awaiting_approval`/`reviewing`/`interrupted`/`rejected`/`running` 七态之一，或被删，当场跳过并记原因。
+- **失败回退**：单行坏数据只让那条变 `content_missing` 跳过，整份摘要照常；两次读各自压成同一个稳定 code `memory_persistence_unavailable`，不外泄 DB 原文。
+- **忠实性**：正文行固定 `- <kind>：<content>`，右侧逐字取自存储文本，不生成、不改写、不合并、不翻译。固定金句用例：`- weak_point：分数除法还需要复习`。
+- **零模型、不读 `.env`**：每轮 pytest 都挂同一个 fail-closed socket 探针，全量 **`outbound attempts=0 unique_hosts=0`**；`tiktoken` 不是本仓依赖，本卡不引入任何 tokenizer 依赖，token 口径是离线启发式（CJK 每字 1、其余 `⌈n/4⌉`），**只用来限长，绝不作为计费/账单数字出现在接口或报告里**。
+
+**测试数字（记录数，均从归档日志解析，不手抄）**
+
+- 定向（最终交付字节）：**40 passed / 0 failed / 13.23 s**，探针 `attempts=0 unique_hosts=0`（`logs/targeted-after-reverse-proof.txt`，10 组反向验证逐条禁用并逐条按字节还原后的复跑）。补守卫后、反向验证前的同字节首跑 40 passed / 12.85 s（`logs/targeted-with-run-read-guard.txt`）。
+- 集合：**2395** 项 + 集合期 1 条 `mcp` `importorskip` skip = **2396 项**，口径同 §20/§17（`logs/collect-only.txt`，收集用时 8.63 s）。
+- 全量回归：**2376 passed / 0 failed / 20 skipped / 993.55 s**，exit 0，21 条 warnings，195 个测试文件，`--basetemp output/qwen202-2026-10-23/pytest-full2`，探针 **`outbound attempts=0 unique_hosts=0`**。相对你验收的 2336 恰好 **+40**，全为本卡新增项，既有用例零转红零消失（`logs/full-suite.txt`，去 NUL 副本 `full-suite-clean.txt`，本轮数字取自副本）。
+- **反向验证 10 组，每组只禁用一条绑定规则**，禁用行与转红数逐组记在 `logs/reverse-proof-summary.txt` + `logs/reverse-<组名>.txt`：读侧源 run 复核 → 8/32；窗口截断 → 1/39；token 预算 → 2/38；超长裁剪 → 1/39；空态 reason 区分 → 8/31；`persisted=False` → 3/37；空内容降级 → 1/39；哈希不含时刻 → 1/39；源码禁写扫描 → 1/39；源 run 那次读的守卫 → 1/39。每组跑完立刻按字节还原，`byte_restore_ok=True` ×10，pristine md5 `005986907fd116096b6f831c78fe7160` 全等。
+- 首跑 2 failed / 37 passed / 20.38 s 与第一轮作废的驱动（补丁叠加、`restore=False`）**都只作过程记录，不作记录数**：前者两处红点全在本卡自己的用例期望（TTL 把 `confirm()` 自戳的墙钟当成注入 `NOW`；手填记忆漏 `run_id=None`），改的是测试，没放宽任何一条产品规则；后者发现即停、按 pristine 逐字节还原、改驱动，被污染日志改名 `logs/void-stacked-reverse-*.txt` 保留不删。
+- 静态检查：CI 口径 `ruff check --select=F821,F823,E9` 两个新文件 **All checks passed**；裸 ruff（仓库未纳入门禁）15 项 = `RUF001` 7 + `EM101` 4 + `EM102` 2 + `I001` 2，同族规则在本仓 `backend/app`+`tests/a`（含本卡新文件）已分别命中 2221/3421/319/252/56，本卡不是首例也不单独清洗。`git diff --check` 干净。
+
+**空态证据（你点名要的那件）**：`logs/empty-state-evidence.txt`（脚本 `empty_state_evidence.py`，真实 SQLite `tmp/empty-state-evidence.db`，**在最终字节上重跑过**）。四种空态各自打印完整返回体与其后的两表行数——A 空库 → `empty/no_active_memory`，counts user_memories=0 / memory_events=0；B 只有未确认候选 → 同上，counts 仍 0/0（201 的 `propose` 本就不落库）；C 有可读记忆但 `token_budget=1` → `empty/no_memory_fit_budget` 且 `skipped` 里挂着 `token_budget`，counts 仍 **1/1（读一次摘要没多一行）**；D `revoke` 之后 → `empty/no_active_memory`，counts 1/2 —— **这条增量是 `memory.revoke()` 自己的审计事件，不是摘要写的**。
+
+**一处中途自查返工（如实登记，不是红点逼出来的）**：初版把记忆那次读包进了 `try/except → 稳定 code`，但源 run 状态那次 SELECT 裸着——本模块 docstring 承诺「两次读、只读、失败给稳定 code」，一条有兜底一条没有是我自己写的不一致。补守卫（`:169-178`）+ 1 项用例（`:281`），测试 **39 → 40 项**，反向验证随之从 9 组扩到 10 组，定向/集合/全量/空态证据**全部在最终字节上重跑**；39 项阶段那批日志移到 `logs/prev-39items/` 保留。只碰本卡自己的两个新文件，没动 201 一行。
+
+**五处需你追认的取舍**（详见台账 §22.4，本卡按字面实现，一处没擅自扩）
+
+1. `3 / 20 / 80 / 600 / 320` 与 `token_budget` 硬上限 `100_000` **这五个数字是我定的**——你和主计划都只写「有界」「token 预算」「可配置版本」，没给数字。默认 3 是照抄既有事实（`conversation_memory.py:21` 的 `.limit(3)`）。改口径只动 `:28-32` 常量。
+2. 「可配置版本」我做成**服务层可配**，**没有回改 `backend/app/agent_runtime/conversation_memory.py:21` 的 `.limit(3)`**：那条在请求路径上（把历史问答拼进 prompt），改它等于改运行时行为，而你写「不碰 API/UI（203）」。**登记不改，请你指派**：并入 203，还是另开一张卡。
+3. **无 `source_run_id` 的记忆**（教师/用户手填那条路）我视为「没有可复核的 run」，直接放行参与摘要（`:124` fallback）。若你认为手填记忆也要另立凭据，改动面是那一行改成跳过 + 一条用例。
+4. **空态拆两个 `reason`** 是我的选择，你只要求「明确空态」。合成一个也能用，但会把「库是空的」和「库里有货但塞不下」混成一类。
+5. **`tests/a/test_session_summary.py` 未纳入 CI portable 清单**：201b 那句只针对两份记忆测试，202 派工条没这句，我不擅自扩清单。要补是 `ci.yml` 尾部 +1 行、42 → 43 文件，同形子集需另跑一轮实测（本卡 40 项，量级 465 → 505/1 上下）。
+
+**合并提示（实测过，不是猜）**：本分支起点 `c28aac4` = `origin/main`，**不含 201b 的四处改动**（`ci.yml` 42 文件、README CI 行、台账 §21、矩阵 §18 在 `qwen/wave2-memory = a625adc`）。所以本卡台账编 **§22**、矩阵编 **§19**，与 §21/§18 不撞号。我用 `git merge-tree --write-tree a625adc HEAD` 干跑了一次三方合并（不碰工作树，输出 `logs/merge-tree-dry-run.txt`）：**README.md 自动合并成功**（201b 加的是 CI 那行、本卡改的是本地全量那行，不在同一行；`docs/00-评委30秒导览.md` 201b 根本没动，合并时直接取本卡那份），**只有两处真冲突**：`docs/CLAIMS_LEDGER.md`（§21 与 §22 都追加在文件末尾）和 `docs/TEST_MATRIX.md`（§18 与 §19 同理）。都是"两段都要"的追加型冲突，保留两份、按 §20→§21→§22 次序排即可，编号不用返工。
+
+**未做**：未新增端点/前端/记忆 UI（203）；未扩 CI 清单；未接 tokenizer 依赖；未动 `user_memory.py`/`models.py`/迁移；未动 `docs/API-CONTRACT.md` 表所有权（归 401/403）；未动 baseline 迁移无条件 `create_table`（归 403）。**QWEN-211 未开始，等你派**。
+
+— Qwen

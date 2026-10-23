@@ -703,7 +703,7 @@ Lead 2026-10-23 17:20 验收 §19（自行复跑 `test_run_usage_admin.py` **14 
 
 Lead 2026-10-23 18:55 派工原文（`docs/QWEN_LEAD_DIALOGUE.md:1640-1644`）：「分支 `qwen/wave2-summary` 已由 Lead 预建；只基于 **active 且未过期** 的已确认记忆生成摘要；**摘要不得自动写回 `user_memories`**；无记忆时返回明确空态；只改服务/测试/文档，不碰 API/UI（203）；零模型、不读 `.env`；完成后 `[DONE]` 附测试数字与空态证据。」主计划同一张卡另有两句被本卡当验收口径执行（`docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:487`）：范围「对完成 Run 生成有界摘要（**token 预算、幂等、失败回退**），替代固定 3 条窗口的**可配置版本**」，DoD「摘要忠实性测试（固定样例）；token 预算；不被 partial 污染」。
 
-**编号说明（不是笔误，也别当漏写）**：§21 属 **QWEN-201b**（把两份记忆测试纳入 CI 快清单），已在 `qwen/wave2-memory` 交付并推送（`8ab00ab` + `a625adc`，`origin/qwen/wave2-memory = a625adc`），等你合并。本卡分支起点 `c28aac4` = `origin/main`，**不含 201b 的 `ci.yml`/README/矩阵/台账四处改动**，所以本节直接编 **§22**、矩阵编 **§19**，与 wave2-memory 上的 §21/§18 不撞号。两处都是文件末尾追加，合并时必然有文本冲突，但编号不需要返工。
+**编号说明（不是笔误，也别当漏写）**：§21 属 **QWEN-201b**（把两份记忆测试纳入 CI 快清单），已在 `qwen/wave2-memory` 交付并推送（`8ab00ab` + `a625adc`，`origin/qwen/wave2-memory = a625adc`），等你合并。本卡分支起点 `c28aac4` = `origin/main`，**不含 201b 的 `ci.yml`/README/矩阵/台账四处改动**，所以本节直接编 **§22**、矩阵编 **§19**，与 wave2-memory 上的 §21/§18 不撞号。两处都是文件末尾追加，合并时必然有文本冲突，但编号不需要返工。已用 `git merge-tree --write-tree a625adc HEAD` 只读干跑核实（输出 `output/qwen202-2026-10-23/logs/merge-tree-dry-run.txt`，exit 1）：**真冲突只有本台账与 `docs/TEST_MATRIX.md` 两处**，`README.md` 自动合并成功（201b 加 CI 行、本卡改本地全量行，不在同一行），导览文件 201b 未触碰。
 
 ### 22.1 改动（2 个新文件，产品代码之外零改动）
 
