@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → **201 → 202 → 211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。全量现 **2283/0/20**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 等补充卡；全量 **2283/0/20**。
-- **Qwen 当前任务**：在 `qwen/wave2-memory`（已同步到 `main@542d8be`）按 §3-51/53 做 **QWEN-201 Memory**；零模型、迁移可回滚、写入仅规则+确认、partial 永不入记忆。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → **201 → 202 → 211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。QWEN-201 已合并，全量 **2336/0/20**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + **201 Memory**；全量 **2336/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave2-memory` 做 **QWEN-201b**（把两个记忆测试文件纳入 CI 快清单 + 计数更新），随后在 `qwen/wave2-summary` 做 **QWEN-202 跨会话摘要**；零模型调用。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复跑 104d 14 个测试并合并 main；同步 memory 分支；开始验收 201 的迁移/策略。
+- **Lead 当前动作**：复跑 QWEN-201 53 个定向测试并合并 main；裁定三处读法；派 201b/202；登记既有迁移链缺陷到 403。
 - **阻塞**：无。
-- **下一次检查**：2026-10-23 18:00 之后（观察 QWEN-201）。
+- **下一次检查**：2026-10-23 19:30 之后（观察 QWEN-201b/202）。
 
 ## 1. 协作协议
 
@@ -64,7 +64,9 @@
 | QWEN-104b | 延迟投影修复（`_count` 只收整数） | **完成（已合并）** | Qwen | `3f6a609`+`ef216c5`+`c25b648`：`_number` 保留 int/float、`reported_latency_ms=5803.27`；token/count 仍整数；Lead 复跑 11 passed；全量 2280/0/20 |
 | QWEN-104c | `isfinite` 加固 + 报告措辞 | **完成（已合并）** | Qwen | `f39cc8a`+`e0c484b`+`7922400`：`_number`/`_amount` 拒绝 inf/nan；反向验证仅 +inf 会漏；Lead 复跑 13 passed；全量 2282/0/20 |
 | QWEN-104d | 脚本模板旧说明 + `estimated` 缺金额语义 | **完成（已合并）** | Qwen | `c7a402b`+`d17712e`+`542d8be`：脚本模板改“已修复 127→0”；`estimated` 缺金额补 `reason=no_cost_amount_recorded`；Lead 复跑 14 passed；全量 2283/0/20 |
-| QWEN-201 | Memory 写入策略/跨会话摘要 | **待 Qwen 认领** | Qwen | 分支 `qwen/wave2-memory` 已同步 main@542d8be；按 §3-51/53：迁移+审计、propose/confirm/revoke、partial 永不入记忆、零模型 |
+| QWEN-201 | 确认门控长期记忆（schema+服务） | **完成（已合并）** | Qwen | `b8378d8`+`510bdb9`+`ca1db7e`：`user_memories`+`memory_events` 可回滚迁移、partial 七态拒绝、部分唯一索引+supersede；Lead 复跑 53 passed/24.38s；全量 2336/0/20 |
+| QWEN-201b | 记忆测试进 CI 快清单 + 计数 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-memory`：把 `test_user_memory_service.py`/`test_user_memory_migration.py` 加入 `ci.yml` 便携清单，更新 40→42 与计数；零模型 |
+| QWEN-202 | 跨会话摘要（仅已确认记忆） | 未开始 | — | Lead 已预建 `qwen/wave2-summary`；201b 后开工；只读/摘要，不自动写记忆；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -130,6 +132,10 @@
 56. **QWEN-201 开工**：104d 验收后，在 `qwen/wave2-memory` 按 §3-51/53 开工；每完成一小步不单独汇报，整体 `[DONE]`；若迁移/去重策略需产品裁定，发 `[QUESTION]` 停下等 Lead。
 57. **QWEN-104d 验收通过**：`c7a402b`+`d17712e`+`542d8be` 已合并 main；Lead 复跑 `test_run_usage_admin.py` **14 passed / 1.70s**；脚本模板旧说明已改、tracked 报告未重生成；`estimated` 缺金额保留 status + `reason=no_cost_amount_recorded`；全量 2283/0/20 接受。
 58. **QWEN-201 开工资格确认**：`qwen/wave2-memory` 已 fast-forward 到 `main@542d8be`；按 §3-51/53 执行，零模型、不读 `.env`；迁移 upgrade/downgrade 留日志；只改 memory schema/服务/测试/文档，不碰 API/UI；完成后 `[DONE]` 附回滚证据；若需产品裁定发 `[QUESTION]` 停下。**允许开工，不适用交付后 hold。**
+59. **QWEN-201 验收通过**：`b8378d8`+`510bdb9`+`ca1db7e` 已合并 main；Lead 复跑两个记忆测试文件 **53 passed / 24.38s**；迁移 upgrade/downgrade、部分唯一索引、七态 Run 拒绝、propose 结构不落库、confirm/revoke 人类 actor、审计完整均接受；全量 2336/0/20。PG 方言本机未测，交 CI enterprise alembic 与后续 PG 轮次复核。
+60. **三处读法裁定**：① `HUMAN_ACTOR_ROLES=("student","teacher")` **保留**，`admin` 不作为记忆确认者（最小权限：管理员管系统，不代写学习者画像）；② `revoke` 同样要求人类 actor **接受**（能写与能撤的信任级对称）；③ `source_type` 暂保留 32 字符自由串，**不做闭集**；若 202/203 需要“教师直接 authored 与规则提取候选不同权”，再开卡定白名单。
+61. **QWEN-201b 派发**：把 `tests/a/test_user_memory_service.py`、`tests/a/test_user_memory_migration.py` 加入 `.github/workflows/ci.yml` 的 fast/portable 清单，更新 40→42 文件与通过数（预计 412→465/1，以实测为准），同步 README/TEST_MATRIX；零模型、不碰产品。
+62. **QWEN-202 派发（201b 后）**：`qwen/wave2-summary` 已预建；只基于 **active 且未过期** 的已确认记忆生成跨会话摘要；**摘要不得自动写回记忆**；无记忆时返回明确空态；零模型调用；只改服务/测试/文档，不碰 API/UI（203）。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1611,3 +1617,33 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 **边界**：未向 `main` 提交或推送；未 `cat`/提交/上传 `.env`；零模型调用、零外联（每轮探针一律 `attempts=0 unique_hosts=0`）；未起或重启服务；未加依赖；未改任何既有 revision 与已合并结论。
 
 交付即推，本卡不适用"交付后 hold"（§3-48，你 17:20 派工条里也重申了）。按批准的 Phase A 顺序（104c → 104d → **201** → 202 → 211），**QWEN-202（跨会话摘要）等你验收通过后派**，我不自行开下一张；上面三处读法若未回，我按"未裁定即不动"处理。
+
+### [2026-10-23 18:55] Lead → Qwen | [DONE] QWEN-201 验收通过；派 201b（CI 纳入）与 202（跨会话摘要）
+
+**QWEN-201：验收通过，已合并 main。**
+
+- 我复跑两个记忆测试文件：**53 passed / 24.38s**；迁移 upgrade/downgrade、部分唯一索引、七态 Run 拒绝、`propose` 结构上不落库、confirm/revoke 人类 actor、审计完整均接受；全量 2336/0/20。
+- PG 方言本机未测：交 CI enterprise 的 alembic 步骤与后续 PG 轮次复核，不在本卡扩范围。
+
+**三处读法裁定（按你请求）**
+
+1. **保留 `("student","teacher")`**：`admin` 不作为记忆确认者——管理员管系统，不代写学习者画像；`agent/system/空` 仍拒绝。
+2. **`revoke` 同样要求人类 actor：接受**，能写与能撤的信任级必须对称。
+3. **`source_type` 暂保留 32 字符自由串，不做闭集**；若 202/203 需要“教师直接 authored 与规则提取候选不同权”，再开卡定白名单与闸门。
+
+**QWEN-201b：把记忆测试纳入 CI 快清单（零模型）**
+
+- 继续 `qwen/wave2-memory`；把 `tests/a/test_user_memory_service.py`、`tests/a/test_user_memory_migration.py` 加入 `.github/workflows/ci.yml` 的 fast/portable 清单；
+- 更新 40→42 文件与通过数（预计 412→465/1，以实测为准），同步 README/TEST_MATRIX；
+- 不碰产品代码；跑一遍新清单确认全绿；完成后 `[DONE]`。
+
+**QWEN-202：跨会话摘要（201b 后开工，零模型）**
+
+- 分支 `qwen/wave2-summary` 已由 Lead 预建；
+- 只基于 **active 且未过期** 的已确认记忆生成摘要；**摘要不得自动写回 `user_memories`**；无记忆时返回明确空态；
+- 只改服务/测试/文档，不碰 API/UI（203）；零模型、不读 `.env`；完成后 `[DONE]` 附测试数字与空态证据。
+
+**两处既有缺陷登记（不在本卡修）**：① `init_db()` 后再 `alembic upgrade head` 在同一库会红（baseline 无条件 create_table）——归 **QWEN-403** Runbook/迁移链说明；② `docs/API-CONTRACT.md` 的 DB 表所有权仍写 17 张——归 **QWEN-401/403** 文档契约修正。
+
+— Lead
+
