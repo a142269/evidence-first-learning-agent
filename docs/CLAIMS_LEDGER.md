@@ -503,3 +503,53 @@ Lead 2026-10-22 23:05 开卡：数据源为评测产物 `runs.jsonl` 的 `budget
 - **未新增端点、未改产品**：`git status` 仅 2 个未跟踪新文件；`backend/`、`tests/`、`ci.yml`、README 均未改动。
 - 迭代过程产物按不删原则留档在 `output/qwen109-2026-10-22/tmp/`：`report_eval_cost-v1-parallel-accounting.py`（v1 自写一套成本判定，已弃用）、`eval-cost-report-run1-buggy-grouping.md`（排除清单归并键错写成 `output/...`）、`eval-cost-report-v1-parallel-accounting.md`、`eval-cost-report-v2-latency-lost.md`（改走产品投影后 latency 全部丢失的中间版，即 §16.4 的发现来源）、`eval-cost-report-v3-no-completed-column.md`（补 `completed` 列之前）、`eval-cost-qwen102-main-only.md`（`--source` 分支验证）、`eval-cost-report-run5-final.md`（重新生成前的已交付副本，供 run6 逐字节比对）。日志 `logs/run1~run4`（迭代过程）、`logs/run5-final.txt`（交付数字来源）、`logs/run6-reproducibility.txt`（提交前复现核对）、`logs/cli-branches.txt`、`logs/crosscheck.txt`。
 - run5 之后对脚本做过一次**纯删死代码**的收尾：删掉 `Bucket.cases` 及其两行赋值（题号分组用的是 `main()` 里的 `per_case` 键，`Bucket` 内那份集合从未被读取）。删后两个 lint 门复跑仍 All checks passed，报告按 §16.5 的可复现性一行重新生成并逐字节相同——**未改动任何交付数字**。
+
+## 17. QWEN-104b 延迟投影修复（2026-10-23，分支 `qwen/wave1-latency`，零模型调用）
+
+Lead 2026-10-23 12:20 派卡、12:26 `[PERMISSION]` 放行（分支由 Lead 从 `main@dcaf082` 预建），固定决定见 §3-47：`reported_latency_ms` 用**独立的非负数值投影**（int/float 均接受，bool/负数/字符串/None 拒绝），而 **token、`model_calls`、`tool_calls` 等计数仍必须整数，不得放宽**；补 int/float/负数/bool/字符串测试，并验证管理端响应确实返回浮点延迟。本节即 §16.4 登记的产品侧观察的落地，**该观察由本卡关闭**。
+
+### 17.1 改动（2 文件，+46/−2；产品 +8/−1，测试 +38/−1）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/services/run_usage.py` | 新增 `_number(value) -> int \| float \| None`（`:29-33`）：非负 int/float **原样返回**，bool/字符串/None/负数 → `None`。`summarize_run_usage` 的 `reported_latency_ms` 由 `_count(...)` 改为 `_number(...)`（`:92`）。**`_count` 一字未动**，token（`:73-75`）、`duration_ms`（`:91`）、`model_calls`（`:93`）、`tool_calls`（`:94`）仍走整数投影 |
+| `tests/a/test_run_usage_admin.py` | 用例 9 → **11**：`test_reported_latency_keeps_measured_floats_and_rejects_non_numbers`（一次列表响应里并排 6 条记录：`900` / `5803.27` / `-1` / `True` / `"900"` / `null`）、`test_counts_stay_integer_only_while_latency_gains_precision`（budget 里塞 `model_calls 3.0`、`actual_input_tokens 12.5`、`actual_output_tokens 1.0`、`usage_unknown_calls 0.5` → 全部 `None`、`usage_status="unknown"`，同一条记录的浮点延迟仍照实返回）。夹具 `add_run` 的 `latency_ms` 形参注解放宽为 `Any`（要能写入 bool/str/null） |
+
+实现取舍（3 条，均可复核）：
+
+1. **命名按 §3-47 的 `_number`**（§4 只写"独立的非负数值投影"，未指定名字，两处不冲突）。
+2. **不复用既有 `_amount`**：`_amount` 会 `float(value)` 强制转换且服务于金额求和（`cost_cny_estimated_sum`）；延迟不参与求和，强转 float 会把整数延迟 `900` 改写成 `900.0`，等于动了 QWEN-104 已验收响应里的既有取值。`_number` **保留原类型**（int 进 int 出、float 进 float 出），既有 9 个用例的 `reported_latency_ms == 900` 断言与响应文本逐字不变。
+3. **未加 `math.isfinite`**：唯一写入方是 `backend/app/evaluation/ablation_runner.py:100` 的 `round((time.perf_counter() - started) * 1000, 2)`，按构造有限；NaN 已被 `value >= 0` 判否拒绝。仓库里另有两处同类过滤带 `isfinite`（`golden_set.py:178-180`、`learning_package.py:263-266`），若 Lead 要对齐口径，加 1 行判断 + 1 条断言即可。
+
+### 17.2 实测（证据等级 offline；零模型调用、零外联）
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 定向（最终代码） | `tests/a/test_run_usage_admin.py` **11** 用例（原 9 + 新 2） | **11 passed / 1.34 s**，`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + fail-closed 探针（副本 `output/qwen104b-2026-10-23/qwen_net_probe.py`）→ `outbound attempts=0 unique_hosts=0`；日志 `output/qwen104b-2026-10-23/logs/targeted-run3-final.txt`；提交前用同一集合复跑 **11 passed / 1.33 s、`attempts=0`**（`logs/targeted-precommit.txt`） |
+| **反向验证**（撤掉修复） | 同上 | 把 `:92` 临时改回 `_count(...)` → **2 failed / 9 passed / 1.67 s**，两处失败都是 `assert None == 5803.27`，即修复前浮点延迟确实被整条丢弃；随后改回并重跑转绿。**未用 `git apply -R`**（该命令被权限分类器拦截），改为一次编辑 + 改回，前后各跑 `git diff` 复核最终状态与预期一致；日志 `logs/targeted-negative.txt` |
+| 管理端真实响应（`output/qwen104b-2026-10-23/probe_admin_response.py`，走 `TestClient` + 一次性 sqlite，非断言桩） | 2 条路由各 1 次 | `GET /api/v2/admin/run-usage/probe-run-1` → **200**，`reported_latency_ms` = **5803.27**（Python `float`），响应原文含 `"reported_latency_ms":5803.27`（**小数没有被截断成整数**）；列表路由同一记录同为 5803.27。同一条响应里 `model_calls 1` / `tool_calls 0` / `input_tokens 3715` / `output_tokens 878` / `usage_unknown_calls 0` / `duration_ms 1200` **仍是整数**；`cost_status="unknown"`、`cost.reason="no_cost_amount_recorded"`、`cost_cny=null`、`usage_status="measured"` 与 §10 的 QWEN-104 口径逐项一致；响应文本不含请求正文（`private`）。探针 `attempts=0 unique_hosts=0`。延迟取值取自真实评测记录（ablation-full `single` 臂的 latency 中位数）；日志 `logs/probe-admin-response.txt` |
+| 静态检查与口径 | `backend/app scripts/ tests/` | CI 口径 `ruff check --select=F821,F823,E9`（`ci.yml:115`）**All checks passed**；裸 ruff：`run_usage.py` **0 findings**，`test_run_usage_admin.py` **4 findings 与 HEAD 基线逐条相同**（3×E501 + 1×EM101，全是既有行、仅行号位移；基线副本 `output/qwen104b-2026-10-23/tmp/lintbase/`）；`git diff --check` 干净。路由装饰器仍 **189**（未新增端点） |
+| 全量回归 | `pytest tests/`（2300 项） | **2280 passed / 0 failed / 20 skipped in 762.69 s**，口径与上一轮一致（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 全新 `--basetemp output/qwen104b-2026-10-23/pytest-full`），探针 **`outbound attempts=0 unique_hosts=0`**，无计费模型端点、无用例因阻断转红；相对上一轮 2278 的 **+2 全部来自本卡新增的 2 个用例**，无既有用例转红或消失；日志 `logs/full-suite.txt` |
+| CI 可移植子集 | `ci-portable-list.txt` 的 **40** 个文件（`diff` 与 107c 提取的清单逐行相同） | **409 passed / 1 skipped / 4 warnings in 56.07 s**，探针 `attempts=0 unique_hosts=0`；日志 `logs/ci-portable.txt`。子集口径与 §15 相同：只跑 CI 会在 Linux 上跑的测试文件 |
+| 项数口径核对 | `--collect-only`（两次安静 + 一次非安静） | 安静收集两次输出 **逐字节相同**、各 **2299** 行（`tmp/collect-a.txt`、`tmp/collect-b.txt`）；非安静收集打印 `collected 2299 items / 1 skipped`（`logs/collect-verbose.txt`，8.75 s，探针同样 `attempts=0`）。那 1 条集合期跳过来自 `tests/a/test_mcp_readonly_protocol.py:11` 的 `importorskip("mcp")`（本机无 `mcp`，与 §15 登记的"CI MCP stdio 步骤本机未跑"同一原因），`torch` 本机可用故 `tests/b/test_sakt.py` 不跳。**2299 + 1 = 2300**，与运行时 2280 passed + 20 skipped 严格对齐；文档沿用运行时项数口径（上一轮 2298 = 2278 + 20），据此刷新 README 与导览 |
+
+### 17.3 与既有登记的衔接（旧正文不回改，本节单向指认）
+
+- **行号漂移**：`run_usage.py` 自原 `:29` 起整体 **+7**：新 `_number` 占 `:29-33`，`summarize_run_usage` 由 `:61` → `:68`，`aggregate_run_usage` 由 `:99` → `:106`，被改的调用点由 `:85` → `:92`。既有文档对本文件的引用只有 §16.4、矩阵 §13 与交付报告第 2 节的 `run_usage.py:22-26`（`_count`），**该行号未被本卡移动、无需换算**；`:85` 这个旧调用点此前没有任何正文引用过。§16/§10 里其它对该文件的行号推断如将来要用，按 +7 换算即可。
+- **§16.4 关闭**：本节即该条产品侧观察的落地修复，观察项由本卡收口，不再另开卡。
+- **QWEN-109 交付报告未被重新生成、未被改动**（Lead 边界「不改已合并结论」，且已验收数字不为"更好看"重跑）。为量化本卡对该报告偏差行的影响，改用**只写 scratch 的同命令复跑**：`output/qwen104b-2026-10-23/tmp/eval-cost-report-after-fix.md`（脚本本身拒绝覆盖已存在文件）。与 `docs/EVAL_USAGE_COST_REPORT_2026-10-22.md` 的 `diff` 只有 **4 个 hunk / 6 行差异**（完整输出 `logs/eval-cost-delta.txt`）：
+  1. 命令行 `--out` 路径不同（脚本把命令写进报告头，属必然差异）；
+  2. 「与产品投影的偏差: latency_ms 有 **127** 条」→ **0 条**；
+  3. 第 2 节同一行「latency_ms 被产品投影判为未记录 127」→ **0**；
+  4. 夹具普查随轮次自然增长：含 `result.budget` 的 jsonl **130 → 138** 份、排除夹具 **122 → 130** 份 / **304 → 324** 条、归并表新增 `qwen104b-2026-10-23/... | 20`。
+  **统计数字逐项不变**：127 条记录、8 个来源、调用数 442、输入 token 1321838、输出 token 276031、`input_chars` 2797092、latency 中位数 14101.54 [2302.41~40332.14]、`cost_status` 全 `unknown`、`runs_without_token_data=1`。夹具普查不是稳定数字（任何一轮的 `--basetemp` 都会往里加），已在 stdout 单列。
+- **诚实登记的残留**：scratch 版里偏差行的**说明文字**仍是修复前的措辞（"小数 latency 全被丢弃 … 本卡不改产品代码"）。交付版按边界保持原样；若 Lead 认为需要更正文，只需改那 1 行说明，**任何数字都不动**。
+
+### 17.4 边界（本卡没有做的事）
+
+- 未向 `main` 提交或推送，只推 `qwen/wave1-latency`；未合并、未重启容器、未起本地服务。
+- 零模型调用：本卡所有运行均挂 fail-closed 探针并记录 `outbound attempts=0 unique_hosts=0`（定向、反向、全量、CI 子集、管理端探针、集合核对共 6 次），计费端点一次都没出现。
+- 未改端点语义与数量（仍 189 路由）、未改 `_count`、未改 `aggregate_run_usage`、未改 `cost`/`usage_status` 词汇与口径、未放宽任何计数为浮点。
+- 未 `cat`、未提交、未上传 `.env`；本轮写入仓库的文件仅 §17.1 的两个代码/测试文件加 4 个文档（账本、矩阵、README、导览）。
+- 未新增 `math.isfinite` 过滤（取舍见 §17.1 第 3 条，留给 Lead 裁定）；未重生成 QWEN-109 报告；未回改 §1-16 旧正文。
+- 越界发现：无新增。旧登记继续在册——`reports/` 未被 gitignore、17 个前端孤儿测试、`multi.py` 行号漂移、`scripts/` 裸 ruff 全角标点基线 2382 项。
