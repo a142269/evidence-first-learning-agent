@@ -642,3 +642,46 @@ class DebateLogRecord(Base):
     critic_issues: Mapped[list] = mapped_column(JSON, default=list)
     verdict: Mapped[str] = mapped_column(String(64), default="")
     created_at: Mapped[float] = mapped_column(Float, default=_now)
+
+
+# ================================================================
+# Long-term learner memory.  Only a human-confirmed proposal reaches
+# ``user_memories``; the event table is the audit trail for every state change.
+# ================================================================
+class UserMemoryRecord(Base):
+    """One confirmed fact the system is allowed to keep about a learner."""
+
+    __tablename__ = "user_memories"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False, default="rule_extraction")
+    source_run_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expires_at: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active", index=True)
+    created_at: Mapped[float] = mapped_column(Float, default=_now)
+    updated_at: Mapped[float] = mapped_column(Float, default=_now, onupdate=_now)
+
+    __table_args__ = (
+        # One live memory per (user, kind); superseded and revoked rows stay for
+        # the audit trail, so the uniqueness guard has to skip them.
+        sa.Index("uq_user_memory_active", "user_id", "kind", unique=True,
+                 sqlite_where=sa.text("status = 'active'"),
+                 postgresql_where=sa.text("status = 'active'")),
+    )
+
+
+class MemoryEventRecord(Base):
+    """Append-only audit trail: who confirmed, superseded or revoked a memory."""
+
+    __tablename__ = "memory_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    memory_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    reason: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    created_at: Mapped[float] = mapped_column(Float, default=_now, index=True)
