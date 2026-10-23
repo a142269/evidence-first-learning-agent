@@ -1647,3 +1647,24 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-23 19:05] Qwen → Lead | [DONE] QWEN-201b 记忆测试纳入 CI 快清单（零模型，证据等级 offline）
+
+**结论**：42 文件新清单本地同形跑 **465 passed / 1 skipped / 0 failed / 96.08 s**，与你预计的 412→465/1 相符；改动只有 `ci.yml` **+2 行**与文档，产品/测试/迁移代码零改动。
+
+**逐条对齐你的三行 DoD**
+
+1. **纳入清单**：`ci.yml:213-214` 追加 `tests/a/test_user_memory_service.py`、`tests/a/test_user_memory_migration.py`，hunk `@@ -212,0 +213,2 @@`；清单本体 `:173-214`，**40 → 42**。清单不是手抄的：改完后用 `sed -n '164,216p' .github/workflows/ci.yml | grep -oE 'tests/[a-z]/[A-Za-z0-9_]+\.py'` **机械重取**成 `ci-portable-list.txt`，与你验收时 `awk` 重取应逐行一致；与 201 那份 40 行清单 diff = `40a41,42`（恰好 +2，既有行序未动）；42 个路径逐条存在性检查，缺失 **0**。
+2. **文件数与通过数、同步 README/TEST_MATRIX**：通过数 **465/1**（首跑 112.98 s、`-rs` 复跑 96.08 s，两跑计数相同），相对 201 的 412/1 **恰好 +53** = 记忆服务 50 + 迁移 3，既有用例零转红零消失；唯一 skip 由 `-rs` **在记录数那份日志里直接点名** `tests\a\test_auth_restart.py:18: Explicit disposable PostgreSQL required`（该子集历史唯一 skip 同一处，CI 上也会同样 skip，故口径一致）。前置 `init_db()` **exit=0**（`logs/ci-init-db.txt`）。文档：`README.md:58` 新增「CI 可移植子集」一行（此前该表只有全量一行提到用例数，没有 CI 子集口径）、`docs/TEST_MATRIX.md:448` §18、`docs/CLAIMS_LEDGER.md:702` §21。
+3. **不碰产品代码 + 跑一遍新清单确认全绿**：`git status --porcelain` 只有 4 项改动（`ci.yml`、`README.md`、两份 docs）。新清单跑绿之外，`quality` job 另两道门在同一份配置上复跑：`ci.yml:141-147` alembic `upgrade head` → **exit=0**、`downgrade base` → **exit=0**（空库，日志 `logs/ci-alembic-smoke.txt`）；`ci.yml:113-115` 的 `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed / exit=0**。workflow 本体也验了：`yaml.safe_load` 解析 OK，按步骤枚举 pytest 文件数得 `quality` 可移植步 **42**、`enterprise-contract` **仍 38**（我没动 PG 清单，逐 job 打印为证 `logs/ci-yaml-parse.txt`）。
+
+**两处如实登记**
+
+- **一处自主取舍（§21.2）**：你只说"加入 fast/portable 清单"，没说插哪。我选了**清单尾部**而非紧跟 `test_conversation_memory_v2.py`（`:207`），理由是该清单既有演化就是依次追加（`test_run_leases`/`test_run_usage_admin`/`test_persistent_auth`/`test_auth_restart`/`test_deployment_policy`），且纯 `+2` 行不动既有行序、最容易复核。要按主题聚类的话，重排是纯位置改动、测试数不变，说一声我就改。
+- **一处口径差（不掩盖）**：`ci.yml:165-167` 只设 `DATABASE_URL` + `A3_OFFLINE_DEMO`，本机根目录有真实 `.env`，所以我的同形复跑**额外**导了 `LLM_PROVIDER=none` 以保证零计费调用；CI 里没有 `.env`，provider 本就不可用。每轮探针一律 **`outbound attempts=0 unique_hosts=0`**，未 `cat`/读取 `.env` 内容。
+
+**未做**：① 未重跑全量 `pytest tests/`——本卡零新增用例、零产品改动，2336/0/20 / 2356 项记录数不动；要一份同提交的全量数我再跑，不擅自动记录数。② 未扩 `enterprise-contract` 38 文件清单（PG 方言你已交该 job 的 alembic 步骤与后续 pg 轮次）。③ 未动覆盖率门槛步 `ci.yml:223-230`。④ 未动 `docs/API-CONTRACT.md:49`（17 张表）与 baseline 迁移的无条件 `create_table`——你本节已分别归 **QWEN-401/403** 与 **QWEN-403**。⑤ 旧结论未改写：§20.3 那行「**清单未扩**」保留为 201 当时的事实，由 §21 使其对下一轮失效。⑥ **本卡数字是 offline 同形复跑**：GitHub `quality` job 的真实绿灯属 remote 证据，本机无 `gh` CLI，不代跑远程也不据此宣称 CI 绿。
+
+**下一步**：按你本节原文「**QWEN-202：跨会话摘要（201b 后开工，零模型）**」，201b 已交付，我这就切到 `qwen/wave2-summary`（你已预建、tip `c28aac4`，与本分支同点，切换零风险）开工 202：只读 **active 且未过期**的已确认记忆、**摘要绝不写回 `user_memories`**、无记忆给明确空态、不碰 API/UI、零模型。若你其实要 202 等 201b 验收通过后再动，回一句我立刻停手——我按"201b 后开工"的字面理解先行，不擅自扩范围。
+
+— Qwen
+
