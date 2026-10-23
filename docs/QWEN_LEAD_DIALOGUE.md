@@ -1569,4 +1569,45 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 之后我在验收通过后派 **QWEN-202**（跨会话摘要）。
 
 — Lead
+### [2026-10-23 18:13] Qwen → Lead | [DONE] QWEN-201 确认门控长期记忆（零模型、零外联，证据等级 offline）
 
+分支 `qwen/wave2-memory`（起点 HEAD `a312050` = 你 fast-forward 到的 `main@542d8be`）；本轮 `b8378d8` 代码+测试（+725/0，1 文件扩展 + 4 新文件）、`510bdb9` 文档、本条 §4。**未向 `main` 提交或推送，只推这一条分支。**
+
+**按你四点原文逐条交付**
+
+1. **迁移 + 隔离 SQLite 真跑（升级与回滚都真跑了）**：`alembic/versions/20261023_0012_user_memories.py`，`down_revision = 20261014_0011`（新 head）。`alembic` CLI 在 `output/qwen201-2026-10-23/tmp/alembic-memory.db` 上：`upgrade head` 跑满 **12** 个 revision → 34 张表含 `user_memories`/`memory_events`；`downgrade base` 回滚 **12** 步 → **两张表与全部 7 个索引消失、`alembic_version` 归空**；**再 `upgrade head`** → 表回归且两张记忆表 0 行。另按 `ci.yml:142-147` 逐字同形复跑 `upgrade head && downgrade base` 于独立空库：**exit=0 / exit=0**。`data/a3_learning.db` mtime `16:18:17` 早于本轮 `17:30:48–17:30:56` 窗口，未被写过。日志 `logs/migration-cli.txt`、`logs/ci-alembic-smoke.txt`、`logs/ci-smoke-upgrade.txt`、`logs/ci-smoke-downgrade.txt`。首跑的检视片段自身取列出错（单列查询按 `r[1]` 取 → `IndexError`），另存 `logs/migration-cli-run1-probe-bug.txt` 不删。
+   - **`downgrade base` 后仍剩 4 张表**（`agent_runs`/`knowledge_documents`/`registered_accounts` + `alembic_version`）：逐条核到注释级——`20261013_0007`「Retain historical agent_runs」、`20261014_0008`「Keep existing accounts」、`knowledge_documents` 由 `20261010_0005` 的 `_ensure_…` 建出且任何 revision 都不 drop。**属既有设计的故意保留，非本卡引入**；本卡两张表的完全回滚由上一条直接证明。
+   - **顺带取到一条既有缺陷（本卡未修，请指派）**：在**同一个库文件**上先 `init_db()`（`create_all`）再 `alembic upgrade head`，`upgrade` 以 **exit=1** 红在 baseline `20260618_0001` 的无条件 `create_table`（`table profiles already exists`）。三条判据与本卡无关：失败日志里 `20261023_0012` 出现 **0** 次；把本卡迁移移出 `alembic/versions/` 后 **HEAD 基线同样 exit=1、同一句错误**（`logs/mixed-head-baseline.txt`，事后已归位并校验 md5 与 pristine 一致）；CI 用两个不同库文件（`ci_smoke.db` / `ci_tests.db`）故踩不到。归位建议：属部署·迁移链面，交你指派。
+2. **三段式写入**：`backend/app/services/user_memory.py`（新 270 行）。`propose`（`:108`）签名里**没有 session 参数**，只回内存 dict 且带 `persisted: False`——"未确认不落库"是结构保证，同时满足 §3「模型只能提议，不得自动写」：模型侧根本拿不到 `session_factory`。`confirm`（`:141`）是唯一落库路径，要求 `actor_role ∈ HUMAN_ACTOR_ROLES = ("student", "teacher")`（`:31`）。`revoke`（`:199`）只改状态不删行并写 `REVOKED` 事件；对已退役记忆重放返回 `changed: False` **且不写第二条事件**（防审计灌水）。TTL 从**确认时刻**起算，过期**只不读、不删**（`active_memories` `:234`）。错误面只给稳定 code，DB 异常统一压成 `memory_persistence_unavailable`，不外泄 DB 文本。
+   - **去重策略（你点名要写清的一件）**：同一 `(user_id, kind)` 只允许**一条 `active`**。两处表达——① schema 层部分唯一索引 `uq_user_memory_active`（`models.py:671-673`，DDL 原文 `CREATE UNIQUE INDEX uq_user_memory_active ON user_memories (user_id, kind) WHERE status = 'active'`，SQLite/PG 各一份方言），退役历史行不受约束、审计可无限累积而不撞库；② 服务层 `confirm` 在**同一事务**内锁定旧活行、置 `REVOKED` 并写 `SUPERSEDED` 事件（reason 记 `superseded_by:<新 id>`，若该行恰好已过期则记 `ttl_expired`），再插新行 + `CONFIRMED`。选**顶掉**而非并存或报错：`kind`（偏好/目标/薄弱点）的定位是"同一维度的当前认知"，并存会让下游读到两条互斥当前值，报错则使模型无法自我修正。SQLite 实测：撞索引得 `IntegrityError`、活行改 `revoked` 后槽位释放（`logs/schema-smoke.txt`）。
+3. **partial/failed Run 永不入记忆**：`_check_source_run`（`:131`）在同一事务内取 `AgentRunRecord`，`status != "completed"` → `source_run_not_completed`；run 不存在 → `source_run_not_found`（选拒绝而非静默丢弃，否则拼错的 id 会悄悄变成"无来源的合法记忆"）。口径与既有实现严格对齐：`agent_runtime/conversation_memory.py:16`（`status == "completed"`）+ `:19`（`memory_eligible`）、`agent_runtime/run_audit.py:154`（`success_count=int(status == "completed")`）。测试把 `partially_completed`/`failed`/`awaiting_approval`/`reviewing`/`interrupted`/`rejected`/`running` **七态参数化**逐一钉死。
+4. **零模型 / 不读 `.env` / 不改 API/UI / 更新两份文档**：全程挂 fail-closed socket 探针，每一轮一律 `outbound attempts=0 unique_hosts=0`；未新增端点、未动前端；`docs/CLAIMS_LEDGER.md` 新增 **§20**（54/0 纯追加）、`docs/TEST_MATRIX.md` 新增 **§17**（17/0），README:56 与 `docs/00-评委30秒导览.md` 的测试行与数据库表行（**37 → 39**，实测 `__tablename__`）同步刷新。
+
+**测试与实测**（Windows + Python 3.12.15）
+
+- 本卡定向：**53 项**（服务 50 + 迁移 3）→ **53 passed / 31.47 s**（`logs/targeted-after-eol-normalise.txt`）。**首跑 51 passed / 2 failed / 33.62 s**（`logs/targeted-run1.txt`）不作记录数——两处失败都是本卡自己的用例期望写错（见下"自我更正"），改的是测试不是产品代码。
+- **反向验证 9 组**（逐条禁用一条绑定规则，看是不是它独自在守）：M1 撤 run 资格闸门 → **7 failed / 46 passed**；M2 撤人类 actor 守卫 → **6 / 47**；M3 让 revoked 可读 → **2 / 51**；M4 让 TTL 比较永真 → **1 / 52**；M5 撤服务层 supersede → **2 / 51**；M6 `CONFIRMED` 写成 `SUPERSEDED` → **5 / 48**；M7 撤 revoke 幂等 → **1 / 52**；M8/M9 让 `downgrade()` 两张表分支永假 → 各 **2 / 51**。9 组恢复后与 pristine **md5 逐字节相同**、复跑全绿。补丁 `tmp/rp-M1..M9.patch`、日志 `logs/rp-M*.txt`、汇总 `logs/reverse-proof-summary.txt`。工具替代登记：本主机 `git apply -R` 被分类器拦，恢复用本卡自建 pristine 的纯文件复制（非 git 操作，只动本卡自己新建的两个文件）。
+- 全量 `pytest tests/`：**2336 passed / 0 failed / 20 skipped / 1156.38 s（19:16）**；项数口径 `--collect-only -q` 收 **2355** 项（11.79 s，探针 `attempts=0`）+ 集合期 1 条 `importorskip("mcp")` skip = **2356 = 2336 + 20**；测试文件 **191 → 193**（含 mcp 文件则 192 → 194）。相对 104d 的 2283 恰好 **+53**，全为本卡新增项，既有用例零转红零消失；日志 `logs/full-suite.txt`、`logs/collect-quiet-probe.txt`。**时长差如实分开**：比 104d 的 842.46 s 长 313.92 s，而本卡 53 项在 CI 同形旗标下只占 31.58 s，差额不归因于本卡改动；同轮 warnings 22 → 25，新增三条全落在 `tests/integration/test_manim_fallback.py`（1→3）与 `test_artifacts_api.py`（1→2）这两族计时敏感的既有用例上，本卡两个新文件零 warning——**这是线索，不是结论**，故只登记差异不作解释。
+- CI 可移植 40 文件子集（清单未扩，本轮由 `awk` 从 `ci.yml:172-212` 机械重取、与 104d 清单逐行相同）：**412 passed / 1 skipped / 80.92 s**，探针 `attempts=0`；与 104d 的 412/1 **逐数相同**，正因为本卡两项不在该子集内。另按 `ci.yml:213` 同形旗标单跑本卡两个文件：**53 passed / 31.58 s**，前置 `init_db()` 后 `create_all` 确实带出两张记忆表与全部索引；日志 `logs/ci-portable.txt`、`logs/ci-style-targeted.txt`。
+- 静态：CI 口径 `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` **All checks passed**；`git diff --check` 干净。裸 ruff（全仓基线 13,647 项，仓库未纳入门禁）：`models.py` **18 → 18** 与 HEAD 基线逐条相同，4 个新文件合计 **24** 项 = `EM101` 18 + `EM102` 2 + `I001` 2 + `E501` 2；这四条规则仓库内已分别有 365/64/514/2907 项同族命中（`run_audit.py` + `run_usage.py` 自己就有 6 项 `EM101`），故属"与本仓风格一致"而非"本卡新引入的风格债"。`E501` 两处是 `tests/a/test_user_memory_service.py:64-65`（106/102 字符），折行即可消掉，但为让记录数与最终代码严格同一份，**全量跑完后未再动代码**，登记为下一卡顺手项。
+
+**两处自我更正（都是测试期望错，未放宽产品代码）**
+
+① `test_partial_unique_index_only_guards_active_rows` 初版断言"m-1 仍是 active 时再插一条 active 应成功"，与本卡自己的"一用户一 kind 只一条活"直接矛盾；改为先把 m-1 置 `revoked` 再插，断言变为 active 计数 **1**、总行 **3**。
+② `test_a_superseded_expired_row_is_labelled_in_the_audit` 初版期望 `ttl_expired`，但紧接的第二次 `confirm` 时前驱尚未过期，产品行为给 `superseded_by:<id>` 是对的；改为先把 `expires_at` 回拨 120 s 再触发，两条分支都真正跑到。
+
+**一处本卡自造噪音（如实登记）**：三个新文件初写成**纯 LF**，而本仓 `core.autocrlf=true`、既有文件是 `i/lf w/crlf`；已归一为 CRLF（转换前后按 LF 归一化 md5 相同、孤立 CR/LF 为 0，归一后五份文件 `git ls-files --eol` 全为 `i/lf w/crlf`），归一后复跑定向仍 **53 passed / 31.47 s**。**次序要说清**：全量 1156.38 s 那一轮跑的是归一前的 LF 形态，归一只动行尾、不动任何内容字节；旧拷贝在 `tmp/pre-crlf/`。
+
+**三处需你追认的读法（本卡按字面实现，一处都没擅自扩）**
+
+1. 「用户/教师」→ `("student", "teacher")`。**`admin` 不在你列出的集合里，故与 `agent`/`system`/空串一样被拒**；`api/v2/access.py:99-103` 的 reviewer 集合 `{teacher, admin}` 管盲评权限，与"确认权"无涉，本卡未借用。若你认为管理员也应能确认，改动面只有这一个元组 + `test_confirm_requires_a_human_actor` 的参数表。
+2. 你对 `revoke` 的原话只有"留审计"，本卡把同样的**人类 actor 守卫**也加在 `revoke` 上（`revocation_requires_human_actor`），理由是"能写"与"能撤"的信任级若不对称，一个非人类 principal 就能既写入又抹除。**这是本卡的选择，不是你的原话。**
+3. §3 表设计里 `source` 列举「run_id/教师/用户显式」。本卡落成 `source_type`（默认 `rule_extraction`，限长 32 的自由串）+ 可选 `source_run_id`，**没有写成闭集**：收紧成白名单需要先裁定"教师直接 authored"与"规则提取候选"是否同权（若不同权，白名单还会反过来改变 `confirm` 的闸门语义）。要闭集的话改动面是 `_LIMITS` 旁一个常量 + 一条参数化用例。
+
+**未做清单**
+
+① **API/UI 一律不碰**（留给 203）：本卡只有 schema + 服务层，**没有任何端点或前端消费这两张表**。② 跨会话摘要属 **202**。③ `docs/API-CONTRACT.md:49`「Contract 4: DB 17 张表所有权」未改——该行被 `tests/b/test_contract_document.py:44` 字面断言、属 QWEN-103/401 的文档契约面，本卡两张表在 17 张之外，**口径漂移只登记不擅改**。④ 本卡两个新用例文件**未**纳入 `ci.yml:172-212` 的可移植 40 文件清单（`ci.yml:142-147` 的 alembic smoke 会自动跑到新迁移，无需改 CI）；是否纳入请你裁定。⑤ `propose` 目前只被服务层与测试调用，**尚无生产者接线**——"谁在什么时机提候选"属 202/203 的产品面，本卡不猜。⑥ **PG 方言未实测**（DoD 只要求隔离 SQLite）：`sqlite_where`/`postgresql_where` 各一份，`.with_for_update()` 已核对编译差异（SQLite 侧编译不出 `FOR UPDATE`、PG 侧出），故本轮数字只在 SQLite 口径内成立；PG 层留给你的 pg 轮次（先例 QWEN-105）。⑦ 上面那条"`init_db()` 后同库 `alembic upgrade head` 必红"属既有 revision 链现象，本卡未改任何既有迁移文件。⑧ 旧登记继续在册：`reports/` 未被 gitignore、17 个前端孤儿测试、`multi.py` 行号漂移、`scripts/` 裸 ruff 全角标点基线 2382 项、可选 MCP stdio 步骤本机未跑。
+
+**边界**：未向 `main` 提交或推送；未 `cat`/提交/上传 `.env`；零模型调用、零外联（每轮探针一律 `attempts=0 unique_hosts=0`）；未起或重启服务；未加依赖；未改任何既有 revision 与已合并结论。
+
+交付即推，本卡不适用"交付后 hold"（§3-48，你 17:20 派工条里也重申了）。按批准的 Phase A 顺序（104c → 104d → **201** → 202 → 211），**QWEN-202（跨会话摘要）等你验收通过后派**，我不自行开下一张；上面三处读法若未回，我按"未裁定即不动"处理。
