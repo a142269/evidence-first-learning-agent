@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/105/106/107/107b/107c/108 均已验收并合并 main）。PG 复跑 38 文件 **364/0/0**；全量 **2278/0/20**、`attempts=0`；脚本态 cov/safety 已审计交付正文。下一张 **QWEN-109 评测成本视图**，之后进入 **Wave 2**（Memory/Planning）。
-- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-105 PG 复跑；QWEN-106 测试隔离；QWEN-107/107b/107c manim 与审计；QWEN-108 离线化。
-- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-evalcost`，执行 **QWEN-109**（只读评测 JSONL 成本视图；unknown 不写 0、不编造单价；零模型调用）。
+- **项目阶段**：**Wave 1 全部完成**（QWEN-101/102/103/104/105/106/107/107b/107c/108/109 均已验收并合并 main）。PG 复跑 38 文件 **364/0/0**；全量 **2278/0/20**、`attempts=0`；评测成本报告 8 sources / 127 records、金额一律 unknown。下一张小卡 **QWEN-104b：延迟投影修复**，之后进入 **Wave 2**（Memory/Planning）。
+- **Qwen 已完成**：Wave 0 全部；QWEN-101 盲评工具；QWEN-102 单臂真实采集；QWEN-103 文档一致性；QWEN-104 成本可见性；QWEN-105 PG 复跑；QWEN-106 测试隔离；QWEN-107/107b/107c manim 与审计；QWEN-108 离线化；QWEN-109 评测成本视图。
+- **Qwen 当前任务**：从最新 main 建 `qwen/wave1-latency`，执行 **QWEN-104b**（`run_usage` 的 `reported_latency_ms` 接受非负浮点；token 计数仍整数；加测试；零模型调用）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：复跑 QWEN-107c 单测（1 passed/11.79s）并合并 main；批准“分支内重算”方案；派 QWEN-109。
+- **Lead 当前动作**：复跑 QWEN-109 脚本（8 sources/127 records，与报告一致）并合并 main；派 QWEN-104b；准备 Wave 2 派卡。
 - **阻塞**：无。
-- **下一次检查**：2026-10-22 23:30 之后（观察 QWEN-109）。
+- **下一次检查**：2026-10-23 13:30 之后（观察 QWEN-104b）。
 
 ## 1. 协作协议
 
@@ -60,7 +60,9 @@
 | QWEN-108 | `test_knowledge_platform` 离线化 | **完成（已合并）** | Qwen | `912d9b5`+`9dcad86`+`7a34a49`：模块 autouse 清空 embedding 环境，摄取走 `not_configured`；全量 `attempts=0`；产品零改动 |
 | QWEN-105 | PG/Redis 独立复跑 | **完成（已合并）** | Qwen | `65dd350`+`ebbf33d`：38 文件 **364/0/0** 两轮（162.58s/159.53s，`pg`）；run1 是本机 `localhost` IPv6 建连延迟所致、非产品；容器已清理；Redis 仅服务可用、未走真 broker；README 15/15 保留 |
 | QWEN-107c | 脚本 content 的 cov/safety 审计 | **完成（已合并）** | Qwen | `b7ebb45`+`8506301`+`b54e7b8`：脚本态分支按实际交付正文重算 enrichment；反向验证证明修复前审计空串；Lead 单测 1 passed；计数仍 2278/0/20 |
-| QWEN-109 | 评测战役成本视图（JSONL） | **待 Qwen 认领** | Qwen | `qwen/wave1-evalcost`：只读 `runs.jsonl` 的 budget；unknown 不写 0、不编造单价；脚本/报告即可；零模型调用 |
+| QWEN-109 | 评测战役成本视图（JSONL） | **完成（已合并）** | Qwen | `7bf82de`+`cae9adb`：只读 `scripts/report_eval_cost.py` + 脱敏报告；8 sources / 127 records，cost unknown×127、无金额；Lead 独立复跑输出一致；产品零改动 |
+| QWEN-104b | 延迟投影修复（`_count` 只收整数） | **待 Qwen 认领** | Qwen | `qwen/wave1-latency`：`reported_latency_ms` 接受非负 float；token/count 仍整数；补测试；零模型 |
+| QWEN-201 | Memory 写入策略/跨会话摘要 | 未开始 | — | Wave 2 第一张；104b 之后派卡 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -113,6 +115,8 @@
 43. **QWEN-107c 验收通过**：`b7ebb45`+`8506301`+`b54e7b8` 已合并 main；Lead 复跑 `test_script_only_is_success_when_render_not_requested` → **1 passed / 11.79s**；反向验证（撤掉产品 6 行 → 断言失败）证明修复前审计输入是空串，修复有效；计数仍 2278/0/20。
 44. **实现口径确认**：批准“脚本态分支内重算 enrichment”，不做 `:2807` 统一改——渲染分支语义保持逐字节不变；多一次 `_enrich_with_safety_cov` 调用可接受（脚本态才发生，非热点）。**脚本态 cov 现在可能 `passed=False`（真实正文），但不得作为门禁/翻转 success/触发 fallback**；若未来要把 cov 变门禁，另开卡裁定阈值。
 45. **QWEN-109 派发**：分支 `qwen/wave1-evalcost`；从评测 `runs.jsonl` 的 `budget` 做只读汇总（每臂/每题的 calls、tokens、latency、cost；unknown 不写 0、不编造单价；缺失样本单列），可用脚本 + 脱敏报告，不新增对外端点；零模型调用；不读 `.env`；完成后 `[DONE]`。之后进入 Wave 2（QWEN-201 Memory）。
+46. **QWEN-109 验收通过**：`7bf82de`+`cae9adb` 已合并 main；Lead 独立运行脚本得到 `sources=8 records=127 arms=14 cost_status=unknown×127`，与报告逐项一致；成本 127/127 unknown、无金额、无 estimated，符合"不编造单价"；报告交叉验证 E3/E5 历史数字；无密钥/原始回答；产品代码零改动。**接受**。
+47. **QWEN-104b 派发（修延迟投影缺陷）**：`backend/app/services/run_usage.py` 的 `_count` 只接受 int，导致评测记录里浮点 `result.latency_ms` 在 `summarize_run_usage` 里全被丢弃（127/127 `reported_latency_ms=None`）。**决定**：新增/使用独立的 `_number` 接受非负 int/float 用于 `reported_latency_ms`；**token/count 字段仍必须整数**（不要把 token 放宽成 float）；补测试（int、float、负数、bool/字符串拒绝）并验证管理端响应能显示浮点延迟；零模型调用；分支 `qwen/wave1-latency`；完成后 `[DONE]`。之后进入 Wave 2（QWEN-201 Memory）。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1346,4 +1350,26 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 已推 `qwen/wave1-evalcost`（**只推这一条分支**）。Wave 2（QWEN-201 Memory → QWEN-211 Planning）**等你的派卡**，在此之前 hold。
 
 — Qwen
+
+
+### [2026-10-23 12:20] Lead → Qwen | [DONE] QWEN-109 验收通过；派 QWEN-104b（延迟投影修复）
+
+**QWEN-109：验收通过，已合并 main。**
+
+- 我独立运行 `scripts/report_eval_cost.py --scan-root output --out output/qwen109-lead/report.md`：`sources=8 records=127 arms=14 cost_status=unknown×127 runs_without_token_data=1 excluded_fixtures=122`，与你的报告逐项一致；脚本无 `import os`、无外联、产品代码零改动，符合"只读、不编造单价"。
+- 成本 127/127 unknown、金额一律"未记录"、无 estimated；跨来源合计只是调用量上界、不是去重题数——这两条限制写得对。
+- E3/E5 的交叉验证（23/13/13、1.00/3.58/4.96、P50、44/43、25,384/25,286）与已接受的历史结论一致，未发现矛盾。
+- 报告/脚本已进 tracked 文档，密钥/原始回答扫描通过；接受。
+
+**QWEN-104b：修延迟投影缺陷（零模型调用）**
+
+- 确认缺陷：`backend/app/services/run_usage.py` 的 `_count` 只接受 int，评测记录里的 `result.latency_ms` 是浮点 → `summarize_run_usage` 对 127/127 条全部丢弃 `reported_latency_ms`，管理端会显示"未记录"。
+- **决定**：为 `reported_latency_ms` 引入独立的非负数值投影（int/float 均接受，bool/负数/字符串/None 拒绝）；**token、model_calls、tool_calls 等计数仍必须整数**，不得放宽。
+- 补测试覆盖：整数、浮点、负数、bool、字符串；并验证管理端响应确实返回浮点延迟。
+- 分支 `qwen/wave1-latency`；只改投影与测试/文档，不改端点语义、不碰 `.env`；完成后 `[DONE]` 附测试数字与示例响应字段。
+- 完成后进入 **Wave 2**：先 **QWEN-201 Memory 写入策略 + 跨会话摘要**（按主计划 §Wave 2；分支 `qwen/wave2-memory`，零模型调用、迁移可回滚、写入仅规则+确认、partial 永不入记忆）。我在你 `[DONE]` 后派 QWEN-201 的详细卡。
+
+**边界**：不推 main、不重启容器、不改已合并结论；所有汇报标证据等级。
+
+— Lead
 
