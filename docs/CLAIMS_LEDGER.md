@@ -698,3 +698,69 @@ Lead 2026-10-23 17:20 验收 §19（自行复跑 `test_run_usage_admin.py` **14 
 - **未做清单**：① **API/UI 一律不碰**（§3-51 明留 203），本卡只有 schema + 服务层，**没有任何端点或前端消费这两张表**；② 跨会话摘要属 QWEN-202；③ `docs/API-CONTRACT.md:49`「Contract 4: DB 17 张表所有权」未改——该行被 `tests/b/test_contract_document.py:44` 字面断言，属 QWEN-103/401 的文档契约面，本卡两张表在 17 张之外，**口径漂移只登记不擅改**；④ 本卡两个新用例文件**未**纳入 `ci.yml:172-212` 的可移植 40 文件清单（清单未扩；`ci.yml:142-147` 的 alembic smoke 会自动跑到新迁移，无需改 CI）；⑤ `propose` 目前只被服务层与测试调用，**尚无生产者接线**——"谁在什么时机提候选"属 202/203 的产品面，本卡不猜；⑥ **PG 方言未实测**（DoD 只要求隔离 SQLite）：迁移给 `sqlite_where` 与 `postgresql_where` 各一份，服务层用 `.with_for_update()`——已核对编译差异，SQLite 侧编译不出 `FOR UPDATE`、PG 侧出，故本轮数字只在 SQLite 口径内成立，PG 层的 `CREATE UNIQUE INDEX … WHERE` 与行锁留给你的 pg 轮次（先例 QWEN-105）；⑦ §20.3 记录的"`init_db()` 后同库跑 `alembic upgrade head` 必红"属既有 revision 链现象，本卡未改任何既有迁移文件。
 - 未向 `main` 提交或推送，只推 `qwen/wave2-memory`；**零模型调用、零外联**（每一轮都挂 fail-closed 探针并记 `attempts=0 unique_hosts=0`）；未 `cat`、未提交、未上传 `.env`；未起或重启服务；未加依赖。
 - 旧登记继续在册：`reports/` 未被 gitignore、17 个前端孤儿测试、`multi.py` 行号漂移、`scripts/` 裸 ruff 全角标点基线 2382 项、可选 MCP stdio 步骤（`ci.yml:338-341`）本机未跑。
+
+## 22. QWEN-202 跨会话摘要（2026-10-23，分支 `qwen/wave2-summary`，零模型调用）
+
+Lead 2026-10-23 18:55 派工原文（`docs/QWEN_LEAD_DIALOGUE.md:1640-1644`）：「分支 `qwen/wave2-summary` 已由 Lead 预建；只基于 **active 且未过期** 的已确认记忆生成摘要；**摘要不得自动写回 `user_memories`**；无记忆时返回明确空态；只改服务/测试/文档，不碰 API/UI（203）；零模型、不读 `.env`；完成后 `[DONE]` 附测试数字与空态证据。」主计划同一张卡另有两句被本卡当验收口径执行（`docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:487`）：范围「对完成 Run 生成有界摘要（**token 预算、幂等、失败回退**），替代固定 3 条窗口的**可配置版本**」，DoD「摘要忠实性测试（固定样例）；token 预算；不被 partial 污染」。
+
+**编号说明（不是笔误，也别当漏写）**：§21 属 **QWEN-201b**（把两份记忆测试纳入 CI 快清单），已在 `qwen/wave2-memory` 交付并推送（`8ab00ab` + `a625adc`，`origin/qwen/wave2-memory = a625adc`），等你合并。本卡分支起点 `c28aac4` = `origin/main`，**不含 201b 的 `ci.yml`/README/矩阵/台账四处改动**，所以本节直接编 **§22**、矩阵编 **§19**，与 wave2-memory 上的 §21/§18 不撞号。两处都是文件末尾追加，合并时必然有文本冲突，但编号不需要返工。
+
+### 22.1 改动（2 个新文件，产品代码之外零改动）
+
+| 文件 | 改动 |
+|---|---|
+| `backend/app/services/session_summary.py`（新，180 行，CRLF，md5 `005986907fd116096b6f831c78fe7160`） | 两个入口 + 五个内部件：`estimate_tokens`（`:47`）、`_clip_to_tokens`（`:53`）、`_positive_int`（`:65`）、`_digest`（`:73`）、`_shape`（`:77`）、`_fit`（`:91`）、`build_summary`（`:100`）、`cross_session_summary`（`:154`）。**`build_summary` 的签名里没有 session**，和 201 的 `propose` 同一条结构约束：走到它的那条路不可能写库。`cross_session_summary` 收 `session_factory`，但库只做两件事——调 201 的 `active_memories`（`:165`，读）与 `select(AgentRunRecord.id, AgentRunRecord.status)`（`:170-174`，读），**没有 `add`/`commit`/`delete`/`flush`/`update`**。绑定常量集中在 `:28-32`：`DEFAULT_WINDOW=3`、`MAX_WINDOW=20`、`MAX_TOKENS_PER_MEMORY=80`、`DEFAULT_TOKEN_BUDGET=600`、`MAX_CHARS_PER_MEMORY=320`。复用而非另造：资格口径直接用 201 的 `MEMORY_ELIGIBLE_RUN_STATUS`（`:19`），异常直接用 `MemoryPersistenceError` / `MemoryPolicyViolation`（`:20-21`），**错误面零新增 code**，`memory_persistence_unavailable` 与 201 同族 |
+| `tests/a/test_session_summary.py`（新，307 行 / **40 项**，24 个测试函数 + 3 组参数化展开成 19 项） | 逐项钉死 DoD：明确空态（含六个字段全等，`:48`）、固定样例金句 `- weak_point：分数除法还需要复习`（`:58`）、正文逐字忠实（每一行 `：` 右侧必须命中已存文本，`:71`）、**三次摘要后 `user_memories`/`memory_events` 行数仍是 `(1, 1)`**（`:85-93`）、幂等（`NOW` 与 `NOW+3600` 两次构建除 `generated_at` 外逐字段相同且 `summary_sha256` 相同，`:96`）、新记忆改变摘要哈希（`:106`）、未确认候选永不可摘要（`:115`）、revoked 掉出窗口（`:122`）、TTL 过期掉出窗口（`:132`）、**七态降级源 run 参数化**（`:145-147`：`partially_completed`/`failed`/`awaiting_approval`/`reviewing`/`interrupted`/`rejected`/`running`）、源 run 被删同样跳过（`source_run_not_completed:None`，`:160`）、手填记忆（无 `source_run_id`）仍可摘要（`:172`）、窗口 3/1/4 三档可配（`:179`）、预算截断（`:196`）、预算容不下任何一条 → 空态（`:207`）、超长裁剪带标记（`:216`）、坏行降级不拖垮整体（`:228`）、估算确定且非负（`:243`）、裁剪不越界（`:251`）、8 组非法预算参数（`:257-261`）+ 4 组缺失用户拒绝（`:266-267`）、**两次读各压一个稳定 code**（记忆库不可达 `:272`；源 run 表不可达 `:281`），以及一条**源码静态扫描**（`:300`）：本模块文本里不允许出现 `.add(`/`.commit(`/`.delete(`/`update(`/`llm`/`provider`/`requests`/`openai`/`http`/`os.environ`/`.env` |
+
+本卡**没有**改 `backend/app/core/models.py`、没有新迁移、没有改 `user_memory.py`、没有动 API/UI/前端。表结构沿用 201 的 `user_memories` + `memory_events`。
+
+### 22.2 这一层到底保证了什么
+
+- **只读 active 且未过期**：过滤条件一条都不在本卡重写，直接调 201 的 `active_memories`（内含 `status='active'` 与 `expires_at IS NULL OR expires_at > now`）。两处口径不可能漂移，201 改这里，202 自动跟着改。
+- **摘要绝不写回 `user_memories`**：三层同时成立——① `build_summary` 纯函数，签名里没有 session；② `cross_session_summary` 的 `with session_factory()` 块只跑 SELECT；③ 返回体恒带 `persisted: False`（`_shape`，`:88`）。实测两层：用例把两张表的行数在三次摘要前后钉死不变（`:93`）；`logs/empty-state-evidence.txt` 直接在真实 SQLite 上打印 `table counts after`，非空库读一次摘要仍是 `{'user_memories': 1, 'memory_events': 1}`。
+- **明确空态**：空态不是 `None`、不是抛异常、也不是 `summary=""` 的摘要态，而是 `status="empty"` + 一个 `reason`，且 `sections/skipped/used_memory_ids/memory_count/estimated_tokens/summary_sha256/persisted` 全部照常给出，调用方不需要 try/except 分支。`reason` 分两类：`no_active_memory`（根本没有可读记忆）与 `no_memory_fit_budget`（有可读记忆，但预算容不下任何一条、或源 run 复核全部挡下）。
+- **有界**：条数窗口 `window`（默 3、上限 20）+ 单项 token `MAX_TOKENS_PER_MEMORY=80` + 单项字符 `MAX_CHARS_PER_MEMORY=320` + 总量 `token_budget`（默 600、硬上限 100_000）。任何被裁、被跳的都显式出现在 `skipped`（`outside_window` `:140`、`token_budget` `:133`、`content_missing` `:121`、`source_run_not_completed:<status>` `:128-129`）与 `truncated` 里，不静默丢。
+- **幂等**：`summary_sha256` 只对**输出正文行**做 sha256（`:87`），不含 `generated_at`、不含 `window`/`token_budget` 这类调用参数——同一份记忆在两个不同时刻构建，哈希一致。这是「consolidation 不重复劳动」的判据，不是装饰字段。
+- **不被 partial 污染（在 201 之上补了读侧）**：写侧闸门 201 已有（`confirm` 当场核对源 run `status='completed'`）。但一条记忆确认后，它的源 run 状态仍可能变化（重跑、人工改判、行被删）。本卡在**读的时候再核一次**（`:127`），`run_statuses` 里不是 `completed` 就跳过并记 `source_run_not_completed:<status>`，因此「先确认、后降级」的记忆不会继续出现在摘要里。
+- **失败回退**：单行坏数据（`content` 空白/非字符串）只让那一条变成 `content_missing` 跳过，整份摘要照常产出；两次读各自被同一个稳定 code 压住（`:175-178`），字符串就是 `memory_persistence_unavailable`，不带 DB 原文。
+- **忠实性**：正文行格式固定 `- <kind>：<content>`，右侧逐字取自存储文本（超长才裁并以 `…` 结尾、并在 `truncated` 里标记），不生成、不改写、不合并、不翻译。
+- **token 口径是离线启发式**：`tiktoken` 不是本仓依赖，本卡不引入外联也不加依赖，用「CJK 每字 1 token，其余 `⌈n/4⌉`」估算（`estimate_tokens`，`:47-50`）。它**只用来限长**，绝不作为计费/账单数字出现在任何接口或报告里；确定性、非负、单调（裁剪的二分谓词把省略号本身计入，所以返回值自身一定 `<= cap`）。
+
+### 22.3 中途自查后的一处返工（如实登记，不是红点逼出来的）
+
+`cross_session_summary` 初版把记忆那次读包进了 `try/except → MemoryPersistenceError("memory_persistence_unavailable")`，但**源 run 状态那次 SELECT 裸着**——本模块 docstring 承诺的是「两次读、只读、失败给稳定 code」，一条路径有兜底一条没有属于我自己写的不一致。补守卫（`:169-178`）+ 1 项用例（`:281`，故意让第二次 factory 抛异常），测试 **39 → 40 项**；因此**反向验证从 9 组扩到 10 组**（新增 R10 `run_read_guard`），定向、集合、全量与空态证据**全部在最终字节上重跑**；9 组阶段的日志整批移到 `logs/prev-39items/` 保留，守卫前的空态证据留在 `logs/prev-39items/empty-state-evidence-pre-guard.txt`，判定与最终一轮逐字相同。这一处只碰本卡自己的两个新文件，没动 201 的任何一行。
+
+### 22.4 五处需你追认的取舍（本卡按字面实现，一处都没擅自扩）
+
+1. **五个数字是我定的**：`3 / 20 / 80 / 600 / 320` 与 `token_budget` 硬上限 `100_000`。你的派工只写「有界」「token 预算」，主计划只写「替代固定 3 条窗口的可配置版本」，没有任何一处给数字。默认为 3 是照抄既有事实（`conversation_memory.py:21` 的 `.limit(3)`）。改口径只需动 `:28-32` 常量，逻辑不动。
+2. **「可配置版本」我做成了服务层可配，没有回改 `backend/app/agent_runtime/conversation_memory.py:21` 的 `.limit(3)`**。那条是**请求路径**上的会话内记忆（把历史问答拼进 prompt），改它等于改运行时行为，而你本卡写「不碰 API/UI（203）」。**登记不改**，请你指派：并入 203，还是另开一张卡。
+3. **无 `source_run_id` 的记忆**（教师/用户手填那条路）在本卡视为「没有可复核的 run」，直接放行参与摘要（`build_summary:124` 的 fallback）。若你认为手填记忆也要另立凭据，改动面就是那一行 fallback 改成跳过 + 一条用例。
+4. **空态拆两个 `reason`** 是我的选择，你只要求「明确空态」。合成一个也能用，但会把「库是空的」和「库里有货但塞不下」这两种运维上完全不同的情形混成一类。
+5. **`tests/a/test_session_summary.py` 未纳入 CI portable 清单**。你在 201 派工里点名要 201b 补两份记忆测试，202 派工条里没有这句，我不擅自扩清单。要补就是 `ci.yml` 尾部 +1 行、42 → 43 文件，同形子集按实测另跑一轮为准（本卡 40 项，量级 465 → 505/1 上下）。
+
+### 22.5 实测（记录数）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 定向（最终交付字节） | **40 passed / 0 failed / 13.23 s**，探针 `attempts=0 unique_hosts=0` | `logs/targeted-after-reverse-proof.txt`（10 组反向验证逐条禁用并逐条按字节还原后的复跑） |
+| 定向（补守卫后首跑） | 40 passed / 12.85 s | `logs/targeted-with-run-read-guard.txt`（同一批最终字节，反向验证之前） |
+| 定向（39 项阶段，CRLF 归一后） | 39 passed / 20.00 s | `logs/targeted-run3-crlf.txt`；归一前同码 39 passed / 19.79 s（`logs/targeted-run2.txt`） |
+| 首跑（**过程记录，不作记录数**） | 2 failed / 37 passed / 20.38 s（39 项） | `logs/targeted-run1.txt`。两处红点全在本卡自己的用例期望：① TTL 用例把 39 项版断言的 `NOW`（模块导入时的真实墙钟）当成了 `confirm()` 自己戳的时刻，差 6.8 s 撞 `abs=5`；② 手填记忆忘了 `run_id=None`，撞上 201 的 `source_run_not_found`。**改的是测试，没有放宽任何一条产品规则**；同轮另有一次 `_clip_to_tokens` 谓词的自查修正（把省略号计入长度），也不是被红点逼出来的 |
+| 集合 | **2395** 项（`pytest tests/ --collect-only`，8.63 s）+ 集合期 1 条 `mcp` `importorskip` skip = **2396 项**，口径同 §20/§17 | `logs/collect-only.txt`，探针 `attempts=0` |
+| 全量回归 | **2376 passed / 0 failed / 20 skipped / 993.55 s**，exit 0，195 个测试文件 | `logs/full-suite.txt`（含 NUL，去 NUL 副本 `logs/full-suite-clean.txt`，本轮所有数字取自该副本），`--basetemp output/qwen202-2026-10-23/pytest-full2`，探针 **`attempts=0 unique_hosts=0`**；相对 201 的 2336 恰好 **+40**，全为本卡新增项，既有用例零转红零消失 |
+| 全量 warnings | 21 条（201 那轮 25、39 项那轮 26），warnings summary 里 `session_summary` 命中 **0** 次——是线索不是结论 | 同上 `logs/full-suite-clean.txt` |
+| **反向验证：10 组各禁用一条绑定规则** | 同 40 项，每组 `failed + passed = 40` | R1 读时复核源 run 状态(不被 partial 污染)（禁用 `:127`）→ **8 failed / 32 passed**；R2 窗口截断（禁用 `:117`）→ **1 failed / 39 passed**；R3 token 预算（禁用 `:132`）→ **2 failed / 38 passed**；R4 超长裁剪（禁用 `:94`）→ **1 failed / 39 passed**；R5 空态原因区分（禁用 `:144`）→ **8 failed / 32 passed**；R6 persisted 恒为 False（禁用 `:88`）→ **3 failed / 37 passed**；R7 空内容降级（禁用 `:120`）→ **1 failed / 39 passed**；R8 摘要哈希只覆盖正文（禁用 `:87`）→ **1 failed / 39 passed**；R9 源码静态扫描禁止写回/模型（禁用 `:105`）→ **1 failed / 39 passed**；R10 源 run 那次读也压成稳定 code（禁用 `:175`）→ **1 failed / 39 passed**。 每组跑完立刻按字节还原，`md5` 与 pristine `005986907fd116096b6f831c78fe7160` 逐字节相同；每组的 pytest 调用自身也带探针，`attempts=0 unique_hosts=0` ×10。驱动 `reverse_proofs.py`、逐组日志 `logs/reverse-<组名>.txt`、汇总 `logs/reverse-proof-summary.txt`（含 `byte_restore_ok=True` ×10 与 10 条转红用例名） |
+| 反向验证第一轮作废（如实登记） | 驱动初版把补丁写进共享 `body` 却没逐轮回滚，导致 R2–R4 的红点是**叠加**的（9/11/12 failed），且 `restore=False` | 发现后停进程、按 pristine 副本逐字节还原（`md5` 复核相同）、驱动改为每轮 `TARGET.write_bytes(original)` + `assert` 还原成功再跑下一组；四份被污染的日志改名 `logs/void-stacked-reverse-*.txt` 保留不删，不作证据 |
+| **空态证据**（Lead 点名要的那件） | 真实 SQLite 上四种空态逐一打印完整返回体 + 每次之后的两表行数 | `logs/empty-state-evidence.txt`（脚本 `empty_state_evidence.py`，库 `tmp/empty-state-evidence.db`，**在最终字节上重跑**）：A 空库 → `empty/no_active_memory`，counts `{0, 0}`；B 只有未确认候选 → 同上，counts 仍 `{0, 0}`（201 的 `propose` 本就不落库）；C 有可读记忆但 `token_budget=1` → `empty/no_memory_fit_budget` 且 `skipped=[{…, 'token_budget'}]`，counts 仍 `{1, 1}`（**读一次摘要没多一行**）；D `revoke` 之后 → `empty/no_active_memory`，counts `{1, 2}`——**这两行增量全部来自 `memory.revoke()` 自己的审计事件，不是摘要写的** |
+| 静态检查 | CI 口径 `ruff check --select=F821,F823,E9` 两个新文件 → **All checks passed**（exit 0） | `logs/ruff-final.txt`。裸 ruff（仓库未纳入门禁）两个新文件共 **15 项** = `RUF001` 7（中文全角冒号/括号，`session_summary.py:148` + 测试 6 处）+ `EM101` 4 + `EM102` 2 + `I001` 2；同族规则在本仓 `backend/app` + `tests/a` 范围内（**含本卡两个新文件**）已分别命中 `E501` 2221 / `RUF001` 3421 / `I001` 319 / `EM101` 252 / `EM102` 56（`logs/ruff-family-repo.txt`），本卡不是首例也不单独清洗 |
+| 行尾与差异 | 两个新文件写成 CRLF：180 行 / 307 行，`crlf == 行数`、孤立 LF/CR 各 **0**；LF 原件留在 `tmp/pre-lf/`，CRLF pristine 在 `tmp/pristine-crlf/`（10 组反向验证的还原基准） | `git diff --check` 干净；`git status --porcelain` 全程只有这两个文件；`__tablename__` 仍 **39**、路由装饰器仍 **194**、`ci.yml` 本分支未动 |
+
+外推限制：以上全部是**本机 offline 同形复跑**（Windows + Python 3.12.15）。GitHub 上的真实绿灯属 remote 证据、由你判读；PG 方言本卡零新表零迁移，不涉及。
+
+### 22.6 未做与边界
+
+- 未把 `test_session_summary.py` 加进 `.github/workflows/ci.yml` 的 fast/portable 清单（见 §22.4 第 5 条）；未动 `enterprise-contract` 38 文件清单；未动覆盖率门槛步。
+- 未回改 `conversation_memory.py:21` 的 `.limit(3)`，也没让运行时去调 `cross_session_summary`（§22.4 第 2 条）。
+- 未新增 API 端点、未改前端、未做 203 的记忆 UI；未接 `tiktoken` 或任何 tokenizer 依赖。
+- 未动 201 的 `user_memory.py` / `models.py` / 迁移；未动 `docs/API-CONTRACT.md` 的表所有权行（Lead 已归 **QWEN-401/403**）；未动 baseline 迁移的无条件 `create_table`（已归 **QWEN-403**）。
+- 未开始 QWEN-211（Phase A 顺序里的下一张，等你派）。

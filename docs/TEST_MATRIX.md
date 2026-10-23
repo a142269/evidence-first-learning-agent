@@ -444,3 +444,35 @@ Lead 2026-10-23 17:20 验收 §16（自行复跑 `test_run_usage_admin.py` **14 
 | CI 同形口径下的本卡用例 | `--no-cov --benchmark-disable -q`（`ci.yml:213` 同形）+ 前置 `init_db()` | **53 passed / 31.58 s**；`create_all` 确实带出两张记忆表与全部索引；日志 `logs/ci-style-targeted.txt` |
 | 静态检查与口径 | `backend/app scripts/ tests/` | CI 口径 `ruff check --select=F821,F823,E9` **All checks passed**；`git diff --check` 干净。裸 ruff（全仓基线 13,647 项，仓库未纳入门禁）：`models.py` **18 → 18** 与 HEAD 基线逐条相同，4 个新文件 **24** 项 = `EM101` 18 + `EM102` 2 + `I001` 2 + `E501` 2，四条规则仓库内已分别有 365/64/514/2907 项同族命中（`run_audit.py`+`run_usage.py` 自己就有 6 项 EM101）；`E501` 两处为 `test_user_memory_service.py:64-65`（106/102 字符），全量跑完后未再动代码，登记为下一卡顺手项。`__tablename__` **37 → 39**；测试文件 **191 → 193**（节点 id 去重口径），含集合期 mcp 文件则是 **192 → 194** |
 | 行尾归一（本卡自造噪音，如实登记） | 3 个新文件初写成纯 LF，本仓既有文件是 `i/lf w/crlf` | 归一为 CRLF：转换前后按 LF 归一化 **md5 相同**（纯行尾变换）、孤立 CR/LF **0**；归一后定向复跑 **53 passed / 31.47 s**。**全量 1156.38 s 那一轮跑的是归一前的 LF 形态**，归一不动任何内容字节；旧拷贝在 `tmp/pre-crlf/`。台账 §20.3 末行 |
+
+## 19. QWEN-202 跨会话摘要实测摘要（2026-10-23，分支 `qwen/wave2-summary`，零模型调用）
+
+Lead 18:55 派 **QWEN-202**，明令「201b 后开工」；分支 `qwen/wave2-summary` 由 Lead 预建，开工 HEAD = `c28aac4` = `origin/main`，工作树起点干净。DoD 原文与逐条交付见 `docs/CLAIMS_LEDGER.md` §22 开头。**编号说明**：§18 属 QWEN-201b，在 `qwen/wave2-memory`（`origin/qwen/wave2-memory = a625adc`）待合并，本节按合并后的最终次序直接编 §19。
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 定向（最终代码） | `tests/a/test_session_summary.py` = **40** 项 | **40 passed / 13.23 s**（10 组反向验证逐组还原后的复跑，`logs/targeted-after-reverse-proof.txt`）；补守卫后、反向验证前的同字节首跑 40 passed / 12.85 s（`logs/targeted-with-run-read-guard.txt`）。39 项阶段：CRLF 归一后 39 passed / 20.00 s（`logs/targeted-run3-crlf.txt`），归一前 19.79 s（`logs/targeted-run2.txt`）。**首跑 2 failed / 37 passed / 20.38 s**（`logs/targeted-run1.txt`）不作记录数：两处红点都是本卡自己的用例期望写错（TTL 把 `confirm()` 自戳时刻当成注入 `NOW`；手填记忆漏 `run_id=None`），改的是测试、没放宽产品规则。**中途自查返工**：源 run 状态那次 SELECT 起初没有异常守卫，与本模块 docstring 的承诺不一致 → 补守卫 + 1 项用例（39 → 40），反向验证随之从 9 组扩到 10 组，定向/集合/全量/空态证据全部在最终字节上重跑，39 项阶段日志移到 `logs/prev-39items/` |
+| **反向验证：10 组各禁用一条绑定规则** | 同 40 项 | R1 读时复核源 run 状态(不被 partial 污染)（禁用 `:127`）→ **8 failed / 32 passed**；R2 窗口截断（禁用 `:117`）→ **1 failed / 39 passed**；R3 token 预算（禁用 `:132`）→ **2 failed / 38 passed**；R4 超长裁剪（禁用 `:94`）→ **1 failed / 39 passed**；R5 空态原因区分（禁用 `:144`）→ **8 failed / 32 passed**；R6 persisted 恒为 False（禁用 `:88`）→ **3 failed / 37 passed**；R7 空内容降级（禁用 `:120`）→ **1 failed / 39 passed**；R8 摘要哈希只覆盖正文（禁用 `:87`）→ **1 failed / 39 passed**；R9 源码静态扫描禁止写回/模型（禁用 `:105`）→ **1 failed / 39 passed**；R10 源 run 那次读也压成稳定 code（禁用 `:175`）→ **1 failed / 39 passed**。 逐组明细见本节末表。逐组跑完即按字节还原，pristine md5 `005986907fd116096b6f831c78fe7160` 全等（`byte_restore_ok=True` ×10）；10 组每次调用都挂探针，`attempts=0 unique_hosts=0` ×10。驱动 `reverse_proofs.py`、日志 `logs/reverse-<组名>.txt`、汇总 `logs/reverse-proof-summary.txt`。**第一轮作废如实登记**：驱动初版未逐轮回滚，R2–R4 的红点为叠加态（9/11/12 failed）且 `restore=False`，发现即停、还原、改驱动，被污染的日志改名 `logs/void-stacked-reverse-*.txt` 保留不删 |
+| **空态证据** | 真实 SQLite（`tmp/empty-state-evidence.db`）+ `logs/empty-state-evidence.txt` | 在**最终字节**上跑（守卫前那份在 `logs/prev-39items/empty-state-evidence-pre-guard.txt`，判定逐字相同）。四种空态各自打印完整返回体与其后的两表行数：空库 `empty/no_active_memory`（counts 0/0）、只有未确认候选（counts 仍 0/0）、`token_budget=1` → `empty/no_memory_fit_budget` + `skipped=[token_budget]`（counts 仍 1/1，摘要一次没多写一行）、`revoke` 后 `empty/no_active_memory`（counts 1/2，**这 1 条增量是 `memory.revoke()` 自己的审计，不是摘要写的**） |
+| 摘要忠实性与不写回 | 用例逐条 | 固定金句 `- weak_point：分数除法还需要复习`；每一行 `：` 右侧必须命中已存文本；连续三次摘要后 `user_memories`/`memory_events` 仍 `(1, 1)`；`NOW` 与 `NOW+3600` 两次构建除 `generated_at` 外逐字段相同、`summary_sha256` 相同；新增记忆即改哈希 |
+| 全量回归（**最终代码，记录数**） | `pytest tests/`（**2396** 项 = 收集 2395 + 集合期 1 条 `mcp` `importorskip` skip，口径同 §14/§15/§16/§17） | **2376 passed / 0 failed / 20 skipped / 993.55 s**，exit 0，`--basetemp output/qwen202-2026-10-23/pytest-full2`，195 个测试文件，探针 **`outbound attempts=0 unique_hosts=0`**；相对 201 的 2336 恰好 **+40**，全为本卡新增项，既有用例零转红零消失；全量 warnings 21（201 那轮 25），warnings summary 里 `session_summary` 命中 **0** 次——是线索不是结论；日志 `logs/full-suite.txt`（去 NUL 副本 `logs/full-suite-clean.txt`）。收集 2395 项用时 8.63 s（`logs/collect-only.txt`） |
+| CI 可移植子集 | **本卡未扩清单**：`ci.yml` 在本分支仍是 201 之后的形态（40 文件；42 文件那份改动在 `qwen/wave2-memory`） | 本卡 40 项**不在** portable 清单内，因此该子集计数不因 202 变化；Lead 202 派工条没要求纳入（201b 那句只针对两份记忆测试）。若要纳入，是 `ci.yml` 尾部 +1 行、42 → 43 文件，需另跑一轮同形复现 |
+| 静态检查与口径 | `backend/app/services/session_summary.py` `tests/a/test_session_summary.py` | CI 口径 `ruff check --select=F821,F823,E9` **All checks passed**；裸 ruff（未纳入门禁）**15 项** = `RUF001` 7 + `EM101` 4 + `EM102` 2 + `I001` 2，同族规则在本仓 `backend/app`+`tests/a`（含本卡新文件）已有 `E501` 2221 / `RUF001` 3421 / `I001` 319 / `EM101` 252 / `EM102` 56（`logs/ruff-final.txt`、`logs/ruff-family-repo.txt`）；`git diff --check` 干净；`__tablename__` 仍 **39**（本卡零新表）、路由装饰器仍 **194**（本卡零端点）、测试文件 **194 → 195** |
+| 行尾 | 2 个新文件写成 CRLF | 180 行 / 307 行，`crlf == 行数`、孤立 LF/CR 各 0；LF 原件 `tmp/pre-lf/`，CRLF pristine `tmp/pristine-crlf/`（10 组反向验证的还原基准）。**归一在反向验证与全量之前完成**，两轮跑的都是最终字节（与 §17 那轮顺序相反，噪音更少） |
+
+### 19.1 10 组反向验证逐组明细（每组只禁用一条绑定规则，跑完立刻按字节还原）
+
+| 组 | 禁用的绑定规则 | 禁用行（原文） | 该组 40 项的结果 | 按字节还原 |
+|---|---|---|---|---|
+| R1 | 读时复核源 run 状态(不被 partial 污染) | `:127` `if status != MEMORY_ELIGIBLE_RUN_STATUS:` | **8 failed / 32 passed** / 14.41 s | True |
+| R2 | 窗口截断 | `:117` `for memory in memories[:window]:` | **1 failed / 39 passed** / 13.91 s | True |
+| R3 | token 预算 | `:132` `if used_tokens + cost > token_budget:` | **2 failed / 38 passed** / 13.59 s | True |
+| R4 | 超长裁剪 | `:94` `if estimate_tokens(text) > MAX_TOKENS_PER_MEMORY:` | **1 failed / 39 passed** / 13.51 s | True |
+| R5 | 空态原因区分 | `:144` `reason = "no_active_memory" if not memories else "no_memory_fit_budget"` | **8 failed / 32 passed** / 13.46 s | True |
+| R6 | persisted 恒为 False | `:88` `"persisted": False}` | **3 failed / 37 passed** / 13.63 s | True |
+| R7 | 空内容降级 | `:120` `if not isinstance(content, str) or not content.strip():` | **1 failed / 39 passed** / 13.48 s | True |
+| R8 | 摘要哈希只覆盖正文 | `:87` `"summary_sha256": _digest([line for line in summary.split("\n") if line]),` | **1 failed / 39 passed** / 13.93 s | True |
+| R9 | 源码静态扫描禁止写回/模型 | `:105` `"""Fold readable memories into one bounded summary. Pure: no session, no model."""` | **1 failed / 39 passed** / 14.23 s | True |
+| R10 | 源 run 那次读也压成稳定 code | `:175` `except Exception as exc:` | **1 failed / 39 passed** / 13.76 s | True |
+
+每组 `failed + passed = 40`（全量定向集合），转红用例名逐条记在 `logs/reverse-proof-summary.txt` 与 `logs/reverse-<组名>.txt`。
