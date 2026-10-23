@@ -805,3 +805,42 @@ Lead 2026-10-23 18:55 派工原文（`docs/QWEN_LEAD_DIALOGUE.md:1640-1644`）�
 - 未新增 API 端点、未改前端、未做 203 的记忆 UI；未接 `tiktoken` 或任何 tokenizer 依赖。
 - 未动 201 的 `user_memory.py` / `models.py` / 迁移；未动 `docs/API-CONTRACT.md` 的表所有权行（Lead 已归 **QWEN-401/403**）；未动 baseline 迁移的无条件 `create_table`（已归 **QWEN-403**）。
 - 未开始 QWEN-211（Phase A 顺序里的下一张，等你派）。
+
+## 23. QWEN-202b 把跨会话摘要测试纳入 CI 快清单（2026-10-23，分支 `qwen/wave2-summary`，零模型调用、产品零改动）
+
+Lead §4（`[2026-10-23 22:35]`，提交 `bbcc8e0`）原文：「**QWEN-202b（继续 `qwen/wave2-summary`，零模型）** — 把 `tests/a/test_session_summary.py` 加入 `.github/workflows/ci.yml` 快清单，42→43 文件；同形复跑预期 **505/1**（原 465 + 40），更新 README/TEST_MATRIX；产品零改动；完成后 `[DONE]`。」同一节记录 **QWEN-201b 与 QWEN-202 验收通过、已合并**（Lead 复跑 `test_session_summary.py` **40 passed / 12.61 s**，接受全量 2376/0/20），并把我提请在 §22.4 的五处取舍逐条裁定：默认值 `3/20/80/600/320` 与 `100_000` **接受**；`conversation_memory.py:21` 的 `.limit(3)` **本轮不改**（等 203/211 有产品需求再开卡，不夹带）；无 `source_run_id` 的手填记忆**允许**参与摘要；空态拆两个 `reason` **接受**；摘要测试进 CI **由本卡 202b 完成**。也就是说 §22.4 的五条已全部关闭，本卡就是其中第 5 条的落地。Lead 还手工解决了 201b 与 202 的文档追加冲突（台账 §21→§22、矩阵 §18→§19、对话两段都保留、编号不变，README 自动合并），所以本节的编号 **§23** 直接接在 §22 之后，无需再声明避让。
+
+### 23.1 改动（1 个非文档文件，只加 1 行）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `.github/workflows/ci.yml` | `quality` job 的 portable 清单追加 `tests/a/test_session_summary.py`，**42 → 43 个文件** | 新行 `:215`（清单本体 `:173-215`，旗标行从 `:215` 顺移到 `:216`，hunk `@@ -212,6 +212,7 @@`，位于 `:214 test_user_memory_migration.py` 之后） |
+| `README.md` | 改写 `:58` 的「CI 可移植子集」行：43 文件 / **505 passed / 1 skipped**，把 201b 的 465/1 降为同格历史 | `:58` |
+| `docs/TEST_MATRIX.md` | 新增 §20 | — |
+| `docs/CLAIMS_LEDGER.md` | 本节 §23 | — |
+
+**产品代码、测试代码、迁移文件零改动**；`enterprise-contract` 的 38 文件 PG 清单未动；覆盖率门槛步未动。§21.2 那条「插入位置属自主取舍」在本卡复现：Lead 只说「加入快清单」，未指定位置，我仍选**清单尾部**（diff 为纯 `+1` 行、不动既有行序，最易复核）；若要按主题聚类与 `test_conversation_memory_v2.py` 相邻，是一次纯位置改动，计数不变。
+
+### 23.2 实测（offline，零模型调用，探针 `attempts=0 unique_hosts=0`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单文件数 | **42 → 43**（与 201b 清单逐行 diff = `42a43`，43 条路径存在性逐条检查 0 缺失） | `ci-portable-list.txt`（由 `inspect_ci_list.py` 从 `ci.yml` **机械重取**，不是照抄上一轮清单） |
+| CI 同形子集（**记录数**） | **505 passed / 1 skipped / 0 failed / 140.63 s**，4 条 warnings，exit 0 | `logs/ci-portable-final.txt`（`-rs`，点名唯一 skip 仍是 `test_auth_restart.py:18` 要求一次性 PostgreSQL） |
+| 同命令首跑 | 505 passed / 1 skipped / 143.77 s | `logs/ci-portable-run1.txt`（两跑计数一致；时长差属主机波动，不解释为结论） |
+| 增量核对 | 465（201b 同清单）+ **40** = 505，40 正是 §22 的摘要用例项数 | 与 Lead 派工条「预期 **505/1**（原 465 + 40）」**实测吻合**；既有 465 项零转红、零消失 |
+| 前置 `init_db()` | exit=0 | `logs/ci-init-db.txt` |
+| alembic smoke | `upgrade head` exit=0、`downgrade base` exit=0（共 24 条 Running 行 = 12 上 + 12 下） | `logs/ci-gates.txt` |
+| CI ruff 门 | `--select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed，exit 0 | 同上 `logs/ci-gates.txt` |
+| workflow 本体 | `yaml.safe_load` OK；`quality` 步 **43** 文件、`enterprise-contract` 仍 **38** | `logs/ci-yaml-parse.txt` |
+| 行尾 | `ci.yml` 343 → **344** 行、CRLF 与行数相等、孤立 LF/CR 各 0，md5 `2bf211180ec7435fd70cf711adf6c292` | 同上；`git diff --check` 干净，工作树除这 4 个文件外无改动 |
+
+外推限制：以上全是**本机按 `ci.yml:216` 旗标同形复跑**（offline 证据等级）。GitHub 上 `quality` job 的真实回执属 remote 证据、由 Lead 判读；本机无 `gh` CLI，不代跑远程。`test_auth_restart.py` 那条 skip 在 CI 上同样会 skip，所以 505/1 两侧口径一致。PG 方言本卡零触碰（该文件未进 enterprise 清单）。
+
+### 23.3 未做与边界
+
+- 未重跑全量 `pytest tests/`：本卡零新增用例、零产品改动，§22 的 **2376/0/20 / 2396 项**记录数不动；若 Lead 验收时想要一份同提交的全量数，我再跑，不在本卡擅自改记录数。
+- 未扩 `enterprise-contract` 38 文件 PG 清单，未动覆盖率门槛步，未动 MCP stdio 步。
+- 未改 `docs/00-评委30秒导览.md`：Lead 本卡只点名 README 与 TEST_MATRIX，导览那行讲的是**全量**用例数（仍属 §22 的 2396 项），与本卡无关。
+- 未动 `docs/API-CONTRACT.md:49`（归 **QWEN-401/403**）、未动 baseline 迁移的无条件 `create_table`（归 **QWEN-403**）。
+- 未开始 **QWEN-211**：Lead 明示「202b 后开工」，分支 `qwen/wave2-planning` 已预建；本节交付后 hold，等你验收。

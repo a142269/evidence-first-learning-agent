@@ -488,3 +488,18 @@ Lead 18:55 派 **QWEN-202**，明令「201b 后开工」；分支 `qwen/wave2-su
 | R10 | 源 run 那次读也压成稳定 code | `:175` `except Exception as exc:` | **1 failed / 39 passed** / 13.76 s | True |
 
 每组 `failed + passed = 40`（全量定向集合），转红用例名逐条记在 `logs/reverse-proof-summary.txt` 与 `logs/reverse-<组名>.txt`。
+
+## 20. QWEN-202b 摘要测试纳入 CI 快清单实测摘要（2026-10-23，分支 `qwen/wave2-summary`，零模型、产品零改动）
+
+Lead §4 `[2026-10-23 22:35]`（提交 `bbcc8e0`）派 202b：「把 `tests/a/test_session_summary.py` 加入 `.github/workflows/ci.yml` 快清单，42→43 文件；同形复跑预期 **505/1**（原 465 + 40），更新 README/TEST_MATRIX；产品零改动；完成后 `[DONE]`。」同一节验收 201b 与 202，并关闭我在 §22.4 提请的五处取舍。逐条交付见 `docs/CLAIMS_LEDGER.md` §23。
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 清单机械重取 | `inspect_ci_list.py` 解析 `ci.yml` → `quality` 步文件行 | **43 个文件**（201b 那份 42 → 本卡 `42a43`），43 条路径 0 缺失；`enterprise-contract` 仍 **38**；`yaml.safe_load` OK |
+| **CI 同形子集（记录数）** | 43 文件全量逐文件参数 + `--no-cov --benchmark-disable -q -rs`（旗标逐字抄 `ci.yml:216`） | **505 passed / 1 skipped / 0 failed / 4 warnings / 140.63 s**，exit 0，`--basetemp output/qwen202b-2026-10-23/pytest-ci-rs`，前置 `init_db()` exit=0，探针 **`outbound attempts=0 unique_hosts=0`**；唯一 skip 是 `test_auth_restart.py:18`（要求一次性 PostgreSQL，CI 上同样 skip）。相对 201b 的 465/1 恰好 **+40** = §22 的摘要 40 项，与 Lead 派工条的「预期 505/1」一致 |
+| 同命令首跑 | 同上，仅去掉 `-rs`、`--basetemp …/pytest-ci` | 505 passed / 1 skipped / 143.77 s（计数与记录数一致，时长差属主机波动）——`logs/ci-portable-run1.txt` |
+| fast job 其余门 | 同库口径 | `alembic upgrade head` exit=0、`downgrade base` exit=0（12 上 + 12 下共 24 条 Running）、`ruff check --select=F821,F823,E9 backend/app scripts/ tests/` All checks passed ——`logs/ci-gates.txt` |
+| 行尾与差异 | `.github/workflows/ci.yml` | 343 → **344** 行、`crlf == 行数`、孤立 LF/CR 各 0、md5 `2bf211180ec7435fd70cf711adf6c292`；`git diff --stat` = **1 file changed, 1 insertion(+)**；`git diff --check` 干净 |
+| 未跑 | 全量 `pytest tests/` | 本卡零新增用例、零产品改动，§22 的 **2376/0/20 / 2396 项**记录数不动（不擅自改记录数）；PG 清单与覆盖率步未动 |
+
+外推限制：本轮全部是**本机 offline 同形复跑**；GitHub `quality` job 的真实绿灯属 remote 证据，由 Lead 判读（本机无 `gh` CLI）。
