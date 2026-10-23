@@ -1465,3 +1465,39 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+### [2026-10-23 14:16] Qwen → Lead | [DONE] QWEN-104c `isfinite` 加固 + 报告措辞更正（零模型调用）
+
+**结论：(a)(b)(c) 全部完成。分支 `qwen/wave1-finite`，两个提交 `f39cc8a`（投影+测试）/ `e0c484b`（文档）。证据等级 offline。**
+
+**(a) 守卫**：`backend/app/services/run_usage.py` +4/−3——`import math`（`:11`）、`_number` 判定改 `math.isfinite(value) and value >= 0`（`:34`）、`_amount` 同（`:40`）。**`_count` 一字未动**，token/`model_calls`/`tool_calls`/`duration_ms` 的整数口径不变。`tests/a/test_run_usage_admin.py` +52/0，用例 11 → **13**。
+
+**实测**（全程挂 fail-closed 探针，`outbound attempts=0 unique_hosts=0`；日志 `output/qwen104c-2026-10-23/logs/`）
+
+| 运行 | 结果 |
+|---|---|
+| 定向（最终代码） | **13 passed / 2.44 s**；提交前复跑 **13 passed / 1.94 s** |
+| **反向验证**（临时撤守卫） | **2 failed / 11 passed / 2.38 s**，失败断言 `assert [inf, None, None] == [None, None, None]`——**漏网的只有 `+inf`**，`-inf`/`nan` 本就被 `>= 0` 判否 |
+| 全量 `pytest tests/`（2302 项） | **2282 passed / 0 failed / 20 skipped / 873.67 s**（Windows + Python 3.12.15；相对 104b 的 2280 恰好 +2 即本卡新增两项，既有用例无一转红）；`--collect-only -q` 收 2301 + 集合期 1 条 `importorskip("mcp")` = 2302，与 §14 同口径 |
+| CI 可移植 40 文件（清单与 107c/104b `diff` 相同） | **411 passed / 1 skipped / 4 warnings / 83.99 s**（上一轮 409/1，+2 即本卡两项） |
+| 静态门 | CI 口径 `ruff check --select=F821,F823,E9` **All checks passed**；裸 ruff `run_usage.py` 0 findings、测试文件 4 findings 与 HEAD 基线逐条相同（仅行号位移）；`git diff --check` 干净；路由装饰器仍 **189**、测试文件仍 **192** |
+
+**为什么这道闸必须有**（三条机制实测，账本 §18.2；不是纸面推断）：① 无守卫时 `_number(inf)` 原样返回 `inf`；② SQLAlchemy/SQLite 的 JSON 列**原样往返** inf，`.db` 里确有字面 `Infinity`，脏值一路走到投影输出；③ 同一份 summary，按 Starlette 严格口径 `json.dumps(..., allow_nan=False)` 直接 **`ValueError: Out of range float values are not JSON compliant: inf`（端点 500）**，按 FastAPI/pydantic 响应编码则**静默写成 `null`**——后者把"未记录"和"记成了 inf"混成同一个值。您那句"不能靠上游按构造有限赌"落成两条断言：响应里 `reported_latency_ms=null`，且正文不含字面 `Infinity`/`NaN`。
+
+**(b) 报告措辞**：`docs/EVAL_USAGE_COST_REPORT_2026-10-22.md` 只改 2 行（第 1 节偏差行、第 2 节偏差表行），**127 这个已交付实测值原样保留**，只加注"该说明已过期 / QWEN-104b 已修复、复跑 127→0"；与交付原件的 `diff` 正好是这 2 行。为了让"复跑 127→0"不是空口，同一条命令复跑只写 scratch（`tmp/eval-cost-report-final.md`）：两处偏差值实打印 **0**，`sources=8 records=127 cost_status=unknownx127`，与已交付报告 `diff` = 6 hunk / 23 行，除 `--out` 路径、这两处偏差值、夹具普查随轮次增长（含 `result.budget` 的 jsonl 130→146 份、排除夹具 122→138 份 / 304→344 条、归并表新增 104b/104c 两行）外**逐字节相同**——127 条记录、442 次调用、1321838/276031 token、2797092 `input_chars`、中位数 14101.54 [2302.41~40332.14] 全部不变。**已交付报告未重生成。**
+
+**(c) 边界**：零模型调用、未读 `.env`、未起或重启服务、未向 `main` 提交或推送（只推 `qwen/wave1-finite`）；只改投影/测试/文档，`aggregate_run_usage` 算法与端点语义不动；§1-17 旧正文不回改。**一处连带更正**：§16.5 的"三方逐字节相同"自本卡起只对措辞更正前的版本成立，账本已指认。
+
+**请 Lead 裁定两件（本卡只登记，没有擅自"修"）**
+
+1. `scripts/report_eval_cost.py:380` 的过期解释是**硬编码模板串**，计数本身是算出来的。(c) 限定"只改投影/测试/文档"，脚本不在其中，所以我没动。代价已实证：复跑产物第 79 行现在是 `| latency_ms 被产品投影判为未记录 | 0 | run_usage.py:22-26 的 _count 只接受非负整数, 小数 latency 全被丢弃 …… 本卡不改产品代码 |`——旧解释与新数字并排，自相矛盾；将来若重生成报告，那行说明会再次变回旧措辞。1 行字符串即可修，请您点头我再动脚本。
+2. 当记录写的是 `cost.status="estimated"` 而 `amount_cny` 非有限时，投影**保留生产者写的 `estimated`**、只把金额判为未记录，于是响应出现 `cost_status="estimated"` 且 `cost_cny=null`（`cost` 字典不含 `amount_cny` 键）。现状已用测试钉住；若应降级为 `unknown`，动的是 QWEN-104 已验收的 `cost_status` 语义，本卡不越界。
+
+**并发会话报备**：本卡开工时 HEAD 已被另一会话从 `main` 切到 `qwen/wave1-finite`（`git reflog` 可见 `checkout` 与 `merge … Fast-forward`）。我只登记该现象与证据，未做任何恢复、回退或评判。我的两个提交基线是您 13:40 派卡时的 `603f589`，未包含别人的动作。
+
+**未做清单**：未动 `_count`/计数口径/聚合算法、未加端点、未改 `ci.yml`、未重生成已交付报告、未改脚本模板、未处理上述裁定 2、未开始 QWEN-201。
+
+**下一步**：交付即推，不适用"交付后 hold"；但按您 §4 的 Phase A 顺序（104c → 201 → 202 → 211），我在您验收本卡前不擅自开 **QWEN-201**。验收通过后我在 `qwen/wave2-memory` 上按 §4 的 DoD 五条开工：`user_memories`+`memory_events` 迁移（隔离 SQLite 真跑 upgrade/downgrade 并留日志）、模型只 `propose` 不落库、`confirm` 必须显式用户/教师 actor、`revoke` 留审计、partial/failed Run 永不入记忆、零模型、不碰 API/UI。上面两件裁定若未回，我按"未裁定即不动"处理，QWEN-201 范围内不触碰它们。
+
+— Qwen
+
