@@ -28,7 +28,7 @@
 | R1 | L13 CI badge | main 分支 CI 绿 | 需复跑（远端） | —（CI 环境） | GitHub Actions 徽章是实时远端状态；本机无 `gh` CLI，本轮未能程序化复核。归档记录：2026-10-18 run #17/#18 全绿，主计划基线注记 run #19 全绿（`1ba64fa`）；Wave 0 合并（merge `5bf77d1`）后 **run #21 success**（Lead 2026-10-19 14:55 报告，含 node 20 前端单测 step；证据等级 `remote`，非本机复核）。 | Wave 1 起每次合并后在状态文档记录 run 编号与结论；如要本机复核需给 `gh` CLI 或网络权限 |
 | R2 | L25 | "每个回答都携带实际使用的来源" | 有证据 | offline | `tests/a/test_learning_package.py` 覆盖未使用证据排除、逐项引用、按 chunk_id 去重；今日便携套件重跑通过。 | 保持 |
 | R3 | L25 | "PostgreSQL 检查点和执行租约实现断线恢复" | 有证据 | offline + pg | 检查点跨进程恢复、租约、API 崩溃恢复测试在 CI enterprise 与 2026-10-18 一次性容器（353 passed）验证；今日 SQLite 便携子集复跑通过。 | 保持；PG 组合已由 QWEN-105（2026-10-22）在本机一次性容器复跑：`test_learning_checkpoint_postgres.py`、`test_run_leases.py`、`test_postgres_api_recovery.py` 均在 38 文件 / 364 passed 两轮内，见 §14 |
-| R4 | L27 | V2 旗舰链路（受限规划→Tutor→Practice→Reviewer→一次返工→按需人审） | 有证据 | offline（契约）+ cloud（单次采集） | 代码 `learning_package.py`（v2.8）+ 便携套件今日 369 passed；真实后端 13 条标准场景采集通过（cloud 历史）。契约测试不等于内容质量。 | 保持 |
+| R4 | L27 | V2 旗舰链路（受限规划→Tutor→Practice→Reviewer→一次返工→按需人审） | 有证据 | offline（契约）+ cloud（单次采集） | 代码 `learning_package.py`（现 v2.9，QWEN-211b；**该 cloud 证据采集时为 v2.8**）+ 便携套件今日 369 passed；真实后端 13 条标准场景采集通过（cloud 历史）。契约测试不等于内容质量。 | 保持 |
 | R5 | L29 | "`depends_on` 是未执行的兼容字段，不提供 DAG 依赖调度" | 有证据 | offline | 与 `orchestrator.py` 实现一致；README 主动降级表述，正确示范。 | V1 `depends_on` 二选一处置属 QWEN-212 |
 | R6 | L31 | "三组对照已记录 72 次真实模型运行"；"双人质量复核尚未完成" | 有证据 | cloud + 待人工 | `evals/results/ablation-fixed-evidence-20261017.md`：24 任务 × 3 组 = 72 次，真实 DeepSeek Flash；人工评分确实未完成，措辞诚实。 | 保持（这是正确的"不宣称"范例） |
 | R7 | L39 | "76 条新版 Golden Set 中 74 条通过" | 有证据-历史 | cloud | 2026-10-16 第二轮在线验收（`UPGRADE_IMPLEMENTATION_STATUS.md` 最终批）；脱敏汇总 `evals/results/qa-golden-v2-summary.json`（74/76、pass_rate 0.9737）。逐例原始记录只在本地 `output/`，未上传。 | 保持，但建议加"2026-10-16 历史"角标（L48 已有总说明） |
@@ -65,7 +65,7 @@
 
 | # | 位置 | 声明 | 状态 | 证据等级 | 依据与说明 | 建议动作 |
 |---|---|---|---|---|---|---|
-| T1 | §8 L58 | "`PROMPT_VERSION=learning-package-v2.4`" | 措辞需修正（过期） | offline | 代码当前为 **v2.8**（`learning_package.py:20`）；`WORKFLOW_VERSION=learning-workflows-v2.3`（`run_lifecycle.py:29`）。文档头部日期 2026-10-15 未随后续批次更新。 | QWEN-103：全文按当前代码刷新版本号与批次差异 |
+| T1 | §8 L58 | "`PROMPT_VERSION=learning-package-v2.4`" | 措辞需修正（过期） | offline | 复核当时代码为 **v2.8**（`learning_package.py:20`；现 **v2.9**、`:23`，见 §25）；`WORKFLOW_VERSION=learning-workflows-v2.3`（`run_lifecycle.py:29`）。文档头部日期 2026-10-15 未随后续批次更新。 | QWEN-103：全文按当前代码刷新版本号与批次差异 |
 | T2 | 接口/验收节 L81 | "新版 Golden Set……仍需完整在线采样" | 措辞需修正（过期） | cloud | 同 E1：10-16 已完成两轮在线；学习包 24 条完整在线质量与人审仍未完成。 | 同 E1 |
 | T3 | §10 L75 | "2026-10-15 真实浏览器配本地模拟 API 验证……尚未真实后端+在线模型浏览器联调" | 有证据 + 待人工 | offline（浏览器 mock 走查） | 措辞如实标注"模拟 API"；10-15 晚些时候做过一次真实后端+桩模型的浏览器复核（UPGRADE 文档），真实在线模型浏览器 E2E 仍未做。 | Wave 3 QWEN-331 Playwright E2E |
 | T4 | §4 | MCP `mcp==2.3.0` 只读、生产启动器待验收 | 有证据 | offline | `requirements-mcp.txt` 钉 2.3.0 ✓；协议测试在 enterprise 可选步骤；"生产启动器和真实部署仍待验收"表述正确。 | 保持 |
@@ -95,7 +95,7 @@
 | S4 | 同上 | Linux 锁容器内 66 passed | 有证据-历史 | offline（Linux 容器） | 同上；nightly 远端记录待复核（R20）。 | QWEN-002→nightly 分层执行时复核 |
 | S5 | 同上 | 本机生产栈 211.3s 构建启动 + 边界全通过 | 有证据-历史 | prod（仅本机） | 明确写了"不等于公网生产验收" ✓。 | 保持该限定 |
 | S6 | 同上 | 费用记录：Redis 预留 188.38/200 元保守额度；"不是账单"；structured-output 费用 unknown 不写 0 | 有证据 | cloud | 符合"费用未知写 unknown"硬约束。 | 保持 |
-| S7 | OPTIMIZATION_HANDOFF_2026-10-18 §5 | "当前工作区提示词版本 v2.6" | 措辞需修正（过期） | offline | 交接时快照为 v2.6；现为 v2.8。交接文档是历史件，不改正文。 | 无动作（本台账标注即可） |
+| S7 | OPTIMIZATION_HANDOFF_2026-10-18 §5 | "当前工作区提示词版本 v2.6" | 措辞需修正（过期） | offline | 交接时快照为 v2.6；现为 v2.9（QWEN-211b；当时复核记为 v2.8）。交接文档是历史件，不改正文。 | 无动作（本台账标注即可） |
 | S8 | `docs/TripleU平台全功能思维导图.md` L550/L1231、`docs/10-学术与工程创新对照表.md` L490-491、`THIRD_PARTY_NOTICES.md` L425 | "React 内嵌应用：`frontend/integrated-map-src/src`"、"代码主体 `LabView.jsx`，由 Vue 以 iframe 嵌入" 等指向具体源码文件的表述 | **代码缺失（测试已隔离，措辞仍待修正）** | offline | 本仓库无 `frontend/integrated-map-src/`（`git ls-files` 无匹配、无 `.gitmodules`；Lead 复核 `git log --all` 亦无记录），只有其构建产物 `frontend/public/integrated-map/assets/*`（2 个文件）；`frontend/src/views/CockpitView.vue` 也不存在（后端 `cockpit.py` 与前端 `api/cockpit.ts` 在）。QWEN-121 处置：`git mv` **17 个**依赖缺失源码的测试到 `frontend/tests/_orphaned/`（只移不删，附逐文件缺失路径清单，其中 `demoLearnerName.test.mjs` 另与 `src/constants/companion.ts` 的 `GENERIC_LEARNER_NAMES` 设计冲突）；其余 17 个文件 `node --test tests/*.test.mjs`（node v24.13.0）实测 **21 顶层结果全通过 / 0 failed / exit 0**，已接入 CI frontend job（无 `|| true`）。**Lead 裁定（14:40 [REVIEW]）：两处语义改写保留**，无需回退；观察项：`.db-weak-kp-*` 死样式待清理或恢复薄弱点列表；若未来产品要求首页轨道图则回退测试并开产品任务。合并后 main run **#21** 在 node 20 复验通过（`remote`）。 | 源码来源结论归 QWEN-401；孤儿测试与 nightly 复核归 QWEN-343；文档正文措辞修正归 QWEN-103（不得把构建产物说成有源码） |
 | S9 | `THIRD_PARTY_NOTICES.md` L453-456 | "59 tracked files under `frontend/public/integrated-map/pixel-campus/` 已在工作树删除但未暂存" | 措辞需修正（过期） | offline | 本轮实测该路径 `git ls-files` = **0**（去重已提交），磁盘只剩 14 个目录、**0 个文件**（`find -type d` = 14，`find -type d -empty` = 12 个叶子空目录，根目录与 `layers/` 只含子目录；Git 不跟踪空目录，`git status` 干净）；同文档 L37 的 30 个 `frontend/public/assets` 陈旧 React 产物计数仍一致。属 Wave 4 许可清点输入。 | QWEN-401 重跑清点后更新该行；本轮不改文档正文 |
 
@@ -880,8 +880,8 @@ Lead §4（`[2026-10-24 12:25]`，提交 `49910eb`）派发本卡，范围逐字
 | 新用例 | **15 passed / 7.65 s**，exit 0 | `logs/new-file-final.txt` |
 | 既有学习包/生命周期定向集（10 个文件，不含新文件） | **207 passed / 0 failed / 41.67 s** | `logs/targeted-package.txt` |
 | 合并（学习包 + 生命周期 + 新用例） | **222 passed / 48.22 s**，0 红 | `logs/combined-package.txt` |
-| **全量回归（记录数，最终字节）** | **2391 passed / 0 failed / 20 skipped / 901.89 s / 11 warnings**，`PYTEST_EXIT=0` 写进同一日志，196 个测试文件 | `logs/full-suite-repeat.txt`（去 NUL 副本 `full-suite-repeat-clean.txt`，本轮数字取自副本） |
-| 同命令首跑（补最后一条「交付结果不含重规划账本」断言之前的字节） | 2391 passed / 0 failed / 20 skipped / 1079.94 s / 11 warnings，计数与记录数逐项一致 | `logs/full-suite-final.txt`（去 NUL 副本 `full-suite-final-clean.txt`）；定向跑与新文件跑全部在最终字节上 |
+| **全量回归（记录数，最终字节）** | **2391 passed / 0 failed / 20 skipped / 901.89 s / 20 warnings**，`PYTEST_EXIT=0` 写进同一日志，196 个测试文件 | `logs/full-suite-repeat.txt`（去 NUL 副本 `full-suite-repeat-clean.txt`，本轮数字取自副本） |
+| 同命令首跑（补最后一条「交付结果不含重规划账本」断言之前的字节） | 2391 passed / 0 failed / 20 skipped / 1079.94 s / 21 warnings，计数与记录数逐项一致 | `logs/full-suite-final.txt`（去 NUL 副本 `full-suite-final-clean.txt`）；定向跑与新文件跑全部在最终字节上 |
 | **CI 同形子集（43 文件快清单，最终字节）** | **505 passed / 1 skipped / 0 failed / 135.49 s / 4 warnings**，`PYTEST_EXIT=0`，前置 `init_db()` exit=0；本卡产品改动没有让快清单里任何一项转红（清单内 7 个文件都跑学习包/生命周期） | `logs/ci-portable-final.txt`（去 NUL 副本 `ci-portable-final-clean.txt`）；清单由 `logs/ci-list-inspect.txt` 从 `ci.yml` **机械重取**，43 文件 0 缺失、`enterprise-contract` 仍 38 |
 | 集合口径 | **2410** 个 node id +（`test_mcp_readonly.py` 收集期 `mcp` `importorskip` 产生的）1 条 = **2411 项**，收集 13.11 s | `logs/collect-only.txt`、`logs/collected-files.txt` |
 | 相对上一记录 | 2391 = 你验收的 2376 + **15**，全为本卡新增；既有用例零转红、零消失 | 同上 |
@@ -902,3 +902,54 @@ Lead §4（`[2026-10-24 12:25]`，提交 `49910eb`）派发本卡，范围逐字
 - **未进 CI 快清单**：`.github/workflows/ci.yml` 仍是 43 文件 / 505 项，`tests/a/test_learning_package_replan.py` 未纳入（纳入属 2xx b 式独立卡，同 201b/202b 口径）；但本卡在最终字节上**同形复跑了这 43 个文件**确认既有的 505/1 记录不动（见 24.3）。PG 方言本轮未跑（该路径无 PG 专属行为，检查点恢复用例走仓库默认 SQLite + `InMemorySaver`）。
 - **未动** `docs/API-CONTRACT.md:49`（归 401/403）、`conversation_memory.py:21`（归 203 之后）、`scripts/prepare_ablation_*.py`，未新增端点/UI。
 - 证据等级：**offline**。全量数与定向数都来自本机同形复跑归档日志；GitHub `quality` job 与 PG 层不属本卡主张。
+
+## 25. QWEN-211b 提示词版本 bump（v2.8 → v2.9）+ 重规划测试进 CI 快清单（2026-10-24，分支 `qwen/wave2-planning`，零模型调用、产品逻辑零改动）
+
+Lead §4（`[2026-10-24 14:30]`，提交 `9d730fe`）派本卡，三条范围逐字：「**bump `PROMPT_VERSION` v2.8 → v2.9**：重规划追加了固定提示词，属提示词变更；同步 `docs/LEARNING_PACKAGE_GUIDE.md`、`docs/V2_TEN_MODULE_IMPLEMENTATION.md`、`docs/CLAIMS_LEDGER.md` 的 T1/v2.8 引用；不要改已有历史行。」「把 `tests/a/test_learning_package_replan.py` 加进 `ci.yml` 快清单 43→44，预期 **520/1**；更新 README/TEST_MATRIX；」「只改版本常量/文档/CI，不碰产品逻辑；完成后 `[DONE]`。」同一节验收 **QWEN-211**：Lead 本机复跑 `test_learning_package_replan.py` **15 passed / 8.91 s**，接受两类确定性失效信号、预算/检索不洗白、checkpoint + `plan.replanned` 审计、超限停止与全量 2391/0/20，并裁定 `MAX_REPLAN_ROUNDS=1` / `MAX_REPLAN_DEPTH=2` **接受**（先固定，按课程/角色分档属后续配置面）、语义级失效**另卡**。§24.4 的「基线常量待裁定」与「未做语义级失效」两条因此关闭，本卡落地剩下的「未 bump 版本」「未进快清单」两条。
+
+### 25.1 改动（1 个产品常量行、1 个 CI 行、6 个文档文件，其中含本节与 §4 `[DONE]`）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `backend/app/agent_runtime/learning_package.py` | **只改 1 行常量**：`PROMPT_VERSION` `learning-package-v2.8` → `learning-package-v2.9`；路由、上限、事件载荷、节点函数逐字节不动 | `:23`；`git diff --stat` = 1 file changed, **1 insertion(+), 1 deletion(-)**；769 行、CRLF 769、孤立 LF/CR 各 0，md5 `39365d91586918122d7e72454f1ad498`（211 交付时 `f63b20beb98799dbb8c296321c0f3eba`） |
+| `.github/workflows/ci.yml` | `quality` job 的 portable 清单尾部追加 `tests/a/test_learning_package_replan.py`，**43 → 44 个文件** | 新行 `:216`（清单本体 `:173-216`，同形旗标行从 `:216` 顺移到 **`:217`**，hunk `@@ -213,6 +213,7 @@`，位于 `:215 test_session_summary.py` 之后）；345 行、纯 CRLF，md5 `3658e9f11738a4633e72551947994080` |
+| `docs/LEARNING_PACKAGE_GUIDE.md` | 版本行改写：写明 v2.9 的变更来源，并保留「v2.8 是 QWEN-102 云端采集与本批契约评测所用版本」 | `:93` |
+| `docs/V2_TEN_MODULE_IMPLEMENTATION.md` | `PROMPT_VERSION` 常量与行号引用同步（`:20`→`:23`，行号后移因 211 在该文件新增了常量与状态字段） | `:58` |
+| `docs/CLAIMS_LEDGER.md` | R4 / T1 / S7 三条**版本引用行**改成「现 v2.9；当时复核/采集为 v2.8」双时态，不动其余历史行 | `:31`、`:68`、`:98` |
+| `README.md` | `:58` CI 行换成本卡 44 文件 / **520 passed / 1 skipped**，202b 的 505/1 与 201b 的 465/1 降为同格历史；`:56` 全量行补记「计数在 v2.9 最终字节上复跑逐项一致」 | `:56`、`:58` |
+| `docs/TEST_MATRIX.md` | 新增 §22 | — |
+| `docs/QWEN_LEAD_DIALOGUE.md` | 本节对应的 §4 `[DONE]` 汇报 | — |
+
+**零改动**：`tests/a/test_learning_package_replan.py` 一字未动（300 行、纯 CRLF、md5 仍 `49d2b437e07459ea3af918657892e56b`），§24 的 15 项用例与 10 组反向验证不重跑不改动；`enterprise-contract` 的 38 文件 PG 清单、覆盖率门槛步、MCP stdio 步均未动。本卡交付面共 **8 个文件**：产品 1 行（`1 insertion(+), 1 deletion(-)`）、CI 1 行（`1 insertion(+)`）、文档 6 个（台账、矩阵、README、`LEARNING_PACKAGE_GUIDE.md`、`V2_TEN_MODULE_IMPLEMENTATION.md`、对话 `[DONE]`）。
+
+### 25.2 语义：为什么这算提示词变更，以及哪些行必须留在 v2.8
+
+- **算提示词变更**：211 在 `_planner` 的失效分支向 Planner 的 `instruction` **追加**固定文案（`:456-460`），而 `instruction` 由 `_ask` 拼进每个角色的 system prompt（`:322-324`，`PROMPT_VERSION` 插值就在 `:324`）并写进检查点与审计。也就是说 v2.8 这个标签下面现在同时存在「无重规划指令」和「带重规划指令」两种真实提示词文本，云端采集（QWEN-102）与本批契约评测用的都是前者。Lead 判「属提示词变更」即指此事，bump 是把标签跟回字节。
+- **历史行不动**（Lead「不要改已有历史行」）：`docs/CLAIMS_LEDGER.md:140`（T1 在 103 修复时的复核记录）、`:901`（§24.4 交付当时记的「未动 `PROMPT_VERSION`」）、`docs/OPTIMIZATION_STATUS_2026-10-18.md:86`、`evals/results/independent-2026-10-19.md:3`、`evals/results/structured-output-20261018.md:16` 与 `docs/QWEN_LEAD_DIALOGUE.md:1859` 全部保留 v2.8——其中三处是**带日期的采集/修复证据本身**的口径，改成 v2.9 等于伪造当时的采集条件。
+- **一处活文档未同步，登记不擅改**：`docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:252` 仍写 `PROMPT_VERSION=learning-package-v2.8`。主计划不在本卡点名的三个文件里，且它是计划件而非现状件，我按越界登记处理；你说一句「同步 252」我就改。
+- **没有测试钉住 `PROMPT_VERSION`**：全仓无对 `:23` 的断言（既有测试只断事件、状态与产物），所以 bump 在测试面上**静默**——`tests/a/test_learning_package.py` 的桩不看 system prompt 里的版本号。这属本卡「只改版本常量/文档/CI」之外的产品/测试面缺口，登记在此不擅自补用例。替代的机械校验是只读脚本 `output/qwen211b-2026-10-24/check_version_consistency.py`：解析产品常量及其行号，与两处文档锚点（各自唯一命中）逐字符比对，并列出台账 claim 表区（脚本取前 200 行，窗口外的 §24/§25 叙述行属明示历史）内仍点名 v2.x 的行，确认只剩带日期的 `:68`/`:140`；`VERSION_CONSISTENT=1`、`logs/version-consistency.txt`。
+
+### 25.3 实测（offline，零模型调用，每条日志均记 `CMD:` 与 `PYTEST_EXIT=0`，探针 `outbound attempts=0 unique_hosts=0`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 版本一致性 | 产品常量 = `learning-package-v2.9`（`:23`），两处文档锚点（`:93`、`:58`）逐字符匹配且各自唯一命中；扫描窗口限于台账**前 200 行（claim 表区）**，其中仍点名 v2.x 的只有 `:68`/`:140` 两条带日期历史行（§24/§25 的叙述行在窗口外，属明示历史） | `logs/version-consistency.txt`（`VERSION_CONSISTENT=1`） |
+| CI 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed（exit 0）；`compileall backend/app tests/` exit 0 | `logs/gates.txt` |
+| 前置 `init_db()` | exit 0 | `logs/ci-init-db.txt` |
+| 清单文件数 | **44**（`yaml.safe_load` 从 `ci.yml` **机械重取**，非照抄上一轮）；44 条路径存在性 0 缺失；末位即本卡新纳入的文件；无重复 | `logs/portable-list.txt`、`logs/ci-list-inspect.txt` |
+| **CI 同形子集（44 文件，最终字节）** | **520 passed / 1 skipped / 0 failed / 4 warnings / 145.34 s**，旗标按 `ci.yml:217` 同形（`--no-cov --benchmark-disable -q -rs`） | `logs/ci-portable.txt`（去 NUL 副本 `ci-portable-clean.txt`）；唯一 skip 仍是 `test_auth_restart.py:18` 要求一次性 PostgreSQL |
+| 增量核对 | 505（202b 同清单）+ **15** = **520**，15 正是 §24 的重规划用例项数 —— 与 Lead 派工条「预期 **520/1**」**实测吻合**；既有 505 项零转红、零消失 | 同上 |
+| 新文件单跑 | 15 passed / 7.62 s | `logs/new-file.txt` |
+| 既有回归面 | 10 个学习包/生命周期文件 **207 passed / 39.83 s**；合并 **222 passed / 45.86 s**（= 207 + 15） | `logs/targeted-package.txt`、`logs/combined-package.txt` |
+| **全量（v2.9 最终字节）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen211b-2026-10-24/pytest-full-suite`）**2391 passed / 0 failed / 20 skipped / 1308.53 s / 21 warnings**，196 个测试文件 / 2411 项 | `logs/full-suite.txt`（去 NUL 副本 `full-suite-clean.txt`）；与 §24 的 2391/0/20 **逐项一致**，本卡零新增用例故记录数不动；warnings 取自 summary 行，§24 记录数轮为 20 条，该数随轮次波动、不解释为结论；1308.53 s 与 §24 的 901.89 s 之差属同机负载（同命令、同口径），同样不作结论 |
+| 集合口径 | **2410** 个 node id +（`test_mcp_readonly_protocol.py` 收集期 `mcp` `importorskip`）1 条 = **2411 项**，收集 15.97 s | `logs/collect-only.txt` |
+| 字节与行尾 | 本卡 8 个改动文件全部纯 CRLF、孤立 LF/CR 各 0：`ci.yml` 344→**345**、产品 769 行不变、`LEARNING_PACKAGE_GUIDE.md` 111、`V2_TEN_MODULE_IMPLEMENTATION.md` 81、`README.md` 225（只换两行、不增行）、台账 904→**955**、矩阵 525→**544**；`git diff --check` 干净 | `logs/bytes-inventory.txt` + 写入脚本自带断言 |
+
+### 25.4 边界与未做
+
+- **产品逻辑零改动**：只动 `:23` 一行常量。路由（`:413-421`）、两条上限（`:258-259`）、`_invalidate_plan`（`:390-411`）、`plan.replanned` 载荷（`:305-310`）逐字节未变，故 §24 的语义主张全部继承，不需重跑反向验证（本卡也没重跑）。
+- **未补钉版本的用例**（见 25.2 末条），**未同步主计划** `:252`，**未改** `docs/00-评委30秒导览.md:106`：那一行讲的是**全量**用例数（仍 2411 项 / 2391 passed），本卡零新增用例故数值不动，Lead 本卡只点名 README 与 TEST_MATRIX。
+- **未跑** GitHub `quality` job 真实回执、未跑 PG `enterprise-contract` 38 文件清单（本卡无 PG 面改动；那条 skip 在 CI 上同样 skip，两侧口径一致）。
+- **未开始 QWEN-221**：Lead 明示「211b 后」，分支 `qwen/wave2-tools` 已预建；本节交付后 hold，等你验收。
+- **顺带更正 §24.3 / 矩阵 §21 的两处 warnings 数**：那两行写的是 `11 warnings`，来自脚本在日志正文里**首次**匹配到「N warnings」，不是 pytest 的 summary 行；按 summary 行重取为 **20**（记录数轮 `full-suite-repeat.txt`）与 **21**（首跑轮 `full-suite-final.txt`），本卡把这两行改成正确数值（矩阵 §21 同步），passed/skipped/时长/项数等其余结论一字未动。本卡的解析器只从 summary 行取数（`write_docs_211b.py::summary`），故不再受正文里同类字符串影响。
+- 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执属 remote、PG 层未触及，均不属本卡主张。

@@ -90,7 +90,7 @@ run.completed 中包含 learning_package（计划、讲解、练习、审核结�
 等待人工审核时只向请求者发送 review.required。教师使用任务编号查询草稿，再调用 `/{run_id}/resume` 提交 approved。
 教师用 edited_answer 替换答案时，不再交付旧结构化学习包，最终 citations 置空；替换文本没有经过来源映射校验，不能继承旧引用。模型审核结果也不标记为对新文本的验证。替换部分交付草稿时同样清除 `partial_completion`，按人工替换内容处理。
 
-本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.8`。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
+本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.9`（v2.9：重规划向 Planner 追加固定失效指令，属提示词变更；上一版 v2.8 是 QWEN-102 云端采集与本批契约评测所用版本）。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
 
 ## 细粒度引用契约
 

@@ -513,8 +513,8 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 新用例 | `tests/a/test_learning_package_replan.py` | **15 passed / 0 failed / 7.65 s**，探针 `attempts=0 unique_hosts=0`，`logs/new-file-final.txt` |
 | 既有回归面 | 10 个学习包/生命周期文件（不含新文件） | **207 passed / 0 failed / 41.67 s**，`logs/targeted-package.txt` |
 | 合并 | 上述 + 新文件 | **222 passed / 0 failed / 48.22 s**，`logs/combined-package.txt` |
-| **全量（记录数，最终字节）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen211-2026-10-24/pytest-full2`） | **2391 passed / 0 failed / 20 skipped / 901.89 s / 11 warnings**，`PYTEST_EXIT=0` 记入同一日志，196 个测试文件 / 2411 项，探针 **`attempts=0 unique_hosts=0`**；相对 202 的 2376 恰好 **+15**，既有用例零转红零消失。`logs/full-suite-repeat.txt`（去 NUL 副本 `full-suite-repeat-clean.txt`） |
-| 全量首跑（补最后一条交付结果断言之前的字节） | 同命令、`--basetemp …/pytest-full` | 2391 passed / 0 failed / 20 skipped / 1079.94 s / 11 warnings，计数与记录数逐项一致；`logs/full-suite-final.txt` |
+| **全量（记录数，最终字节）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen211-2026-10-24/pytest-full2`） | **2391 passed / 0 failed / 20 skipped / 901.89 s / 20 warnings**，`PYTEST_EXIT=0` 记入同一日志，196 个测试文件 / 2411 项，探针 **`attempts=0 unique_hosts=0`**；相对 202 的 2376 恰好 **+15**，既有用例零转红零消失。`logs/full-suite-repeat.txt`（去 NUL 副本 `full-suite-repeat-clean.txt`） |
+| 全量首跑（补最后一条交付结果断言之前的字节） | 同命令、`--basetemp …/pytest-full` | 2391 passed / 0 failed / 20 skipped / 1079.94 s / 21 warnings，计数与记录数逐项一致；`logs/full-suite-final.txt` |
 | **CI 同形子集（43 文件，最终字节）** | `ci.yml:216` 同形旗标 + 前置 `init_db()` | **505 passed / 1 skipped / 0 failed / 4 warnings / 135.49 s**，`PYTEST_EXIT=0`，探针 `attempts=0`；清单机械重取 43 文件 0 缺失 ——`logs/ci-portable-final.txt`、`logs/ci-list-inspect.txt` |
 | 集合 | `--collect-only -q` | 2410 个 node id（收集 13.11 s）+ 收集期 1 条 `mcp` `importorskip` skip = **2411 项**；`logs/collect-only.txt` |
 | 失效/上限/审计行为 | 定向日志（`--log-cli-level=INFO`，4 个关键用例） | 4 passed；`logs/replan-evidence-run.txt` |
@@ -523,3 +523,22 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` job 真实回执、PG 专项 | 本卡未把新文件纳入快清单（清单仍 43 文件、记录仍 505/1，同形复跑见上一行）；PG 层无专属改动 |
 
 外推限制：全部为**本机 offline** 复跑，零计费模型调用；GitHub 真实回执与 PG 侧结论不属本卡主张。重规划阈值 `MAX_REPLAN_ROUNDS=1`/`MAX_REPLAN_DEPTH=2` 是基线常量，**最终取值待 Lead 产品裁定**。
+
+## 22. QWEN-211b 版本 bump + 重规划测试纳入 CI 快清单实测摘要（2026-10-24，分支 `qwen/wave2-planning`，零模型调用、产品逻辑零改动）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 版本常量 | `backend/app/agent_runtime/learning_package.py:23` | `learning-package-v2.8` → **`learning-package-v2.9`**（1 insertion / 1 deletion，其余 768 行逐字节不动） |
+| 文档同步 | Lead 点名的三处 | `LEARNING_PACKAGE_GUIDE.md:93`、`V2_TEN_MODULE_IMPLEMENTATION.md:58`、`CLAIMS_LEDGER.md` R4/T1/S7（`:31`/`:68`/`:98`）；历史行 `:140`、`:901`、`OPTIMIZATION_STATUS_2026-10-18.md:86`、`evals/results/` 两件、对话 `:1859` **未动**；主计划 `:252` 登记未改 |
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **43 → 44 个文件**（新行 `:216`，旗标行 `:216`→`:217`；`enterprise-contract` 仍 38） |
+| 版本一致性核对（只读脚本） | `check_version_consistency.py` | `VERSION_CONSISTENT=1`；`logs/version-consistency.txt` |
+| CI 门 | ruff（`--select=F821,F823,E9`）+ `compileall` + 前置 `init_db()` | All checks passed / exit 0 / INITDB_EXIT=0；`logs/gates.txt`、`logs/ci-init-db.txt` |
+| 新文件单跑 | `tests/a/test_learning_package_replan.py` | **15 passed / 0 failed / 7.62 s**，`logs/new-file.txt` |
+| 既有回归面 | 10 个学习包/生命周期文件（不含新文件） | **207 passed / 0 failed / 39.83 s**；合并 **222 passed / 45.86 s**（= 207 + 15）；`logs/targeted-package.txt`、`logs/combined-package.txt` |
+| **CI 同形子集（44 文件，最终字节）** | `ci.yml:217` 同形旗标 `-rs` + 前置 `init_db()` | **520 passed / 1 skipped / 0 failed / 4 warnings / 145.34 s**，`PYTEST_EXIT=0`，探针 `attempts=0 unique_hosts=0`；清单机械重取 44 文件 0 缺失；唯一 skip = `test_auth_restart.py:18`；相对 202b 的 505 恰好 +15，与 Lead 预计 **520/1** 吻合 —— `logs/ci-portable.txt`（去 NUL 副本 `ci-portable-clean.txt`）、`logs/portable-list.txt` |
+| **全量（记录数，v2.9 字节）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen211b-2026-10-24/pytest-full-suite`） | **2391 passed / 0 failed / 20 skipped / 1308.53 s / 21 warnings**，`PYTEST_EXIT=0`，196 个测试文件 / 2411 项，探针 `attempts=0 unique_hosts=0`；passed / skipped / 项数与 §21 的 211 记录**逐项一致**（本卡零新增用例），warnings 数随轮次波动（§21 记录数轮 20 条、本轮 21 条），不作结论；`logs/full-suite.txt`（去 NUL 副本 `full-suite-clean.txt`） |
+| 集合 | `--collect-only -q` | 2410 个 node id + 收集期 1 条 `mcp` `importorskip` skip = **2411 项**（收集 15.97 s）；`logs/collect-only.txt` |
+| 字节 | 本卡 8 个改动文件 | 纯 CRLF、孤立 LF/CR 各 0；另 §21 两行的 warnings 数（11）按 pytest summary 行更正为 **20**（记录数轮）/**21**（首跑轮），其余数值与结论一字未动；`ci.yml` 345 行 md5 `3658e9f11738a4633e72551947994080`，产品 769 行 md5 `39365d91586918122d7e72454f1ad498`，新测试文件 md5 不变 `49d2b437e07459ea3af918657892e56b`；`git diff --check` 干净；`logs/bytes-inventory.txt` |
+| 未跑 | GitHub `quality` job 真实回执、PG 专项 | 本卡只改清单与版本常量，PG 清单（38 文件）与方言行为未触及 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用；GitHub 真实回执与 PG 侧结论不属本卡主张。**缺口登记**：没有任何测试断言 `PROMPT_VERSION` 的字面值，bump 在测试面上静默，本卡按 Lead 范围未补用例（见台账 §25.2）。
