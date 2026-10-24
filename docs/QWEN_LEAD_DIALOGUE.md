@@ -2029,3 +2029,115 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+### [2026-10-24 17:29] Qwen → Lead | [DONE] QWEN-221 单一工具目录 + 运行时 deny-by-default + 统一审计：9 工具×5 角色基线矩阵、36 对越权扫（4 放行 / 32 拒绝且执行面零调用）、每个结局各写一条审计事件，18 项新用例、11 组反向验证，44 文件 CI 同形复跑仍 **521 passed / 1 skipped**、全量 **2410 passed, 20 skipped, 23 warnings in 1067.30s (0:17:47)**
+
+**范围对齐**：按你 §4 `[2026-10-24 16:15]`（提交 `1ffc282`）逐字执行五条——「**单一 ToolRegistry 元数据**：工具名、允许角色、参数 schema、只读/副作用、超时、权限键」「运行时 **deny-by-default**：未知工具、未授权角色、非法参数一律拒绝并写审计事件」「替换散落的工具白名单/注册，保留现有调用行为与稳定错误面」「测试覆盖越权拒绝、未知工具、schema 错误、审计；不碰 API/UI/前端；零模型、不读 `.env`」「`[DONE]` 附权限矩阵基线、越权测试与审计证据」。另两句照办：「若工具角色划分需要产品裁定，先给基线矩阵并在 `[DONE]` 标明，不擅自扩到 API/UI」——矩阵见下面第 2 节，**要裁定的那条在第 8 节**；「**之后**：221 → 231 → 301 → …」，本卡交付后 hold。分支就用了你预建的 `qwen/wave2-tools`，未建分支、未动 `main`。**零模型调用、未读 `.env`、未碰 API/UI/前端/迁移/DB/评测 harness/`ci.yml`**；证据等级 **offline**。台账 §27、矩阵 §24、README `:56`/`:58`、评委导览 `:106`、`V2_TEN_MODULE_IMPLEMENTATION.md:30/:31` 已同步。
+
+#### 1. 改动面：两处注册面收敛成一处，行为与错误面不动
+
+| 文件 | 角色 | 字节 |
+|---|---|---|
+| `backend/app/services/tool_catalog.py`（**新增**） | 9 个工具各一条 `ToolSpec`（名字/来源/描述/权限键/允许角色/只读或副作用/版本/超时与超时类/参数模型或 JSON schema/截断上限/MCP 暴露）+ `ROLE_PERMISSIONS` + `decide_access()` + `matrix_violations()` + `v2_timeouts()` | 215 行、纯 CRLF、孤立 LF/CR 各 0、md5 `3c13c4490298567bf34b6986e6c86656` |
+| `backend/app/services/tool_audit.py`（**新增**） | 统一审计事件（14 个固定键、环形 500、`counts()` 含 `refused`、键集漂移即 `raise`） | 123 行、md5 `7cb62306d6677cbb980000240b5bab39` |
+| `backend/app/services/v2_learning_tools.py` | **删除** `ROLE_TOOLS`、`SCHEMAS` 与 `_Args`/`SearchArgs`/`EmptyArgs`/`PrerequisiteArgs`；权限、参数校验、超时、截断全部改读 `ToolSpec`；`call()` 每个出口经同一个 `finish()` 写一条事件 | 171 行（HEAD `1ffc282` 180 行）、md5 `e17a28b1da38837f4b983e51b5635233`、`git diff --numstat` **46 / −55** |
+| `backend/app/services/agent_tools/registry.py` | 5 个 `ToolSchema` 字面量改由 `source_specs("v1")` 循环构造；`_traced_call` 入口加同一个 `decide_access(INTERNAL_ROLE, tool)` 闸门，未登记名字**不再执行 handler** | 503 行（HEAD 527 行）、md5 `8b6844c70c32fd516d9ff4ef62b9693a`、numstat **47 / −71** |
+| `tests/a/test_tool_registry_permissions.py`（**新增**） | 18 条用例，见第 3、4 节 | 395 行、md5 `af49171bb284a43725e312b8571d8ef2` |
+
+**逐字节钉住的零改动**（`logs/final-bytes.txt`，四个都 `same_as_HEAD_lf_normalised=True`、`git_diff_vs_HEAD=empty`）：`backend/app/mcp_readonly.py`（70 行、工作树 md5 `6eea05e5fef4622ae314f9e1e1654e03`，与 §25/§26 记录同值）、`.github/workflows/ci.yml`（345 行、`3658e9f11738a4633e72551947994080`，`yaml.safe_load` 机械重取 `quality` 仍 **44** 文件、`enterprise-contract` 仍 **38** → `CI_UNTOUCHED=1`）、`api/v2/learning_runs.py`（431 行、`8d2730e73b6dd54ee284a64cc14ac417`）、`agent_runtime/learning_package.py`（769 行、`39365d91586918122d7e72454f1ad498`）。
+
+一处**主机事实**如实登记：本仓存 LF、本机检出 CRLF，所以 `git show HEAD:<file>` 的 blob md5 与工作树 md5 天然不同（例：`ci.yml` blob `f43925…` vs 工作树 `3658e9…`）。我因此把「未动」判据定为三条同时成立：工作树 md5 = 前一轮记录值、EOL 归一化后与 HEAD blob 逐字节相同、`git diff HEAD -- <file>` 为空。
+
+#### 2. 基线权限矩阵（派工第 1 条 + 第 5 条要的「权限矩阵基线」）
+
+下表由 `matrix_dump_221.py` **从 `tool_catalog` 本身导出**（`logs/permission-matrix.txt`，`MATRIX_DUMP_OK=1`、`violations=(none)`），不是我手写的第二份真相。「必填参数」对 V2 取 pydantic 模型的 `is_required()`、对 V1 取 JSON schema 的 `required`，两条路都从声明处读。
+
+| 工具 | 来源 | 允许角色 | 权限键 | 副作用 | 超时(秒) | 必填参数 | 全部参数 | 截断 | MCP |
+|---|---|---|---|---|---|---|---|---|---|
+| `search_course_evidence` | v2 | tutor | `course:evidence:search` | 否 | 30 (search) | `query` | `query` | 5 | 是 |
+| `get_learning_profile` | v2 | planner | `learning:profile:read` | 否 | 10 (standard) | (无) | (无) | - | 是 |
+| `get_recent_mistakes` | v2 | planner | `learning:mistakes:read` | 否 | 10 (standard) | (无) | (无) | - | 是 |
+| `get_prerequisites` | v2 | planner | `learning:prerequisites:read` | 否 | 10 (standard) | `knowledge_point_id` | `knowledge_point_id` | - | 是 |
+| `lookup_knowledge_point` | v1 | system | `knowledge:lookup` | 否 | - | `kp_name` | `kp_name` | - | 否 |
+| `query_knowledge_graph` | v1 | system | `knowledge:graph:query` | 否 | - | `kp_name` | `hop`/`kp_name` | - | 否 |
+| `execute_code` | v1 | system | `code:sandbox:execute` | **是** | - | `code` | `code`/`language`/`timeout` | - | 否 |
+| `search_resources` | v1 | system | `resource:search` | 否 | - | `query` | `limit`/`query`/`resource_type` | - | 否 |
+| `generate_learning_materials` | v1 | system | `material:generate` | **是** | - | `topic`/`types` | `description`/`pptx_template`/`topic`/`types` | - | 否 |
+
+角色侧：`planner` 3 键、`tutor` 1 键、`practice` **0**、`reviewer` **0**、内部角色 `system` 5 键（V1 全部）；`student`/`teacher`/`admin` 等主体角色不在 `ROLE_PERMISSIONS` 里，走运行时闸门即 `unknown_role` 拒。
+
+`decide_access()` 的判定顺序（deny-by-default，三层任一不 positively 命中即拒）：`unknown_tool`（目录注册层）→ `unknown_role`（角色层）→ `role_not_allowed`（工具×角色层）→ `permission_not_granted`（权限键层，矩阵自相矛盾时用）→ `granted`。
+
+**基线是等值迁移，不是重新授权**：测试内嵌 221 之前 `ROLE_TOOLS` 的字面 dict，同时断言 `{role: tools_for_role(role)} == 基线` 与 `matrix_violations() == []`。也就是说本卡**没有**给任何角色新增权限，也没有收回任何权限——这是「保留现有调用行为」的可核对形式。
+
+#### 3. 越权测试证据（派工第 4 条）
+
+`tests/a/test_tool_registry_permissions.py` 18 条，执行面一律换成 spy，**拒绝类用例同时断言 `executor.calls == []`**，所以「拒了但还是跑了」这种半吊子红得下来：
+
+- **4 角色 × 9 工具 = 36 对全量扫**（`test_matrix_refuses_every_unlisted_role_tool_pair_without_execution`）：放行 **4** 对（planner×3、tutor×1）逐对断言 `status=success`；其余 **32** 对逐对断言 `reason=role_not_allowed`、`status=denied`、`data is None`、`audit()["result_count"] == 0`、执行面零调用；结束后审计 `total == 36`、`refused == 32`、`by_decision == {"granted": 4, "role_not_allowed": 32}`。
+- **未知工具 / 未知角色**在运行时闸门就拒：`drop_course_grants`（planner）→ `unknown_tool`，`student` 请求 `get_learning_profile` → `unknown_role`；两条事件的 `decision` 顺序、以及未登记工具的审计事件 `source/version/permission_key` 恒空、`side_effect is False`、`timeout_seconds is None`，都逐字段断言——名字仍进审计，因为「谁试图调了什么不存在的东西」是唯一线索。
+- **schema 错误**：8 个非法入参用例（注入未声明键 `user_id`、空 `{}`、纯空格 `"   "`、501 字超长 `query`、缺 `knowledge_point_id`、类型错等）一律 `invalid_args` 且**不执行**；参数模型 `extra="forbid"` + `str_strip_whitespace=True`，rp06 把它退回 `extra="ignore"` 就让 2 条用例转红。
+- **空范围**：`user_id`/`course_id` 为空仍是拒绝（`missing_scope`），不会退化成更宽的默认范围。
+- **V1 面**：未登记工具名不再执行 handler，返回既有结构化失败 `{success: False, error: "tool_access_denied: <reason>", tool}`——错误面三键一字未动（rp05 让闸门不看名字直接放行 → 1 条转红）。
+
+#### 4. 审计证据（派工第 2 条）
+
+- **每个结局各写一条**：`success / no_data / denied / invalid_args / timeout / failed` 六种结局各一条事件，逐条比对顺序与状态（`test_one_unified_audit_event_per_call_whatever_the_outcome`）。**这是 221 之前的缺口**：旧 V2 只在成功返回后才有 `audit()` 字典、拒绝路径不留任何记录，旧 V1 只有展示用的 `ToolCallTrace`。
+- **事件形状固定**：14 个键 `tool/source/version/role/run_id/session_id/status/decision/reason/permission_key/side_effect/timeout_seconds/latency_ms/request_hash`；元数据只从 `ToolSpec` 派生，不接受调用方自报（`test_audit_metadata_is_derived_from_the_catalog_not_the_caller`）；环形 500 条，`counts()` 给 `total/granted/refused/by_status/by_decision/by_tool`。
+- **不收参数值**：`build_event()` 是关键字签名，传 `query=` 直接 `TypeError`；落盘的只有摘要哈希（`request_hash`）与异常类名（V1 的 `reason`）。rp07 把拒绝路径改回「不写事件」→ **3 条转红**；rp08 把未登记工具名在事件里丢掉 → **4 条转红**。
+- 持久化仍是进程内环形缓冲，未落库、未经 API 暴露——见第 8 节归属。
+
+#### 5. 「保留现有调用行为」的证据
+
+- **导出面逐字节相同**：`compare_openai_export.py` 用 `git show HEAD:backend/app/services/agent_tools/registry.py` 取旧版并排比对 `to_openai_tools()` → `HEAD tools=5 NEW tools=5 identical=True`、`ORDER_SAME=True`、`OWNER_SAME=True`、`OPENAI_EXPORT_IDENTICAL=1`（`logs/openai-export-compare.txt`）。
+- **错误面六态与结构**由用例逐字钉住（`ToolResult` 六字段、`audit()` 六键、V1 三键）。
+- **同形复跑**：既有 3 个工具文件 + 本卡新文件 **32 passed / 1 skipped**（`32 passed, 1 skipped in 5.17s`，前三个文件仍是 14 项、唯一 skip 仍是 `mcp` 未装的 `importorskip`）；5 个学习包/运行时文件 **60 passed / 0 failed**（`60 passed in 23.77s`）；**44 文件 CI 同形子集仍 521 passed, 1 skipped, 4 warnings in 147.78s (0:02:27)**，与 211c 的记录**逐数相同** = 目录化对既有行为零改变。
+- **`ci.yml` 未改**：你的 221 派工没有 CI 条款，按 201b/202b/211b 先例那属独立一张卡。我把「本卡新文件追加为第 45 个文件」的候选清单预演了一遍只作证据：`539 passed, 1 skipped, 4 warnings in 143.83s (0:02:23)`（= 521 + 18），日志 `logs/measure-221-ci45-candidate.txt`、清单 `logs/candidate-list.txt`，**未写进 CI**。
+
+#### 6. 反向验证：11 组单层破坏，全部真红后按字节恢复
+
+每组只改一处、只跑本卡测试文件、`finally` 里恢复原字节并断言 md5 相同；判据是「必须有 pytest summary 行 + 红点点名对应用例 + 无 ImportError + 探针 `attempts=0 unique_hosts=0` + 每组收集仍是 `18 = failed + passed`」（驱动 `reverse_proofs_221.py` → `logs/reverse-proofs.txt`，`ALL_PROOFS_VALID=1`）：
+
+| 组 | 破坏 | 红点数 | 钉住的规则 |
+|---|---|---|---|
+| rp01 | 抹掉某角色的权限键（工具仍列角色） | 5 failed | `permission_not_granted` 层与基线 dict |
+| rp02 | 给 `get_learning_profile` 加 tutor **并同时**补权限键（两层一致、`matrix_violations()` 仍空） | 4 failed | 「等值迁移、不擅自扩权」 |
+| rp03 | 工具改名使其脱离目录 | 5 failed | 目录是唯一声明源 |
+| rp04 | 删掉 `unknown_role` 分支 | 2 failed | 无权限键角色一律拒 |
+| rp05 | V1 闸门不看名字直接放行 | 1 failed | 未登记名字不执行 handler |
+| rp06 | 参数模型退回 `extra="ignore"` | 2 failed | 未声明键拒绝 |
+| rp07 | 拒绝路径不写审计（改回 221 之前的直接返回） | 3 failed | 一调用一事件、`refused` 计数 |
+| rp08 | 未登记工具名不进事件（`tool=""`） | 4 failed | 审计保留 attempted 名 |
+| rp09 | 截断改回字面量 `[:5]` 不读 spec | 1 failed | 上限来自目录 |
+| rp10 | MCP 适配器里的工具名改名 | 1 failed | `ast` 名字+入参名平价 |
+| rp11 | OpenAI 导出丢 `required` | 1 failed | 导出投影完整 |
+
+#### 7. 实测（offline，每条日志记 `CMD:` 与 `PYTEST_EXIT=`，全部 `outbound attempts=0 unique_hosts=0`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 本卡新文件单跑 | **18 passed / 0 failed / 0.93 s**，`PYTEST_EXIT=0` | `logs/measure-221-newfile.txt` |
+| 既有工具面 + 新文件 | 32 passed, 1 skipped in 5.17s | `logs/measure-221-tools.txt` |
+| 学习包/运行时面 | 60 passed in 23.77s | `logs/measure-221-package.txt` |
+| **CI 同形子集（44 文件，未纳入本卡新文件）** | 521 passed, 1 skipped, 4 warnings in 147.78s (0:02:27)，旗标按 `ci.yml:217` 同形 + `-rs` + 前置 `init_db()` | `logs/measure-221-ci44.txt`、`logs/portable-list.txt` |
+| 候选 45 文件清单（**仅证据、未采纳**） | 539 passed, 1 skipped, 4 warnings in 143.83s (0:02:23) | `logs/measure-221-ci45-candidate.txt` |
+| **全量 `pytest tests/`（最终字节）** | **2410 passed, 20 skipped, 23 warnings in 1067.30s (0:17:47)**，`PYTEST_EXIT=0`，197 个测试文件 / **2430 项** = 211c 的 2412 项 + 本卡 18 项 | `logs/measure-221-full-suite.txt` |
+| 集合口径 | `--collect-only` = **2429** 个 node id +（`test_mcp_readonly_protocol.py` 收集期 `mcp` `importorskip`）1 条 = **2430 项**，收集 13.35 s | `logs/measure-221-collect-only.txt` |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed（exit 0）、`compileall backend/app tests/` exit 0、CI 前置 `init_db()` INITDB_EXIT=0、`git diff --check` 干净 | `logs/gates.txt`、`logs/ci-init-db.txt` |
+| 字节与行尾 | 5 个文件全部纯 CRLF、孤立 LF/CR 各 0；4 个承诺未动的文件三条判据同时成立 | `logs/final-bytes.txt` |
+
+#### 8. 边界、未做，与**要你裁定的**几条
+
+1. **待裁定（产品角色划分，本卡只给基线）**：`backend/app/mcp_readonly.py:25` 把 MCP 范围固定成 `role="planner"`，而 `search_course_evidence` 的基线只给 `tutor`，所以 MCP 侧那个工具名会稳定返回 `denied`。**这一条 221 前后完全一致**（旧 `ROLE_TOOLS` 同样如此），本卡既不擅自扩权也不擅自改那个文件（本机未装 `mcp`，改了也无法本地验证；我改为用 `ast` 用例钉住适配器里的工具名与入参名与目录平价）。既有 `tests/a/test_mcp_readonly_protocol.py` 第一条用例注入假 broker，所以今天没有任何用例覆盖这一点。请裁：给 planner 加 `course:evidence:search`，还是把 MCP 作用域角色改成 `tutor`。
+2. **两处「声明了但运行时不消费」的 `allowed_tools` 未合并**：`services/agent_config_service.py`（`:38`/`:133`/`:156`，配 `core/models.py:476` 的 JSON 列与 `agents/configurable_agent.py:4`）是持久化配置面；`agent_runtime/contracts.py:20` 的 `RunPolicy.allowed_tools`（及 `RunContext.permissions`）目前零消费者。运行时权限判定已统一走目录，这两处属配置/编排层，按你的顺序归 **301/341/343**。`configurable_agent` 不执行工具，所以本卡不存在绕过矩阵的路径。
+3. **审计仍是进程内环形缓冲**（500 条、不落库、不经 API 暴露）：满足派工第 2 条，但持久化要定 schema 与迁移，超出「不碰 API/UI」的范围，归 **341/343**。
+4. **超时语义**：V2 四个工具由 broker 统一 `asyncio.wait_for`（标准 10 s、检索 30 s，值从 spec 派生、代码里不写字面量）；V1 五个工具 `timeout_seconds=None` 表示由 handler 自持（`execute_code` 的沙箱 `timeout` 参数），不是缺失。截断目前只有 `search_course_evidence` 的 5 条进目录；图内 `hits[:5]`/`evidence[:15]` 编排层截断不在 221 范围，归 231/301。
+5. 未跑 GitHub `quality` job 真实回执（本机无 `gh`，**属 remote 证据、由你判读**）；未跑 PG `enterprise-contract` 38 文件清单（本卡零 PG 面改动，同 §22/§23/§25/§26 口径）。
+6. **迭代与作废记录保留、不掩盖**：`logs/dev-new-permissions.txt` 记着用例首稿的三轮自身错误（`recent()` 是最新在前而非最旧、`by_status` 的 denied 漏算 `missing_scope`、`ast` 只扫模块顶层漏掉 `create_server()` 里嵌套的装饰函数）；`logs/void-full-suite-stopped-midrun.txt` 是 16→18 项之间启动的全量跑，**我主动中止、不作记录**，最终字节上另起一轮（本表数字来自那一轮）。文档脚本 `apply_docs_221.py` 的**首跑在写完文件之后才抛 `AssertionError`**——「保留同格历史」那条断言我错用在了「计数格故意整体替换」的那一格；处置是把五份文档从我改动前的备份逐字节恢复（md5 比对一致、`git status --short` 回到只有 5 个 backend/tests 条目）后重跑，断言改为仅 `keep_history` 时生效。恢复过程中我自己的一条 `cp` 写错，在仓库根留下 4 份同名文档副本，已删除、未进任何提交。
+7. 台账 §24/§25/§26 与各矩阵旧节**一字未改**，本卡只追加 §27 / §24；README 与导览是**换最新记录 + 旧记录降为同格历史**；`V2_TEN_MODULE_IMPLEMENTATION.md:30/:31` 是把「白名单在 broker 里」这句过期事实改指 `tool_catalog.py` 并补记审计事件，属同一轮计数/事实同步。
+
+**提交**（只推 `qwen/wave2-tools`，未碰 `main`）：`feat(qwen-221)` 目录 + 审计 + 两个注册面收敛、`test(qwen-221)` 18 条权限用例、`docs(qwen-221)` 台账 §27 / 矩阵 §24 / README / 导览 / 十模块、`docs(collab)` 本节。
+
+**下一张**按你的顺序是 **QWEN-231**，我在此 hold 等验收；若 221 需要补 CI 快清单（45 文件候选已预演好），那按先例是 `221b`。
+
+— Qwen
