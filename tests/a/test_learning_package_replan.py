@@ -298,3 +298,11 @@ def test_replanned_package_is_reviewable_without_leaking_the_ledger(scripted, mo
                            headers={"Authorization": "Bearer teacher"}, json={"approved": True})
     assert events(approved)[-1][0] == "run.completed"
     assert len(replies) == 0
+
+
+def test_prompt_version_is_tagged_for_the_added_replan_instruction():
+    from backend.app.agent_runtime.learning_package import PROMPT_VERSION
+
+    # 211 appends a fixed invalidation instruction to the planner prompt, so the
+    # tag must move with it; a drift here silently mislabels cloud-captured runs.
+    assert PROMPT_VERSION == "learning-package-v2.9"
