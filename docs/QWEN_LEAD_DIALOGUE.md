@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。211/211b 已合并，`PROMPT_VERSION=v2.9`、CI 快清单 **44 文件 / 520 passed / 1 skipped**。下一小卡 **211c（版本常量断言）**，随后 **221 ToolRegistry**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b；全量 **2391/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave2-planning` 做 **QWEN-211c**（加一条 `PROMPT_VERSION=="learning-package-v2.9"` 断言并更新计数）；随后在 `qwen/wave2-tools` 做 **QWEN-221**。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。211/211b/211c 已合并，`PROMPT_VERSION=v2.9`、CI 快清单 **44 文件 / 521 passed / 1 skipped**、全量 **2392/0/20**。下一张 **QWEN-221 ToolRegistry**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c；全量 **2392/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave2-tools`（已同步到 `main@13ea358`）做 **QWEN-221**：统一 ToolRegistry + deny-by-default 权限矩阵 + 审计；零模型、不碰 API/UI。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 211b；同步主计划 v2.9；派 211c；准备 221 验收。
+- **Lead 当前动作**：验收并合并 211c（16 passed、521/1、2392/0/20）；同步 tools 分支；明确授权 221 开工。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 16:30 之后（观察 QWEN-211c/221）。
+- **下一次检查**：2026-10-24 17:30 之后（观察 QWEN-221）。
 
 ## 1. 协作协议
 
@@ -70,8 +70,8 @@
 | QWEN-202b | 摘要测试进 CI 快清单 | **完成（已合并）** | Qwen | `195b051`+`747b97a`+`0089593`：`ci.yml` 42→43 文件，CI 同形 **505 passed / 1 skipped**；仅 CI/文档 |
 | QWEN-211 | Planning 有界重规划 | **完成（已合并）** | Qwen | `d11960e`+`55ff0bf`+`55520f3`：2 类失效信号、`MAX_REPLAN_ROUNDS=1`/`DEPTH=2`、checkpoint/审计、超限停止；Lead 复跑 15 passed/8.91s；全量 2391/0/20 |
 | QWEN-211b | PROMPT_VERSION 与 CI 纳入 | **完成（已合并）** | Qwen | `1ad4da5`+`8c646c8`+`2bb0464`：v2.8→v2.9、文档双时态；CI 43→44 文件，**520 passed / 1 skipped**；全量 2391/0/20 |
-| QWEN-211c | 版本常量断言 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-planning`：在 `test_learning_package_replan.py` 加 `PROMPT_VERSION=="learning-package-v2.9"` 断言；预期全量 2392/0/20、CI 521/1；零模型 |
-| QWEN-221 | 统一 ToolRegistry + 权限矩阵 | 未开始 | — | Lead 已预建 `qwen/wave2-tools`；211c 后开工；单一工具元数据/参数 schema/权限/审计；零模型 |
+| QWEN-211c | 版本常量断言 | **完成（已合并）** | Qwen | `ffb087e`+`bfae720`+`13ea358`：`PROMPT_VERSION=="learning-package-v2.9"` 断言；全量 **2392/0/20**、CI **521/1**；产品/CI 零改动 |
+| QWEN-221 | 统一 ToolRegistry + 权限矩阵 | **待 Qwen 认领** | Qwen | 分支 `qwen/wave2-tools` 已同步 main@13ea358；单一工具元数据/参数 schema/权限/审计；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -153,6 +153,13 @@
 72. **QWEN-211b 验收通过**：`1ad4da5`+`8c646c8`+`2bb0464` 已合并 main；`PROMPT_VERSION=v2.9`、文档双时态（v2.8 保留为 QWEN-102 采集版本）；CI 43→44 文件，**520/1**；全量 2391/0/20；接受。Lead 已同步主计划 `:252` 的版本引用。
 73. **QWEN-211c 派发（版本防漂移）**：继续 `qwen/wave2-planning`；在 `tests/a/test_learning_package_replan.py` 增加断言 `PROMPT_VERSION == "learning-package-v2.9"`（只加用例项、不新增文件），预期全量 **2392/0/20**、CI **521/1**；更新计数；零模型、不碰产品逻辑；完成后 `[DONE]`。之后 **221**。
 74. **QWEN-221 开工**：211c 验收后在 `qwen/wave2-tools`（已预建）按 §3-71 执行；允许开工、不适用 hold；若权限矩阵需要产品裁定（例如工具角色划分），先给基线矩阵并在 `[DONE]` 标明，不擅自扩到 API/UI。
+75. **QWEN-211c 验收通过**：`ffb087e`+`bfae720`+`13ea358` 已合并 main；新增 `PROMPT_VERSION=="learning-package-v2.9"` 断言（15→16 项）；CI **521/1**、全量 **2392/0/20**；产品与 `ci.yml` 零改动；接受。评委导览的计数刷新一并接受。
+76. **QWEN-221 正式开工**：`qwen/wave2-tools` 已 fast-forward 到 `main@13ea358`；**允许开工，不适用 hold**；按 §3-71 执行：
+   (a) 单一 ToolRegistry 元数据：工具名、允许角色、参数 schema、只读/副作用、超时、权限键；
+   (b) 运行时 **deny-by-default**：未知工具/未授权角色/非法参数一律拒绝并记审计；
+   (c) 替换散落的工具白名单，保留现有行为与错误面稳定；
+   (d) 测试覆盖越权、未知工具、schema 错误、审计事件；不碰 API/UI/前端；零模型、不读 `.env`；
+   (e) `[DONE]` 附权限矩阵基线、越权测试与审计证据。之后 **231**。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1999,3 +2006,26 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 **提交**（只推 `qwen/wave2-planning`）：`test(qwen-211c)` 版本断言用例、`docs(qwen-211c)` 台账 §26 / 矩阵 §23 / README / 评委导览、`docs(collab)` 本节。台账与矩阵是**追加**，README 与导览是**换最新记录 + 保留同格历史**。
 
 — Qwen
+
+### [2026-10-24 16:15] Lead → Qwen | [DONE] QWEN-211c 验收通过；QWEN-221 正式开工
+
+**QWEN-211c：验收通过，已合并 main。**
+
+- 新增 `PROMPT_VERSION == "learning-package-v2.9"` 断言（15→16 项）；CI 快清单 **521/1**、全量 **2392/0/20**；产品与 `ci.yml` 零改动；接受。
+- 评委导览的计数刷新一并接受；反向验证证明断言钉的是产品字面值，处理正确。
+
+**QWEN-221：现在开工（允许，不适用交付后 hold）**
+
+- `qwen/wave2-tools` 已由我 fast-forward 到 `main@13ea358`，直接在该分支工作，无需建分支。
+- 范围：
+  1. **单一 ToolRegistry 元数据**：工具名、允许角色、参数 schema、只读/副作用、超时、权限键；
+  2. 运行时 **deny-by-default**：未知工具、未授权角色、非法参数一律拒绝并写审计事件；
+  3. 替换散落的工具白名单/注册，保留现有调用行为与稳定错误面；
+  4. 测试覆盖越权拒绝、未知工具、schema 错误、审计；不碰 API/UI/前端；零模型、不读 `.env`；
+  5. `[DONE]` 附权限矩阵基线、越权测试与审计证据。
+- 若工具角色划分需要产品裁定，先给基线矩阵并在 `[DONE]` 标明，不擅自扩到 API/UI。
+
+**之后**：221 → 231（Observation/claim-support 进主链）→ 301（Run 队列/Worker）→ 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404；P2 后置。
+
+— Lead
+
