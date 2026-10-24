@@ -1799,3 +1799,62 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-24 13:53] Qwen → Lead | [DONE] QWEN-211 有界重规划：2 类失效信号 + 2 条硬上限，15 项新增、10 组反向验证，全量 2391 passed / 0 failed / 20 skipped
+
+**范围对齐**：按你 §4 `[2026-10-24 12:25]`（提交 `49910eb`）与 §3-66(b)/§3-68 执行——只改 planner 与测试/文档，**零模型调用、未读 `.env`、未碰 API/UI/迁移/DB**；主计划 DoD「失败路径测试；审计事件；文档」三件齐。
+
+#### 1. 实现（唯一产品文件 `backend/app/agent_runtime/learning_package.py`，+121/−28）
+
+- **计划失效检测（2 个确定性信号）**：`tool_failed`＝课程检索节点拿到 `failed`/`timeout` 的 `ToolResult`（`:511-520`）；`evidence_stalled`＝模型重复已检索过的提问且证据集仍为空（`:486-489`）。你条 1 的「新证据与当前计划假设冲突」我实现为它的可观测形式——计划假设「这个提问能拿到证据」被证据状态否证；**语义级冲突判定需要额外模型或规则，未臆造**（见 §5）。
+- **两条独立硬上限**：`MAX_REPLAN_ROUNDS = 1`、`MAX_REPLAN_DEPTH = 2`（`:258-259`），任一耗尽 `raise PackageFailure(stop_code)`（`:401-402`）→ 运行**停止**而不是继续尝试。
+- **超限停止沿用根因错误码**：`learning_package_tool_failed` / `learning_package_repeated_search`，**不新增用户可见 code**（前端 `LearningPackageView.vue:104-106` 的 code→文案映射不动，避免 API/UI 面扩张）。
+- **checkpoint 与恢复**：`PackageState` 加 `plan_version`/`replan_rounds`/`plan_invalidations`/`plan_invalidation`（`:231-234`），每次失效→重规划都走既有 `run_audit.checkpoint`；**零 API 改动**即新增 `plan.replanned` 事件（`_observed` `:305-310`），同时落 `agent_checkpoints`。载荷只 9 个键（8 项账本字段 `trigger`/`round`/`plan_version`/`model_calls`/`tool_calls`/`input_chars`/`search_count`/`evidence_count`，加 `_observed` 补的 `node`），**不含提示词、模型文本、检索内容、提问原文**，也不进交付结果与教师草稿。
+- **不洗白任何既有上限**：失效只清 `artifacts`/`practice_error`/`partial_completion`/陈旧 `decision`，预算、`searches`、证据、返工计数全部保留（`:393-395`、`:410-411`）；失败检索照旧计费且提问记入 `searches`（`:513-520`），所以重规划不能把同一提问免费再跑；`_planner` 复用检查点里的 `planning_context`，不重放画像/错题/前置知识（`:427-430`）。
+- **明确不重规划的三类**：检索预算耗尽、无证据直接 finish（契约违约）、`denied`/`invalid_args`（授权拒绝）——都有用例钉住「`planner` 只 1 次、0 条 `plan.replanned`」。
+- 路由改动：`decide`/`tool` 各加一条到 `planner` 的条件边（`:413-421`），`guard→…→verify` 节点集与既有终态不变。
+
+#### 2. 重规划次数（实测，offline）
+
+| 场景 | 失效触发 | 重规划轮数 | planner 节点 | decide 节点 | 模型调用 | 检索尝试 | 终态 |
+|---|---|---|---|---|---|---|---|
+| 首次检索失败→换提问后交付 | `tool_failed` | **1** | 2 | 3 | 8 | 2 | `run.completed`，`tool_calls=2` |
+| 重复提问且无证据→换提问后交付 | `evidence_stalled` | **1** | 2 | 4 | 9 | 2 | `run.completed`，`tool_calls=2` |
+| 两次检索都失败 | `tool_failed` | 1 后停止 | 2 | — | 4 | 2 | `run.failed: learning_package_tool_failed`，0 条 `answer.delta` |
+| 重规划后模型又提同一问 | `tool_failed` → `evidence_stalled` | 1 后停止 | 2 | — | 4 | **1** | `run.failed: learning_package_repeated_search`（失败的提问已被记账，跑不掉） |
+| `MAX_REPLAN_ROUNDS=0` | 不发放轮次 | 0 | **1** | — | 2 | 1 | `learning_package_tool_failed` |
+| `MAX_REPLAN_DEPTH=1` | 不发放轮次 | 0 | **1** | — | 2 | 1 | `learning_package_tool_failed` |
+
+#### 3. 超限停止日志（产品自身日志，非用例断言）
+
+`--log-cli-level=INFO` 定向跑 4 个关键用例：**4 passed / 2.78 s**，日志含 **4 条** `Run <uuid> failed (PackageFailure)`（来自 `run_lifecycle.py:269`），探针 `attempts=0`。`logs/replan-evidence-run.txt`（去 NUL 副本 `replan-evidence-clean.txt`）。诚实边界：产品日志行只记异常类名、不记错误码，错误码在 `run.failed` 载荷里由用例逐条钉住。
+
+#### 4. checkpoint 恢复证据
+
+`test_consumed_replan_round_survives_a_checkpoint_restart`（`:258-275`）：失败停止后 `POST /api/v2/learning-runs/{run_id}/continue` → 同一 `run.failed` 错误码、`node.started` **只有 `['tool']`**、**模型调用数不变**、`plan.replanned` 新增 0 条、检索尝试 2→3。也就是已消耗的那一轮从检查点读回，恢复不会发新轮、不会白送模型调用。另有 `test_replan_audit_event_is_persisted_as_a_checkpoint_row`：`agent_checkpoints` 里 `status='plan.replanned'` 恰 1 行、`node_name='planner'`、`state_data` 键集就是那 9 个。
+
+#### 5. 需你裁定的基线常量
+
+`MAX_REPLAN_ROUNDS=1` / `MAX_REPLAN_DEPTH=2` 取自主计划「最多 1 次」，写成类常量、不读 `.env`、不接 API 参数。要按课程/角色分档就得搬到配置，那是 API/UI 面改动，本卡按边界不做。**语义级失效**（检索结果与步骤 goal 不相关之类）需要额外模型判断或规则库 + 预算，请另开卡。
+
+#### 6. 测试与回归（记录数）
+
+- 新文件 `tests/a/test_learning_package_replan.py`（300 行，**15 项全为新增**）：**15 passed / 7.65 s**（`logs/new-file-final.txt`）。
+- 既有学习包/生命周期定向集（10 个文件，不含新文件）：**207 passed / 0 failed / 41.67 s**（`logs/targeted-package.txt`）。
+- 合并：**222 passed / 48.22 s** = 定向 207 + 新 15（`logs/combined-package.txt`）。
+- **CI 同形子集（43 文件快清单，最终字节）：505 passed / 1 skipped / 0 failed / 135.49 s**，`PYTEST_EXIT=0`、前置 `init_db()` exit=0、清单从 `ci.yml` 机械重取（43 文件 0 缺失，`enterprise-contract` 仍 38）——本卡产品改动没让快清单任何一项转红，但**新文件仍未纳入清单**（纳入属独立 CI 卡）。`logs/ci-portable-final.txt`、`logs/ci-list-inspect.txt`
+- **全量回归（记录数，最终字节）：2391 passed / 0 failed / 20 skipped / 901.89 s / 11 warnings**，`PYTEST_EXIT=0` 直接写进日志；2391 passed + 20 skipped = 集合 2410 个 node id + 收集期 1 条 `mcp` `importorskip` skip = **2411 项**，196 个测试文件（195 个有 node id + 收集期被整模块跳过的 `tests/a/test_mcp_readonly_protocol.py`）；相对你验收的 2376 恰好 **+15**，既有用例零转红零消失（`logs/full-suite-repeat.txt`，去 NUL 副本 `full-suite-repeat-clean.txt`）。
+- 同命令首跑：2391/20，1079.94 s，11 warnings（`logs/full-suite-final.txt`，去 NUL 副本 `full-suite-final-clean.txt`）。
+- **过程坦白**：写完代码后自查发现 `_decide` 里残留 5 行**不可达的旧分支**（`{"decision": decision}` 之后的死代码），已删除；删除后在最终字节上重跑了定向集、15 项新用例、10 组反向验证与全量。记录数用的是最终字节那一跑。
+- **10 组反向验证全部被抓**，累计 **60** 个失败用例，产品文件按字节还原（`ALL_10_MUTATIONS_CAUGHT`、`PRODUCT_RESTORED_TO_PRE_ROUND_BYTES=1`，`logs/reverse-summary.txt` + `logs/reverse-R01..R10*.txt`）。R05（`decide` 永不指向 planner）首轮**逃过**测试集，暴露真实覆盖缺口 → 补 `test_stalled_search_replans_and_recovers_with_a_new_query` 后 10/10 被抓。
+- CI ruff 门 `--select=F821,F823,E9` All checks passed + `compileall` OK（`logs/gates-ruff.txt`）；全部 9 个改动/新增文件（1 产品 + 1 测试 + 7 文档，含本节）纯 CRLF、孤立 LF/CR 各 0、`git diff --check` 干净。
+
+#### 7. 未做与登记
+
+- **未进 CI 快清单**：`ci.yml` 仍 43 文件 / 505 项；纳入 `test_learning_package_replan.py` 属 2xx b 式独立卡（同 201b/202b 口径）。**PG 层本卡未跑**（恢复用例走仓库默认 SQLite + `InMemorySaver`，无 PG 专属分支）。
+- **未 bump `PROMPT_VERSION`**（仍 `learning-package-v2.8`）：重规划提示是状态触发的**追加固定文案**，与既有 `_review` 同类；bump 会让 `LEARNING_PACKAGE_GUIDE.md:89`、`V2_TEN_MODULE_IMPLEMENTATION.md:58` 与台账 T1 行集体漂移。若你认为追加指令即算提示词变更，我按 bump 流程重跑并逐处改文档。
+- **未动**：`docs/API-CONTRACT.md:49`（归 401/403）、`conversation_memory.py:21` 的 `.limit(3)`、`scripts/prepare_ablation_*.py`、任何端点/UI/迁移；`plan.replanned` 的前端展示（当前前端忽略未知事件，不报错）留给 UI 卡。
+- 产物全部在 gitignored 的 `output/qwen211-2026-10-24/`；`reports/` 未使用。
+
+**证据等级：offline**（本机同形复跑 + 归档日志；GitHub 真实回执与 PG 侧结论不属本卡主张；`remote` 仅指已推送 `qwen/wave2-planning` 分支本身）。提交：`feat(qwen-211)` 产品 + `docs(qwen-211)` 文档 + 本节。等你验收后再开 221。
+
+— Qwen
