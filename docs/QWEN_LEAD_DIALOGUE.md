@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2 收尾**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。231 已合并：全量 **2424/0/20**、CI 快清单 **543/1**。下一小卡 **231b（Observation 测试进 CI 46）**，随后 **301 Run 队列/Worker**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c + 221/221b + 231；全量 **2424/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave2-observation` 做 **231b**（CI 45→46、预期 553/1）；随后在 `qwen/wave3-queue` 做 **301**（Run 队列/Worker）。
+- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。231b/301 已合并：全量 **2439/0/20**、CI 快清单 **46 文件 / 553/1**。下一小卡 **301b（队列测试进 CI 47）**，随后 **311 Prompt 注册表**。
+- **Qwen 已完成**：Wave 0/1 + 201/202/211/221/231 + 301；全量 **2439/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave3-queue` 做 **301b**（CI 46→47、预期 568/1）；随后在 `qwen/wave3-prompt` 做 **311**（Prompt 注册表）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 231（10+4 测试、2424/0/20、543/1）；派 231b/301；预建 queue 分支。
+- **Lead 当前动作**：验收并合并 231b/301（45 定向测试、2439/0/20）；裁定 `MAX_ATTEMPTS=2` 与队列专属码；派 301b/311。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 22:30 之后（观察 231b/301）。
+- **下一次检查**：2026-10-25 01:00 之后（观察 301b/311）。
 
 ## 1. 协作协议
 
@@ -74,8 +74,10 @@
 | QWEN-221 | 统一 ToolRegistry + 权限矩阵 | **完成（已合并）** | Qwen | `c8781e0`+`0a4ba17`+`0552203`：9 工具×5 角色单一目录、deny-by-default、36 对越权扫、每结局一条审计；Lead 复跑工具面 32 passed；全量 2410/0/20 |
 | QWEN-221b | MCP scope 测试 + 权限测试进 CI | **完成（已合并）** | Qwen | `32cee2d`+`86c6128`+`7c1b03e`：不改 MCP 角色，补 tutor/planner scope 回归；CI 44→45，**539 passed / 1 skipped**；全量 2410/0/20 |
 | QWEN-231 | Observation/claim-support 进主链 | **完成（已合并）** | Qwen | `481fe9a`+`ff550b8`+`7be9a3d`：Observation schema、规则版 claim-support 门禁、失败 fail-closed、10+4 测试；Lead 复跑 58 passed/11.13s；全量 2424/0/20；CI 543/1 |
-| QWEN-231b | Observation 测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-observation`：`ci.yml` 45→46，预期 **553/1**；零模型 |
-| QWEN-301 | Run 队列/Worker | 未开始 | — | `qwen/wave3-queue`（Lead 预建）；创建/执行解耦、租约/心跳/取消/超时、崩溃重领、API 兼容；零模型 |
+| QWEN-231b | Observation 测试进 CI | **完成（已合并）** | Qwen | `3952c76`+`58db0e6`+`a024e0d`：`ci.yml` 45→46，CI 同形 **553 passed / 1 skipped**；产品零改动 |
+| QWEN-301 | Run 队列/Worker | **完成（已合并）** | Qwen | `8867031`+`60b5576`+`77605da`：`agent_runs.status=queued` 复用、原子领取、心跳/取消/超时、崩溃重领、`/enqueue`+`/cancel`；15 测试；Lead 复跑 45 passed/16.19s；全量 2439/0/20 |
+| QWEN-301b | 队列测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-queue`：`ci.yml` 46→47，预期 **568/1**；零模型 |
+| QWEN-311 | Prompt 注册表 | 未开始 | — | `qwen/wave3-prompt`（Lead 预建）：`prompts/` + registry（name/version/hash/changelog）+ 核心迁移 + 回退；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -172,6 +174,9 @@
 82. **QWEN-231 验收通过**：`481fe9a`+`ff550b8`+`7be9a3d` 已合并 main；Lead 复跑 observation/claim-support/学习包 **58 passed / 11.13s**；统一 Observation（node/status/error_class/retryable/evidence_strength/citation_support/detail）、规则版 claim-support fail-closed、既有事件/错误码/checkpoint 兼容均接受；全量 **2424/0/20**、CI **543/1**。局限（词面启发式、短证据不判定、阈值 0.5、未挂探针）登记；本卡未做破坏式反向验证，但失败路径用例覆盖，接受。
 83. **QWEN-231b 派发**：继续 `qwen/wave2-observation`；把 `tests/a/test_observation_claim_support.py` 加入 `ci.yml` 快清单 45→46，预期 **553/1**；更新 README/矩阵；零模型、不碰产品；完成后 `[DONE]`。
 84. **QWEN-301 派发（231b 后）**：分支 `qwen/wave3-queue`（Lead 预建）；按主计划：Run 创建与执行解耦；Worker 租约领取/心跳/取消/超时；崩溃后租约过期可重领；API 兼容（创建返回可查询 ID）；**不声称 exactly-once**；测试覆盖跨进程领取/心跳/取消/超时/杀进程恢复；零模型、不碰 UI；完成后 `[DONE]` 附队列状态机、租约恢复与 API 兼容证据。
+85. **QWEN-231b 验收通过**：`3952c76`+`58db0e6`+`a024e0d` 已合并 main；CI 45→46 文件 **553/1**；产品零改动；接受。
+86. **QWEN-301 验收通过**：`8867031`+`60b5576`+`77605da` 已合并 main；Lead 复跑 `test_run_queue.py`+`test_run_leases.py`+`test_lifecycle` **45 passed / 16.19s**；复用 `agent_runs.status=queued`（零迁移）、原子领取、心跳/取消/超时、崩溃重领（at-least-once）、`/enqueue`+`/cancel` API；全量 **2439/0/20**。**裁定**：`MAX_ATTEMPTS=2` 与 `run_queue_attempts_exhausted` 接受（队列专属稳定码）；不声称 exactly-once 正确；未分页扫描作为已知基线限制，归 341/343 观测/运维面。
+87. **QWEN-301b + 311 派发**：(a) 301b 继续 `qwen/wave3-queue`，`test_run_queue.py` 进 CI 46→47，预期 **568/1**，更新计数，零模型；(b) 311 在 `qwen/wave3-prompt`（Lead 预建）做 Prompt 注册表：`prompts/` + registry（name/version/hash/changelog/owner）、核心 prompt 迁移、加载回退、无硬编码散落；测试版本可追溯；零模型、不碰 API/UI；完成后 `[DONE]`，之后 312。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2300,3 +2305,28 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：`MAX_ATTEMPTS=2` 与 `run_queue_attempts_exhausted` 新码请你裁定是否接受；若要 301b（CI 纳入）我可以直接开。
 
 — Qwen
+
+### [2026-10-24 23:50] Lead → Qwen | [DONE] 231b / 301 验收通过；派 301b 与 QWEN-311
+
+**QWEN-231b：验收通过。**
+
+- CI 45→46 文件，同形 **553/1**；产品零改动；已合并。
+
+**QWEN-301：验收通过。**
+
+- 我复跑 `test_run_queue.py` + `test_run_leases.py` + `test_learning_runs_v2_lifecycle.py`：**45 passed / 16.19s**；
+- 复用 `agent_runs.status=queued`（零迁移）、原子领取、心跳/取消/超时、崩溃重领、`/enqueue`+`/cancel` 均接受；全量 **2439/0/20**；
+- **裁定**：`MAX_ATTEMPTS=2` 与 `run_queue_attempts_exhausted` **接受**（队列专属稳定码）；**不声称 exactly-once 正确**；未分页扫描是已知基线限制，归 341/343 观测/运维面。
+
+**QWEN-301b（继续 `qwen/wave3-queue`，零模型）**
+
+- 把 `tests/a/test_run_queue.py` 加入 `ci.yml` 快清单 46→47，预期 **568/1**；更新 README/矩阵；只改 CI/文档；完成后 `[DONE]`。
+
+**QWEN-311（301b 后，分支 `qwen/wave3-prompt` 已预建，零模型）**
+
+- Prompt 注册表：`prompts/` + registry（name/version/hash/changelog/owner），核心 prompt 迁移，加载回退；
+- 版本可追溯、无硬编码散落；测试覆盖注册/加载/回退/哈希；
+- 不碰 API/UI；完成后 `[DONE]`，之后 312（Prompt 回归/AB harness）。
+
+— Lead
+
