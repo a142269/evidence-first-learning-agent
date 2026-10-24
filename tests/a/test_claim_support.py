@@ -1,6 +1,6 @@
 import pytest
 
-from backend.app.evaluation.claim_support import evaluate_claims
+from backend.app.evaluation.claim_support import evaluate_claims, evaluate_rule_based_support
 
 
 def review(name, supported=True, severe=False, relevance=None):
@@ -72,3 +72,50 @@ def test_adjudicator_cannot_support_claim_with_invalid_citation():
                "adjudication": review("c")}]
     with pytest.raises(ValueError):
         evaluate_claims(claims, ["other"])
+
+
+def test_rule_based_support_accepts_cited_shared_evidence():
+    evidence = [{"chunk_id": "c1", "content":
+                 "检索增强生成先检索课程材料，再依据证据组织回答，并标注引用来源，便于读者核对；"
+                 "课程材料说明检索的作用。"}]
+    result = evaluate_rule_based_support(
+        [{"text": "检索增强生成先检索课程材料，再依据证据组织回答。", "source_ids": ["c1"]}],
+        evidence,
+    )
+    assert result["passed"]
+    assert result["citation_support"] == 1.0
+    assert result["evidence_strength"] == 1.0
+    assert result["evaluated_items"] == 1 and result["unsupported_items"] == 0
+
+
+def test_rule_based_support_rejects_unrelated_long_evidence():
+    evidence = [{"chunk_id": "c1", "content":
+                 "微积分与线性代数的矩阵分解、特征值计算和概率分布公式推导，均属纯数学内容，"
+                 "不涉及任何教学讲解方法。"}]
+    result = evaluate_rule_based_support(
+        [{"text": "检索增强生成先检索课程材料，再依据证据组织回答。", "source_ids": ["c1"]}],
+        evidence,
+    )
+    assert not result["passed"]
+    assert result["evidence_strength"] == 0.0
+    assert result["unsupported_items"] == 1
+    assert "evidence_unsupported" in result["reasons"]
+
+
+def test_rule_based_support_rejects_missing_and_invalid_citations():
+    evidence = [{"chunk_id": "c1", "content": "课程证据"}]
+    missing = evaluate_rule_based_support([{"text": "一句讲解", "source_ids": []}], evidence)
+    assert not missing["passed"] and "citation_missing" in missing["reasons"]
+    invalid = evaluate_rule_based_support([{"text": "一句讲解", "source_ids": ["c2"]}], evidence)
+    assert not invalid["passed"] and "citation_invalid" in invalid["reasons"]
+    assert invalid["citation_support"] == 0.0
+
+
+def test_rule_based_support_does_not_judge_short_fixture_evidence():
+    # Tiny fixtures are indistinguishable from metadata stubs; the rule reports
+    # "not judged" instead of inventing a lexical support verdict.
+    result = evaluate_rule_based_support(
+        [{"text": "完全无关的讲解文本", "source_ids": ["c1"]}],
+        [{"chunk_id": "c1", "content": "课程证据"}],
+    )
+    assert result["passed"] and result["evidence_strength"] is None
