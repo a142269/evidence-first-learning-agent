@@ -844,3 +844,61 @@ Lead §4（`[2026-10-23 22:35]`，提交 `bbcc8e0`）原文：「**QWEN-202b（�
 - 未改 `docs/00-评委30秒导览.md`：Lead 本卡只点名 README 与 TEST_MATRIX，导览那行讲的是**全量**用例数（仍属 §22 的 2396 项），与本卡无关。
 - 未动 `docs/API-CONTRACT.md:49`（归 **QWEN-401/403**）、未动 baseline 迁移的无条件 `create_table`（归 **QWEN-403**）。
 - 未开始 **QWEN-211**：Lead 明示「202b 后开工」，分支 `qwen/wave2-planning` 已预建；本节交付后 hold，等你验收。
+
+## 24. QWEN-211 有界重规划（2026-10-24，分支 `qwen/wave2-planning`，零模型调用）
+
+Lead §4（`[2026-10-24 12:25]`，提交 `49910eb`）派发本卡，范围逐字：「1. 计划失效检测：工具失败 / 新证据与当前计划假设冲突时触发重规划；2. **最大重规划轮数与深度**硬上限（给基线常量即可，`[DONE]` 中标明；不要无限循环）；3. 每次重规划保留 checkpoint / 当前状态，可从 checkpoint 恢复；4. 超限时**停止并给出明确状态**，不是继续尝试；5. 测试覆盖：正常重规划、超轮数停止、超深度停止、checkpoint 恢复」，边界「只改 planner/agent runtime/测试/文档，不碰 API/UI；零模型、不读 `.env`；若最大轮数/深度等阈值需产品裁定，先给基线常量并在 `[DONE]` 中标明」；同一节还验收了 QWEN-202b 并把 211 之后的顺序定为 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404。主计划 `docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:489` 逐字：「QWEN-211 | Planning 有界重规划：工具失败/无证据时，最多 1 次换查询/换策略；记录原因与预算；不突破步数 | P1 | QWEN-103 | 3d | 失败路径测试；审计事件；文档」——本节按该 DoD 交付失败路径测试、审计事件与文档三件。
+
+### 24.1 改动（1 个产品文件、1 个新测试文件、6 个文档文件，另加 §4 汇报）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `backend/app/agent_runtime/learning_package.py` | 唯一产品文件：失效检测、两条硬上限、失效账本、`plan.replanned` 审计事件与两条新路由 | `_REPLAN_REASONS` `:110-113`；`PackageState` 四个新字段 `:231-234`；`MAX_REPLAN_ROUNDS = 1` / `MAX_REPLAN_DEPTH = 2` `:258-259`；`_observed` 发事件 `:305-310`；`_invalidate_plan` `:390-411`；`_route_decide` / `_route_after_tool` `:413-421`；`_planner` 重规划分支 `:423-471`；`_decide` 停滞分支 `:486-489`；`_tool` 授权拒绝分支 `:507-510`、失败分支 `:511-520` |
+| `tests/a/test_learning_package_replan.py` | **新增 15 项**，脚本化结构化输出桩驱动真实 API，零模型零网络 | `:32` 交付脚本、`:58-69` 失败检索注入、`:239-255` 检查点行、`:258-275` 断点恢复 |
+| `docs/LEARNING_PACKAGE_GUIDE.md` | 上限表加 2 行（重规划轮数、单运行计划版本）+ 一段「有界重规划」说明 | 新行 `:34-35`；说明段 `:44` |
+| `docs/ENTERPRISE_ARCHITECTURE_GUIDE.md` | §3.1 SSE 事件表加 `plan.replanned` 一行 | `:100`（原 `review.required` 行 `:99` 之后） |
+| `README.md` | 全量行刷新为 2391/20，并把「211 未进 CI 快清单」写进 CI 行 | `:56`、`:58` |
+| `docs/00-评委30秒导览.md` | 测试用例行刷新为 2411 项 | `:106` |
+| `docs/TEST_MATRIX.md` / `docs/CLAIMS_LEDGER.md` | 新增矩阵 §21 / 本节 §24 | — |
+
+`git diff --stat`：产品文件 **1 file changed, 121 insertions(+), 28 deletions(-)**（769 行、CRLF 769、孤立 LF/CR 各 0，md5 `f63b20beb98799dbb8c296321c0f3eba`）；新测试文件 300 行、纯 CRLF、md5 `49d2b437e07459ea3af918657892e56b`。**未碰** API 路由、SSE 契约字段、前端、迁移、DB、评测 harness、`.env`。
+
+### 24.2 语义：什么算计划失效、上限怎么生效
+
+- **两个触发（都是确定性可观测信号，不需要第二次模型判断）**。`tool_failed`：课程检索节点拿到 `failed`/`timeout` 状态的 `ToolResult`（`:511-520`，授权拒绝分支 `:507-510`）；`evidence_stalled`：模型重复使用已经检索过的提问、且此时证据集合仍为空（`:486-489`）。这就是 Lead 条 1 里「新证据与当前计划假设冲突」的可观测形式——计划假设「这个提问能拿到课程证据」被实际证据状态否证。语义级冲突判定需要额外模型或规则，属产品裁定，本卡不臆造（见 24.4）。
+- **两条独立硬上限**：`MAX_REPLAN_ROUNDS = 1`（一个运行最多替换一次计划）与 `MAX_REPLAN_DEPTH = 2`（一个运行最多存在两版计划），任一耗尽即 `raise PackageFailure(stop_code)`（`:401-402`）。两个阈值各有用例单独把它压到 0/1 复验「上限本身是硬门」，而不是只验组合行为。
+- **超限停止沿用根因错误码**，不新增用户可见 code：`learning_package_tool_failed` / `learning_package_repeated_search`。前端 `LearningPackageView.vue:104-106` 的 `run.failed` 分支按既有 code 映射文案，新增 code 会变成 API/UI 面改动，本卡按 Lead 边界不做。
+- **不洗白任何既有上限**：`_invalidate_plan` 只清 `artifacts`/`practice_error`/`partial_completion` 与陈旧 `decision`，**不动** `budget`（`model_calls`/`tool_calls`/`input_chars`）、`searches`、`evidence`、`revisions`（`:393-395`、`:410-411`）。失败的那次检索仍然计费、其提问仍然记入 `searches`（`:513-520`），所以重规划后的计划不可能把同一个提问免费再跑一遍——用例把这条钉死：注入「第二次仍失败」时提问只执行 1 次、模型调用停在 4 次。
+- **重规划不重放上下文工具**：`_planner` 在失效分支复用检查点里的 `planning_context`，不再读画像/错题/前置知识（`:427-430`），用例断言 `get_learning_profile`、`get_recent_mistakes` 各只调用 1 次。
+- **不越权的三种情形明确排除**：检索预算耗尽（`searches >= MAX_TOOL_CALLS`）与「无证据直接 finish」是违约/授权停止，不是计划失效，仍走原来的 `learning_package_no_evidence`；`denied`/`invalid_args` 的工具是授权拒绝，重规划不可能让它变许可，直接失败（用例 `test_denied_tool_never_triggers_a_replan`）。
+- **审计与可恢复性**：失效那一刻写 `plan_invalidation`（→ 合并进累积的 `plan_invalidations`）并由 `_observed` 发出 `plan.replanned` 事件（`:305-310`）。账本条目本身 8 个键——`trigger`/`round`/`plan_version`/`model_calls`/`tool_calls`/`input_chars`/`search_count`/`evidence_count`（`:404-409`）；审计事件与检查点行在此之上由 `_observed` 补一个 `node`，共 9 个键（`:310`），SSE 帧再自带 `run_id`/`event_sequence`，**不含**提示词、模型文本、检索内容、提问原文或计划正文；`record.result`、教师审核草稿 `approval` 与 GET 结果都不带账本（两个参数化用例覆盖 `require_approval` 两态）。崩溃/中断后 `POST /{run_id}/continue` 从检查点读回**已消耗的那一轮**：只重放失败节点并再次停止，不发放新的一轮，也不追加任何模型调用。
+
+### 24.3 实测（offline，零模型调用，探针 `outbound attempts=0 unique_hosts=0`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新用例 | **15 passed / 7.65 s**，exit 0 | `logs/new-file-final.txt` |
+| 既有学习包/生命周期定向集（10 个文件，不含新文件） | **207 passed / 0 failed / 41.67 s** | `logs/targeted-package.txt` |
+| 合并（学习包 + 生命周期 + 新用例） | **222 passed / 48.22 s**，0 红 | `logs/combined-package.txt` |
+| **全量回归（记录数，最终字节）** | **2391 passed / 0 failed / 20 skipped / 901.89 s / 11 warnings**，`PYTEST_EXIT=0` 写进同一日志，196 个测试文件 | `logs/full-suite-repeat.txt`（去 NUL 副本 `full-suite-repeat-clean.txt`，本轮数字取自副本） |
+| 同命令首跑（补最后一条「交付结果不含重规划账本」断言之前的字节） | 2391 passed / 0 failed / 20 skipped / 1079.94 s / 11 warnings，计数与记录数逐项一致 | `logs/full-suite-final.txt`（去 NUL 副本 `full-suite-final-clean.txt`）；定向跑与新文件跑全部在最终字节上 |
+| **CI 同形子集（43 文件快清单，最终字节）** | **505 passed / 1 skipped / 0 failed / 135.49 s / 4 warnings**，`PYTEST_EXIT=0`，前置 `init_db()` exit=0；本卡产品改动没有让快清单里任何一项转红（清单内 7 个文件都跑学习包/生命周期） | `logs/ci-portable-final.txt`（去 NUL 副本 `ci-portable-final-clean.txt`）；清单由 `logs/ci-list-inspect.txt` 从 `ci.yml` **机械重取**，43 文件 0 缺失、`enterprise-contract` 仍 38 |
+| 集合口径 | **2410** 个 node id +（`test_mcp_readonly.py` 收集期 `mcp` `importorskip` 产生的）1 条 = **2411 项**，收集 13.11 s | `logs/collect-only.txt`、`logs/collected-files.txt` |
+| 相对上一记录 | 2391 = 你验收的 2376 + **15**，全为本卡新增；既有用例零转红、零消失 | 同上 |
+| 重规划次数 | 交付路径 `planner` 节点 **2 次**、`plan.replanned` 事件 **1 条**、`trigger=tool_failed`、`round=1`；停滞路径同为 1 轮但 `decide` 4 次、模型调用 9 次 | `test_failed_retrieval_replans_once_and_still_delivers`、`test_stalled_search_replans_and_recovers_with_a_new_query`（`:80-93`、`:145-164`） |
+| 超限停止日志 | 上限触发时产品自身记录 `Run <uuid> failed (PackageFailure)`（`run_lifecycle.py:269`），本轮 4 个关键用例共 **4** 条这样的停止日志，同时用例钉住 `run.failed` 载荷里的错误码与 0 条 `answer.delta` | `logs/replan-evidence-run.txt`（`--log-cli-level=INFO`，去 NUL 副本 `replan-evidence-clean.txt`） |
+| 上限独立硬门 | `MAX_REPLAN_ROUNDS=0` 与 `MAX_REPLAN_DEPTH=1` 各自把运行钉在 `planner` 1 次、0 条 `plan.replanned`、错误码 `learning_package_tool_failed` | `test_replan_round_cap_is_an_independent_hard_limit`、`test_replan_depth_cap_is_an_independent_hard_limit`（`:167-186`） |
+| checkpoint 恢复 | 断点续跑后仍是同一 `run.failed` 错误码，`node.started` 只有 `['tool']`，**模型调用数不变**、检索尝试从 2 增到 3、新事件 0 条 | `test_consumed_replan_round_survives_a_checkpoint_restart`（`:258-275`） |
+| 审计事件持久化 | `agent_checkpoints` 里 `status='plan.replanned'` 恰 1 行、`node_name='planner'`、`state_data` 键集 = 上面那 9 个（含 `node`） | `test_replan_audit_event_is_persisted_as_a_checkpoint_row`（`:239-255`） |
+| 反向验证（最终字节上复跑一轮） | **10 组全部被抓**，累计 **60** 个失败用例；每组改完后按字节还原产品文件（`PRODUCT_RESTORED_TO_PRE_ROUND_BYTES=1`、`ALL_10_MUTATIONS_CAUGHT`） | `logs/reverse-summary.txt`、`logs/reverse-R01..R10*.txt` |
+| CI ruff 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed；`compileall` OK | `logs/gates-ruff.txt` |
+| 行尾与差异 | 全部 9 个改动/新增文件（1 产品 + 1 测试 + 7 文档，含 `docs/QWEN_LEAD_DIALOGUE.md` 的本节汇报）纯 CRLF、孤立 LF/CR 各 0；`git diff --check` 干净 | 写入脚本自带断言 + 本节 md5 |
+
+### 24.4 需 Lead 裁定、边界与未做
+
+- **基线常量待裁定**：`MAX_REPLAN_ROUNDS = 1`、`MAX_REPLAN_DEPTH = 2` 取自主计划「最多 1 次」，写成类常量、不读 `.env`、不接 API 参数。若产品要按课程/角色分档，是把常量搬到配置的动作，属 API/UI 面，本卡不做。
+- **未做「语义级」失效检测**：只实现可观测信号（工具失败/超时、重复提问且证据为空）。若你要的是「新证据与计划假设冲突」的语义判定（例如检索结果与步骤 goal 不相关），那需要额外的模型判断或规则库，请另开卡并给预算。
+- **未新增错误码**、未动 `PROMPT_VERSION`（仍 `learning-package-v2.8`）：重规划指令是**追加**的固定文案，与 `_review` 已有的「按状态追加指令」先例同类；bump 版本号会让 `LEARNING_PACKAGE_GUIDE.md:89`、`V2_TEN_MODULE_IMPLEMENTATION.md:58` 与 CLAIMS_LEDGER 的 T1 行集体漂移，那是独立文档工作。若你认为追加指令本身就该算提示词变更，说一声，我按 bump 流程重跑并逐处改文档。
+- **未进 CI 快清单**：`.github/workflows/ci.yml` 仍是 43 文件 / 505 项，`tests/a/test_learning_package_replan.py` 未纳入（纳入属 2xx b 式独立卡，同 201b/202b 口径）；但本卡在最终字节上**同形复跑了这 43 个文件**确认既有的 505/1 记录不动（见 24.3）。PG 方言本轮未跑（该路径无 PG 专属行为，检查点恢复用例走仓库默认 SQLite + `InMemorySaver`）。
+- **未动** `docs/API-CONTRACT.md:49`（归 401/403）、`conversation_memory.py:21`（归 203 之后）、`scripts/prepare_ablation_*.py`，未新增端点/UI。
+- 证据等级：**offline**。全量数与定向数都来自本机同形复跑归档日志；GitHub `quality` job 与 PG 层不属本卡主张。

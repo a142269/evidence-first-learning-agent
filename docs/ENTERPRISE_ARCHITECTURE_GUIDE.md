@@ -97,6 +97,7 @@ V2 的 HTTP 入口是 `POST /api/v2/learning-runs/stream`，文件为
 | `tool.completed` | 只读工具已返回脱敏状态、条数与耗时 | 显示工具进度，不展示原始画像 |
 | `answer.delta` | 一段回答文本 | 追加到流式消息 |
 | `review.required` | Graph 在敏感操作前中断 | 展示审核面板，不自动继续 |
+| `plan.replanned` | 上一版计划失效，Planner 在硬上限内重规划一次；只含原因标识与预算计数 | 可选提示“正在调整学习计划”；前端忽略未识别事件，不展示原始内容 |
 | `run.completed` | 成功结束，包含答案、证据、质量字段 | 固化消息和引用 |
 | `run.failed` | 失败，包含稳定错误码 | 友好展示并保留 Run ID |
 

@@ -503,3 +503,23 @@ Lead §4 `[2026-10-23 22:35]`（提交 `bbcc8e0`）派 202b：「把 `tests/a/te
 | 未跑 | 全量 `pytest tests/` | 本卡零新增用例、零产品改动，§22 的 **2376/0/20 / 2396 项**记录数不动（不擅自改记录数）；PG 清单与覆盖率步未动 |
 
 外推限制：本轮全部是**本机 offline 同形复跑**；GitHub `quality` job 的真实绿灯属 remote 证据，由 Lead 判读（本机无 `gh` CLI）。
+
+## 21. QWEN-211 有界重规划实测摘要（2026-10-24，分支 `qwen/wave2-planning`，零模型调用）
+
+Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界重规划**：计划失效检测（工具失败/新证据）→ 允许有限重规划；最大轮数/深度硬上限；保留 checkpoint，超限停止而不是无限循环；测试覆盖超限停止与恢复」，边界「只改 planner/测试/文档，不碰 API/UI；零模型、不读 `.env`」。逐条交付见 `docs/CLAIMS_LEDGER.md` §24。
+
+| 运行 | 集合 | 结果 |
+|---|---|---|
+| 新用例 | `tests/a/test_learning_package_replan.py` | **15 passed / 0 failed / 7.65 s**，探针 `attempts=0 unique_hosts=0`，`logs/new-file-final.txt` |
+| 既有回归面 | 10 个学习包/生命周期文件（不含新文件） | **207 passed / 0 failed / 41.67 s**，`logs/targeted-package.txt` |
+| 合并 | 上述 + 新文件 | **222 passed / 0 failed / 48.22 s**，`logs/combined-package.txt` |
+| **全量（记录数，最终字节）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen211-2026-10-24/pytest-full2`） | **2391 passed / 0 failed / 20 skipped / 901.89 s / 11 warnings**，`PYTEST_EXIT=0` 记入同一日志，196 个测试文件 / 2411 项，探针 **`attempts=0 unique_hosts=0`**；相对 202 的 2376 恰好 **+15**，既有用例零转红零消失。`logs/full-suite-repeat.txt`（去 NUL 副本 `full-suite-repeat-clean.txt`） |
+| 全量首跑（补最后一条交付结果断言之前的字节） | 同命令、`--basetemp …/pytest-full` | 2391 passed / 0 failed / 20 skipped / 1079.94 s / 11 warnings，计数与记录数逐项一致；`logs/full-suite-final.txt` |
+| **CI 同形子集（43 文件，最终字节）** | `ci.yml:216` 同形旗标 + 前置 `init_db()` | **505 passed / 1 skipped / 0 failed / 4 warnings / 135.49 s**，`PYTEST_EXIT=0`，探针 `attempts=0`；清单机械重取 43 文件 0 缺失 ——`logs/ci-portable-final.txt`、`logs/ci-list-inspect.txt` |
+| 集合 | `--collect-only -q` | 2410 个 node id（收集 13.11 s）+ 收集期 1 条 `mcp` `importorskip` skip = **2411 项**；`logs/collect-only.txt` |
+| 失效/上限/审计行为 | 定向日志（`--log-cli-level=INFO`，4 个关键用例） | 4 passed；`logs/replan-evidence-run.txt` |
+| 反向验证 | 10 组逐条禁用绑定规则 | **全部转红**，累计 60 个失败用例，产品文件按字节还原（`ALL_10_MUTATIONS_CAUGHT`，`PRODUCT_RESTORED_TO_PRE_ROUND_BYTES=1`）；`logs/reverse-summary.txt` |
+| 门 | CI ruff（`--select=F821,F823,E9`）+ `compileall` | All checks passed / COMPILE_OK；`logs/gates-ruff.txt` |
+| 未跑 | GitHub `quality` job 真实回执、PG 专项 | 本卡未把新文件纳入快清单（清单仍 43 文件、记录仍 505/1，同形复跑见上一行）；PG 层无专属改动 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用；GitHub 真实回执与 PG 侧结论不属本卡主张。重规划阈值 `MAX_REPLAN_ROUNDS=1`/`MAX_REPLAN_DEPTH=2` 是基线常量，**最终取值待 Lead 产品裁定**。
