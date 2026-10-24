@@ -90,6 +90,14 @@ run.completed 中包含 learning_package（计划、讲解、练习、审核结�
 等待人工审核时只向请求者发送 review.required。教师使用任务编号查询草稿，再调用 `/{run_id}/resume` 提交 approved。
 教师用 edited_answer 替换答案时，不再交付旧结构化学习包，最终 citations 置空；替换文本没有经过来源映射校验，不能继承旧引用。模型审核结果也不标记为对新文本的验证。替换部分交付草稿时同样清除 `partial_completion`，按人工替换内容处理。
 
+## 队列执行（QWEN-301）
+
+`POST /api/v2/learning-runs/enqueue` 与执行解耦：只持久化一个 `status="queued"` 的 Run（请求体与 `/stream` 相同），返回 `{run_id, status, session_id, workflow_version}`，**不**在请求内执行。后续由队列 Worker（`backend/app/agent_runtime/run_worker.py`）领取执行，走与 `/stream` 相同的图、租约心跳（`run_leases`）、超时（answer 60s / learning_package 180s）与交付契约；结果仍通过 `GET /api/v2/learning-runs/{run_id}` 查询，队列专属审计事件为 `run.queued` / `run.claimed` / `run.cancelled` / `run.queue_exhausted`（落在 `agent_checkpoints`，`GET /{run_id}/events` 可读）。
+
+`POST /api/v2/learning-runs/{run_id}/cancel` 可取消队列来源且处于 `queued` / `running` 的 Run（409：`run_not_cancellable` / `run_not_queued`）；运行中取消会轮换执行租约，使原 Worker 的后续写入被拒绝，取消结果不被覆盖。
+
+崩溃恢复语义是 **at-least-once**：Worker 进程死亡后其租约过期，任何 Worker 的领取扫描都会重领并重新执行（`MAX_ATTEMPTS=2`，超限判 `failed("run_queue_attempts_exhausted")`）；死亡执行的新写入被轮换后的 execution 租约隔离。**不声称 exactly-once**。`/stream` 同步端点保留原语义不变；`/resume`、`/continue`、`/reconcile` 对队列来源的 Run 同样适用、行为不变。
+
 本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.9`（v2.9：重规划向 Planner 追加固定失效指令，属提示词变更；上一版 v2.8 是 QWEN-102 云端采集与本批契约评测所用版本）。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
 
 ## 细粒度引用契约

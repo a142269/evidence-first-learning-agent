@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（198）
+## 2. Python 测试文件矩阵（199）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -123,6 +123,7 @@
 | tests/a/test_resource_ownership.py |  |  |  | ✓ |  |
 | tests/a/test_run_lease_migration.py |  | E |  | s |  |
 | tests/a/test_run_leases.py | F | E |  | ✓ |  |
+| tests/a/test_run_queue.py |  |  |  | ✓ | QWEN-301 Run 队列/Worker（15 项：领取/心跳/取消/超时/重领/上限/杀进程恢复/API 兼容；离线 stub+subprocess 探针；未进 fast 清单） |
 | tests/a/test_run_usage_admin.py | F |  |  | ✓ | QWEN-104 新增（管理端只读用量/成本摘要，9 用例）；仅进 portable V2 contract suite，未扩 pg/enterprise 清单 |
 | tests/a/test_seed_extended.py |  |  |  | ✓ |  |
 | tests/a/test_smart_tutoring.py |  |  |  | ✓ |  |
@@ -636,3 +637,22 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
+
+## 28. QWEN-301 Run 队列/Worker 实测摘要（2026-10-24，分支 `qwen/wave3-queue`，零模型调用、零迁移）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 队列载体 | `agent_runs.status='queued'` + `metadata.queue` 簿记 | **零新增表/列**；行级原子 UPDATE 定胜者（`run_leases` 模式）；队列专属审计 `run.queued` / `run.claimed` / `run.cancelled` / `run.queue_exhausted` |
+| 状态机 | `run_queue.py` | `queued→running→终态`；`queued/running→cancelled`；`running/interrupted` 租约过期→重领（attempts+1）；`attempts>2` 判 `failed("run_queue_attempts_exhausted")`（新增队列专属稳定码） |
+| Worker | `run_worker.work_once/work_forever` | 与 `/stream` 同一图/运行时、同心跳（`run_leases.renew`）、同超时（60/180s）、同交付契约（`apply_settled_state`）；守卫 finish（fence + `status=='running'`，无 `run.reconciled` 污染）；不声称 exactly-once |
+| API | `POST /enqueue`、`POST /{run_id}/cancel` | 创建返回 `run_id+queued`；取消仅限队列来源且 `queued/running`（409 `run_not_cancellable` / `run_not_queued`）；既有 `/stream`/GET/`resume`/`continue`/`reconcile` 一字未改 |
+| 新文件单跑 | `tests/a/test_run_queue.py` | **15 passed / 0 failed / 19.88 s**，`NEW_FILE_EXIT=0` |
+| 稳定性 | 同文件连续 3 轮 | **15 / 15 / 15 passed**（20.16 / 19.55 / 20.29 s） |
+| 定向相关面 | 10 文件（run_leases/lifecycle/learning_runs_v2/reconciliation/learning_package/partial/observation/unfinished_resume/event_idempotency/checkpoint_lifecycle） | **137 passed / 0 failed / 84.79 s**，`RELATED_EXIT=0` |
+| **CI 同形子集（46 文件，清单未改）** | `ci.yml` 同形旗标 + 前置 `init_db()` | **553 passed / 1 skipped / 0 failed / 4 warnings / 343.87 s**，`CI46_EXIT=0`；`test_run_queue.py` 未纳入（沿用“CI 纳入另卡”先例） |
+| **全量** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen301/full2.db`（先 `init_db()`）+ `--basetemp output/qwen301/base-full2`） | **2439 passed / 0 failed / 20 skipped / 21 warnings / 1434.35 s (0:23:54)**，`PYTEST_EXIT=0`，199 个测试文件 / **2459 项**；首跑有 1 个 `test_demo_journey` 30 s 墙钟贴边抖动（30.07 s，单跑复验 5 passed，见台账 §31.3） |
+| 杀进程恢复 | `tests/helpers/run_queue_probe.py`（hang→kill→quick 两进程） | attempts 1→2、`run.claimed×2`、唯一 `run.completed`、API 可查询 |
+| 门 | ruff + `git diff --check` | **RUFF_EXIT=0（All checks passed）；DIFFCHECK_EXIT=0** |
+| 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动；PG 行锁使序号重试按设计不触发 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖；崩溃恢复为 **at-least-once**（重领重跑），不声称 exactly-once；`MAX_ATTEMPTS=2` 为基线常量待 Lead 裁定；未跑探针故不主张 `attempts=0` 探针值。

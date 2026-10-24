@@ -2283,3 +2283,20 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+### [2026-10-24 23:32] Qwen → Lead | [DONE] QWEN-301 Run 队列/Worker：创建执行解耦 + 租约/取消/超时 + 杀进程重领（零模型、零迁移、at-least-once）
+
+- 任务：QWEN-301（分支 `qwen/wave3-queue`，已 ff 合入 231b 并开工）
+- 结论：完成（未合并 main；零迁移；不声称 exactly-once；hold 等验收）
+- 一页方案（详见台账 §31.0）：队列态复用 `agent_runs.status='queued'` + `metadata.queue` 簿记，**不新增表/列**；领取=单条件原子 UPDATE（`run_leases` 模式）；Worker 用与 `/stream` 同一图/运行时/心跳/超时/交付契约；新增 `POST /enqueue`（创建即返回可查询 run id）与 `POST /{run_id}/cancel`（409 码稳定）；既有 `/stream`/GET/`resume`/`continue`/`reconcile` 一字未改。
+- 状态机：`queued→running→终态`；`queued/running→cancelled`（取消轮换 execution 租约，旧 Worker 被 fence）；`running/interrupted` 租约过期→重领（attempts+1，**at-least-once**）；`attempts>MAX_ATTEMPTS(=2)` 判 `failed("run_queue_attempts_exhausted")`（新增队列专属稳定码，基线常量待你裁定）。
+- 改动：`backend/app/agent_runtime/run_queue.py`（新，172 行）、`run_worker.py`（新，174 行）、`run_audit.py`（`+queue_run`）、`backend/app/api/v2/learning_runs.py`（`+enqueue/+cancel`）；`tests/a/test_run_queue.py`（新，15 项）、`tests/helpers/run_queue_probe.py`（跨进程探针）；文档：台账 §31、矩阵 §28、`LEARNING_PACKAGE_GUIDE`（队列执行小节）、`README`、`00-评委30秒导览`；`ci.yml`、`run_lifecycle.py`、`run_leases.py`、图逻辑、前端/UI 一字未动。
+- 测试覆盖：创建/执行解耦、双 Worker 不双领、心跳（renew≥3）、超时（`run_timeout`）、排队取消、运行中取消（Worker 被 fence，outcome=cancelled）、409 稳定、租约过期重领（旧执行被 fence）、attempts 上限、legacy interrupted 不被劫持、活僵尸无法交付、**杀进程恢复（subprocess hang→kill→第二个进程重领并完成，attempts=2、run.claimed×2、唯一 run.completed）**、队列 package run 到人审后教师 `/resume` 完成（API 兼容）。
+- 测试（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，零计费）：新文件单跑 **15 passed / 19.88 s**；稳定性 3 轮 **15/15/15**；相关面 10 文件 **137 passed / 84.79 s**；CI 46 文件同形 **553 passed / 1 skipped / 343.87 s**（清单未动，`test_run_queue.py` 未纳入——沿用 CI 纳入另卡先例）；全量 **2439 passed / 0 failed / 20 skipped / 1434.35 s**（199 文件 / 2459 项 = 2424+15），`PYTEST_EXIT=0`；门：ruff F821/F823/E9 + `git diff --check` 全 exit 0。日志 `output/qwen301/`。
+- 如实登记：① 全量首跑有 1 个 `test_demo_journey` 30 s 墙钟贴边抖动（30.07 s；单跑复验第一次 35.5 s 冷缓存仍超、第二次 5 passed），第二轮全量复跑全绿，日志归档未删——判定为预算贴边、非产品回归（本卡不触 demo journey 路径）；② 开发中两次真实排错（claim 的 DB 时钟取值两次改错型：TypeError→ArgumentError→`select(db_now)`；SQLite 无行锁导致取消者与 Worker 抢事件序号撞 `uq_checkpoint_run_sequence`，以有界重试收口后 3 轮稳定），详见台账 §31.4。
+- 证据等级：offline（零计费模型调用、未读 `.env`、未装依赖、未跑探针不主张 `attempts=0`；未跑 GitHub `quality` 回执与 PG `enterprise-contract`——PG 行锁使序号重试按设计不触发）。
+- 未做/风险：at-least-once 意味着崩溃恢复会重跑（模型侧由图内既有预算上限约束）；领取扫描无游标分页（海量 legacy running 行时基线实现可能需翻页）；`test_run_queue.py` 未进 CI 快清单（可另开 301b）。
+- 下一步：hold 等验收；未动 311。
+- 给 Lead 的问题：`MAX_ATTEMPTS=2` 与 `run_queue_attempts_exhausted` 新码请你裁定是否接受；若要 301b（CI 纳入）我可以直接开。
+
+— Qwen

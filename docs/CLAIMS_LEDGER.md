@@ -1242,3 +1242,87 @@ Lead §4（`[2026-10-24 21:45]`）派工逐字：「把 `tests/a/test_observatio
 - **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；全量与 PG 面未重跑（本卡零产品/零用例项改动，记录数不变）。
 - 随后开工 QWEN-301（`qwen/wave3-queue`）。
 - 证据等级：**offline**。
+
+## 31. QWEN-301 Run 队列/Worker：创建与执行解耦、租约、取消/超时与崩溃恢复（2026-10-24，分支 `qwen/wave3-queue`，零模型调用）
+
+Lead §4（`[2026-10-24 21:45]`）派工逐字：「Run 创建与执行解耦；Worker 租约领取/心跳/取消/超时；崩溃后租约过期可重领；创建返回可查询 ID、API 兼容；**不声称 exactly-once**；测试覆盖跨进程领取/心跳/取消/超时/杀进程恢复；零模型、不碰 UI。」
+
+### 31.0 一页方案（实现前定稿的架构选择）
+
+- **队列载体**：**不新增表/列、零迁移**。入队态就是 `agent_runs.status='queued'`，队列簿记（`enqueued_at` / `attempts` / `worker_id` / `claimed_at` / `retired_by`）放在既有 `metadata` JSON 的 `queue` 键里。理由：复用 `run_leases` 已验证的行级原子 UPDATE 模式，避免迁移风险；`agent_checkpoints` 上既有的 `uq_checkpoint_run_sequence (run_id, sequence)` 唯一索引天然提供事件序号防重。
+- **状态机**（全部持久化在 run 行上）：
+  `queued ─claim→ running ─finish→ completed / partially_completed / awaiting_approval / failed`；
+  `queued ─cancel→ cancelled`；`running ─cancel（同事务轮换 execution_id、清租约）→ cancelled`（旧 Worker 的下一次 fenced 写失败，不覆盖取消结果）；
+  `running/interrupted 且租约过期 ─claim→ running`（at-least-once 重领，`attempts+1`）；
+  `attempts > MAX_ATTEMPTS(=2)` 的那次领取**不再执行**，直接判 `failed("run_queue_attempts_exhausted")`（新增的队列专属稳定码，不触碰既有错误面）。
+- **Worker**：`run_worker.work_once / work_forever`。领取（`run_queue.claim_next_run`）→ 用与 `/stream` **同一**运行时（`learning_runs._graph / _package_graph`，同 `ingestion.py` 复用既有管道的先例）执行 → `run_leases.renew` 心跳（读调用点属性，可测试注入）→ `asyncio.wait_for` 超时（answer 60s / package 180s，同 `/stream`）→ `run_audit.log_retrieval` → `run_lifecycle.apply_settled_state` → 有守卫的 finish（fence + `status=='running'`）。**不**复用 `finish_run(expected_status=...)`（它固定写 `run.reconciled` 审计行，语义属 reconcile）。
+- **API**：新增 `POST /api/v2/learning-runs/enqueue`（返回 `run_id` + `status='queued'`，不执行；package 模式同样要求登录、builder 可用）与 `POST /{run_id}/cancel`（仅 `queued/running` 且**队列来源**的 run 可取消；`409 run_not_cancellable` / `409 run_not_queued`）。既有 `/stream`（保留同步语义，同 ingestion 同步端点先例）、`GET /{run_id}`、`/resume`、`/continue`、`/reconcile` 一字未改。
+- **语义**：**at-least-once**。崩溃后任一 Worker 的领取扫描会重领（`queued`、`running` 租约过期、`interrupted` 三类候选；只认队列来源，不劫持 legacy run 的 `/continue`+reconcile 路径）；死亡执行的新写被轮换后的 `execution_id` fence 拒绝。不声称 exactly-once。
+- **SQLite 并发细节**：SQLite 的 `SELECT ... FOR UPDATE` 不锁行，取消者/僵尸 Worker 与另一写者可能抢同一事件序号，输家撞 `uq_checkpoint_run_sequence`（IntegrityError）——`run_queue._safe_write_retrying` 对 IntegrityError 有界重试 3 次（PG 有真行锁，重试无害）；这是本轮实测发现的真问题，已按最小修复收口。
+
+### 31.1 改动（3 个产品/运行时文件 + 1 个新测试文件 + 1 个测试探针 + 5 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `backend/app/agent_runtime/run_queue.py`（新，172 行） | 队列状态机：`claim_next_run`（单条件 UPDATE 定胜者、DB 时钟 `session.scalar(select(db_now))` 一次取值、`attempts` 赢取后从新鲜 metadata 自增）、`cancel_run`（queued/running 两路、running 路轮换 `execution_id`）、`_retire_exhausted`（同事务判失败 + `run.queue_exhausted` 审计）、`is_queued_run` / `queue_origin`（队列来源判定）、`_safe_write_retrying`（SQLite 序号竞争重试）；常量 `MAX_ATTEMPTS=2`、`ATTEMPTS_EXHAUSTED="run_queue_attempts_exhausted"`、`QUEUE_STATUSES` | — |
+| `backend/app/agent_runtime/run_worker.py`（新，174 行） | `work_once`（claim→执行→settle→守卫 finish，返回稳定 outcome：`idle`/终态 status/`cancelled`/`lost_lease`/`missing`/`persistence_unavailable`）、`work_forever`（持久化故障睡眠重试不退出）、`_execute_claimed`（与 `/stream` 同构：history/画像加载、on_event 落 `agent_checkpoints`、心跳任务 + `asyncio.wait_for` 超时；心跳失败传播并取消图任务）、`_finish_guarded`（fence + `status=='running'` 守卫 + 终态事件映射，无 `run.reconciled` 污染） | — |
+| `backend/app/agent_runtime/run_audit.py` | 新增 `queue_run(...)`：与 `start_run` 同构的行，但 `status='queued'`、无租约、初始审计 `run.queued`；`start_run`/既有函数一字未动 | `:85` |
+| `backend/app/api/v2/learning_runs.py` | 新增 `POST /enqueue`（401/503 语义同 `/stream`；返回 `{run_id, status:'queued', session_id, workflow_version}`）与 `POST /{run_id}/cancel`（409 码稳定）；新增 `import time`、`run_queue`；既有端点与 `/stream` 行为一字未动 | `:270`、`:306` |
+| `tests/a/test_run_queue.py`（新，**15 项**） | 见 31.2 | — |
+| `tests/helpers/run_queue_probe.py`（新） | 跨进程 Worker 探针：argv `sqlite路径 mode(hang|quick)`，import 前 set `DATABASE_URL`，离线桩运行时，禁外联（`httpx`/`requests` patch），stdout 输出 JSON outcome | — |
+| `docs/CLAIMS_LEDGER.md` | 本节 §31（追加） | — |
+| `docs/TEST_MATRIX.md` | 文件矩阵新增一行（`test_run_queue.py`，N 列 ✓、未进 fast）+ 新增 §28 | — |
+| `docs/LEARNING_PACKAGE_GUIDE.md` | 新增「队列执行（QWEN-301）」小节：enqueue/cancel 契约、at-least-once 语义、`/stream` 不变 | — |
+| `README.md` | `:56` 全量行、`:58` CI 行（CI 清单未动、计数不变，注明 301 字节上复跑） | `:56`、`:58` |
+| `docs/00-评委30秒导览.md` | 测试用例行更新 | `:106` |
+| `docs/QWEN_LEAD_DIALOGUE.md` | §4 末尾追加 `[DONE]`；§0/§2/§3 未动 | — |
+
+**未改**：`run_lifecycle.py`、`run_leases.py`、图/学习包逻辑、`ci.yml`、迁移/表结构（**零迁移**）、前端/UI。`WORKFLOW_VERSION` 与 `PROMPT_VERSION` 未动（无图状态格式变更、无提示词变更）。
+
+### 31.2 测试覆盖（15 项，全部离线；scripted/stub 运行时 + 隔离 SQLite + 全新 basetemp）
+
+| 用例 | 覆盖点 |
+|---|---|
+| `test_enqueue_returns_queryable_queued_run` | 创建/执行解耦：enqueue 只落 `queued` 行（无租约、无 `run.started`、有 `run.queued`），GET 可查询，`/stream` 同 app 内仍正常 |
+| `test_enqueue_package_mode_requires_login` | enqueue 的 401 错误面与 `/stream` 一致 |
+| `test_worker_claims_and_completes_run` | 正常领取→执行→交付：`run.claimed(attempts=1)`、retrieval 审计行、`run.completed`、`success_count=1`、无 `run.reconciled` 污染、二次 work_once `idle` |
+| `test_two_workers_never_double_claim` | 双线程并发领取：胜者 completed、败者 idle、attempts==1 |
+| `test_heartbeat_renews_lease_during_execution` | 心跳：`run_leases.HEARTBEAT_SECONDS` 注入 0.05s，执行 0.5s，renew ≥3 次，完成后状态 completed |
+| `test_timeout_marks_run_failed` | 超时：`timeout_seconds=0.2` + 5s 慢生成 → `failed` + `{"error":"run_timeout"}`（复用 `/stream` 的既有码）+ 租约释放 |
+| `test_cancel_queued_run_is_never_claimed` | 排队取消：`cancelled` 行永不被领取、result `{"cancelled": True}`、`run.cancelled` 审计 |
+| `test_cancel_running_run_fences_the_worker` | 运行中取消：取消后 Worker 的检索日志/finish 全被 fence，outcome=`cancelled`，终态保持 cancelled 且不被 Worker 覆盖 |
+| `test_cancel_conflicts_are_stable` | 完成态取消 409 `run_not_cancellable`；legacy（`/stream` 形状）running run 取消 409 `run_not_queued` |
+| `test_expired_lease_can_be_reclaimed_by_another_worker` | 租约过期重领：attempts 1→2、新 `execution_id`；旧执行的 `renew` 被 fence 拒绝（RunStateConflict），新执行可续 |
+| `test_attempts_exhausted_fails_the_run` | 上限：第 3 次领取不再执行，`failed("run_queue_attempts_exhausted")` + `run.queue_exhausted(attempts=3)` 审计 |
+| `test_legacy_interrupted_run_is_not_reclaimed` | 不劫持：legacy interrupted run 不被队列领取，`/continue`+reconcile 语义保留 |
+| `test_live_zombie_worker_cannot_publish_after_reclaim` | 僵尸隔离：被重领后活着的旧 Worker 无法交付（outcome=`lost_lease`），最终由新 Worker 唯一 `run.completed`，attempts==2 |
+| `test_killed_worker_process_is_reclaimed_and_completed` | **杀进程恢复（跨进程）**：subprocess 探针 hang→领取→父进程 `kill()`→强制租约过期→第二个探针进程重领并完成；attempts==2、`run.claimed×2`（probe-hang→probe-quick）、唯一 `run.completed`、API 可查询 |
+| `test_queued_package_run_reaches_review_and_teacher_resume` | API 兼容：队列来源的 package run 经 Worker 到 `awaiting_approval`（学生视图 `review_required`、教师视图 approval 草稿），教师 `/resume` 原端点完成交付——`/resume` 对队列 run 零改动可用 |
+
+### 31.3 实测（offline，零计费模型调用；日志均含 `*_EXIT=`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新文件单跑 | **15 passed / 0 failed / 19.88 s**，`NEW_FILE_EXIT=0` | `output/qwen301/logs/new-file.txt` |
+| 稳定性复跑 | 同文件连续 3 轮 **15 / 15 / 15 passed**（20.16 s / 19.55 s / 20.29 s） | `output/qwen301/`（base-stab1..3） |
+| 定向相关面（10 文件：run_leases/lifecycle/learning_runs_v2/reconciliation/learning_package/partial/observation/unfinished_resume/event_idempotency/checkpoint_lifecycle） | **137 passed / 0 failed / 84.79 s**，`RELATED_EXIT=0` | `output/qwen301/logs/related.txt` |
+| **CI 同形子集（46 文件，清单未改）** | **553 passed / 1 skipped / 0 failed / 4 warnings / 343.87 s**，`CI46_EXIT=0`；唯一 skip 仍 `test_auth_restart.py:18`；`test_run_queue.py` 未纳入（沿用“CI 纳入另卡”先例） | `output/qwen301/logs/ci46.txt` |
+| 全量 `pytest tests/` | **2439 passed / 0 failed / 20 skipped / 21 warnings / 1434.35 s (0:23:54)**，`PYTEST_EXIT=0`，199 个测试文件 / **2459 项**（= 231b 基线 2424/0/20 + 本卡 15 项） | `output/qwen301/full-suite.txt`、`full-suite-exit.txt` |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` + `git diff --check` → **RUFF_EXIT=0（All checks passed）；DIFFCHECK_EXIT=0** | `output/qwen301/logs/ruff.txt` |
+| 全量首跑（如实登记） | **1 failed（`test_demo_journey` 墙钟预算 30.07 s > 30 s）/ 2438 passed / 20 skipped / 1691.52 s**；单跑复验两次：首次 35.5 s 仍超（冷缓存）、第二次 **5 passed / 30.27 s**；第二轮全量复跑（上表）全绿。判定为 30 s 预算贴边抖动，非产品回归（本卡不触 demo journey 路径）；日志未删 | `output/qwen301/full-suite-run1-journeyflake.txt`、`logs/journey-standalone.txt`、`logs/journey-standalone2.txt` |
+
+### 31.4 开发中的两次真实排错（如实登记）
+
+1. **`claim_next_run` 的 Python/SQL 时钟混用**：候选过滤在 Python 侧拿 ORM float 与 `db_now` 的 SQL 表达式比较 → `TypeError`；先误改成 `session.scalar(db_now(session))`（`ArgumentError: Executable SQL expected, got Cast`），最终以 `session.scalar(select(db_now(session)))` 一次取 DB 时钟定值修复。scratch 复现脚本 `output/qwen301/repro.py` 留档。
+2. **SQLite 事件序号竞争（真问题）**：全文件跑序下 `test_cancel_running` 间歇 503，captured log 显示 `IntegrityError`——SQLite `FOR UPDATE` 不锁行，取消者与执行中 Worker 并发 `_next_event_sequence` 抢同一 `(run_id, sequence)`。以 `_safe_write_retrying`（仅对 IntegrityError 有界重试 3 次）收口，连续 3 轮全文件复跑稳定。另发现测试自造的 legacy 行缺 `request` 元数据会触发 `load_run` KeyError→503，属测试准备错误，已在测试内补齐真实形状。
+
+### 31.5 边界与未做
+
+- **at-least-once**：崩溃恢复=重领重跑，同一次请求可能被执行多次（模型侧预算由图内 `MAX_MODEL_CALLS` 等既有上限约束）；**不声称 exactly-once**。
+- `MAX_ATTEMPTS=2`（执行尝试上限 2 次，第 3 次领取判失败）是**基线常量**，最终阈值待 Lead 裁定；`run_queue_attempts_exhausted` 是本卡新增的队列专属稳定码，未触碰任何既有错误码。
+- 领取扫描按 `created_at` 排序、单轮最多看 `limit*3` 行，海量 legacy running/interrupted run 混入时可能需要翻页——基线实现按当前规模足够，未做游标分页。
+- Worker 执行历史在领取时加载（`before=record.started_at`），与 `/stream` 的创建时加载语义一致；教师撤课等运行中授权变化由工具层的既有实时校验兜底。
+- **未把 `test_run_queue.py` 加入 `ci.yml` 快清单**（沿用“CI 纳入另卡”先例）；未跑 GitHub `quality` 回执与 PG `enterprise-contract`（本卡零 PG 面改动；PG 侧 `FOR UPDATE` 行锁使序号重试按设计退化为不触发）。
+- `expire_batch` 启动清扫与队列重领并存：queue 来源的 expired run 被扫成 `interrupted` 后仍是队列候选，不丢任务。
+- 未动 QWEN-311；完成 301 即停，hold 等验收。
+- 证据等级：**offline**。
