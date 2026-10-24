@@ -1091,3 +1091,64 @@ Lead §4（`[2026-10-24 16:15]`，提交 `1ffc282`）先验收 **QWEN-211c**（�
 - **文档脚本的首跑在写完文件之后才炸**，如实登记：`apply_docs_221.py` 第一次跑时，前四处改动（台账 §27、矩阵 §24、README `:56`/`:58`）都已落盘，到「评委导览计数格」那条 `assert old_body in after[index]` 才失败——那条断言只该用在「保留同格历史」的格子上，计数格是**故意**整体替换的。处置：五份文档全部从改动前的备份（`tmp/docs-before/`，md5 逐一比对一致、`git status --short` 回到只有 5 个 backend/tests 条目）恢复后重跑，脚本把该断言改为仅 `keep_history` 时生效；恢复过程中我自己在仓库根留下了 4 份同名副本（一条写错的 `cp` 列表），已删除、未进任何提交。
 - 计数一律按 pytest summary 行取数；warnings 数随轮次波动不作结论（本轮 CI 子集 4 warnings，与 211c 同数）。
 - 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执与 PG 层不属本卡主张。
+
+## 28. QWEN-221b MCP scope 角色回归 + 权限测试进 CI 快清单（2026-10-24，分支 `qwen/wave2-tools`，零模型调用、产品零改动）
+
+**派工与撤回（两版，按后一版执行）**：Lead 2026-10-24 18:30 §4 先派 221b 要求把 `backend/app/mcp_readonly.py` 的 scope role 由 `planner` 改成 `tutor`，并补测试 + CI 44→45；同日 19:35 `[CORRECTION]` **撤回角色修改**：「我上一版 §3-78 读漏了 `backend/app/mcp_readonly.py:56-64`：`search_course_evidence` **已经**用 `tutor_scope` 调用；`planner` scope 只用于 `get_learning_profile`/`get_recent_mistakes`/`get_prerequisites`。所以不存在『MCP 搜索稳定 denied』的 bug，把全局 scope role 改成 tutor 反而会弄坏 planner 的三个工具。」更正版范围逐字：「不改产品权限/角色，只做两件事：① 补 fake-broker/ast 回归测试，证明 MCP `search_course_evidence` 用 `tutor` scope、profile/mistakes/prereqs 用 `planner` scope（本机无 `mcp` 时保持 `importorskip`）；② 把 `tests/a/test_tool_registry_permissions.py` 加入 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/TEST_MATRIX；零模型、不碰 API/UI；完成后 `[DONE]`。随后 **231**。」本卡从 `qwen/wave2-tools` 起点开工（`main`=`ec29cf4`、分支 HEAD=`9c926ce`，即 Lead 那条 `docs(collab)` 更正提交；`git diff --stat main...HEAD` 只有该文档）。
+
+### 28.1 改动（2 个代码/CI 文件 + 4 个文档文件；产品 `mcp_readonly.py` 零改动）
+
+| 文件 | 改动 | 锚点与字节 |
+|---|---|---|
+| `tests/a/test_tool_registry_permissions.py` | 用例项 **18 → 18（0 新增）**：把原「MCP 适配器暴露的名字/入参名」用例扩成 MCP scope 角色回归。**静态半**（`ast`，不 import 产品模块）：`_scope()` 内 `ToolContext(..., role=...)` 字面量恒 `planner`、`search_course_evidence` 内恒 `tutor`，search 把 `tutor_scope` 交给 `broker.call(..., "search_course_evidence", ...)`，三个 planner 工具各 `_call("<自身工具名>", ...)`。**动态半**：`sys.modules` 注入假 `mcp`/`mcp.server` 后 `importlib` 导入适配器（保留其 import 期 `RuntimeError` 依赖检查），用录制 broker 跑全部四个工具，`(role, tool)` 序列 = `("tutor","search_course_evidence")` + `("planner","get_learning_profile"/"get_recent_mistakes"/"get_prerequisites")`，run/user/course 三标识全程一致、`knowledge_point_id` 原样转发；并断言 `decide_access("tutor","search_course_evidence").allowed is True` / `planner` 为 `False`。假 `mcp` 只在用例内存在（`monkeypatch.setitem` 撤销、适配器模块 `sys.modules` 条目显式还原），因此全量跑序中 `test_mcp_readonly_protocol.py` 的 `importorskip("mcp")` 行为不变 | 506 行、纯 CRLF（孤立 LF/CR 各 0）、md5 `b3490549e9d41d129fffdc6109b215e7`、`git diff --numstat` **119 / −8** |
+| `.github/workflows/ci.yml` | `quality` job portable 快清单 **44 → 45 个文件**：在 `tests/a/test_learning_package_replan.py` 后加 `tests/a/test_tool_registry_permissions.py`（新行 `:217`，旗标行 `--no-cov --benchmark-disable -q` 顺延 `:218`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍保留 | 346 行、纯 CRLF、md5 `13d24bab8fe451d3121de6b4efc4ad20`、`git diff --numstat` **1 / 0** |
+| `README.md` | `:58` CI 行换成本卡 45 文件 **539/1** 记录、221 那轮降为同格「再前」；`:56` 全量行换成本卡最终字节复跑记录、221 那轮降为同格「再前」 | `:56`、`:58` |
+| `docs/TEST_MATRIX.md` | 新增 §25（**追加**，不回改 §1–§24） | — |
+| `docs/CLAIMS_LEDGER.md` | 新增本节 §28（**追加**，不回改 §1–§27） | — |
+| `docs/QWEN_LEAD_DIALOGUE.md` | §4 末尾追加本卡 `[DONE]`；§0/§2/§3 **未动**（Lead 维护） | — |
+
+**本卡零改动**：`backend/app/mcp_readonly.py` —— 70 行、md5 `6eea05e5fef4622ae314f9e1e1654e03`（= §27.1 记录的 221 交付值；`git diff HEAD -- backend/app/mcp_readonly.py` 为空；反向验证脚本每次破坏后都按字节恢复并复核 md5，见 28.4）。上述「与 HEAD 相同」沿用 §27.1 的三条判据（工作树 md5 = 前轮记录值、`git diff` 为空、EOL 归一化后与 `git show HEAD:` 同 blob），本机存 LF / 检出 CRLF 的差异不再误读。
+
+### 28.2 角色事实与钉法（为什么两条腿都要）
+
+`mcp_readonly.py` 的现状（**正确**，不改）：`_scope()`（`:19-25`）从环境变量取 run/user/course 并固定 `role="planner"`，服务 `get_learning_profile`/`get_recent_mistakes`/`get_prerequisites` 三个只读工具；`search_course_evidence`（`:56-64`）在函数内另建 `ToolContext(role="tutor")` 再调 broker——因为目录矩阵里 `search_course_evidence` 的允许角色只有 `tutor`，而 `planner` 的权限键只有画像/错题/先修。
+
+- **只用 ast 不够**：ast 钉住「源码今天这样写」，但挡不住未来把 `tutor_scope` 建成后又被误传成 `scope` 之类的运行时接错。
+- **只用假 broker 不够**：假 broker 钉住「运行时实际递出去的角色」，但如果导入期 `mcp` 缺失会整条用例不可用；而且不解释「为什么必须是 tutor」。
+- 所以本卡两条腿都上：假 `mcp` 注入让动态半在本机无 SDK 时也能跑；`decide_access` 的断言把「tutor 该放行 / planner 该拒绝」的矩阵依据钉在同一处；ast 半则在 import 出问题前就能给出定位。**无 `mcp` 的既有行为保留**：`test_mcp_readonly_protocol.py` 不动，仍整文件 `importorskip`（本机 `SKIPPED ... could not import 'mcp'`），本卡不装依赖。
+
+### 28.3 实测（offline，零计费模型调用；日志均含 `CMD:` 与 `PYTEST_EXIT=`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 本卡文件单跑 | **18 passed / 0 failed / 1.04 s**，`PYTEST_EXIT=0` | `logs/target-permissions.txt` |
+| 定向 4 文件（本卡 + 两个工具面 + MCP 协议） | **32 passed / 1 skipped / 2.67 s**（唯一 skip = `test_mcp_readonly_protocol.py:11` 的 `mcp` `importorskip`） | `logs/target-tools-bundle.txt` |
+| **CI 同形子集（45 文件）** | **539 passed / 1 skipped / 0 failed / 4 warnings / 121.79 s**，旗标按 `ci.yml:218` 同形 `--no-cov --benchmark-disable -q -rs` + 前置 `init_db()`；= 44 文件 521 + 该文件既有 18，与 Lead 预计 **539/1** 逐数一致；唯一 skip = `test_auth_restart.py:18` | `logs/ci45.txt`、`logs/portable-list.txt`、`logs/ci-list-inspect.txt` |
+| **全量（记录数）** | **2410 passed / 0 failed / 20 skipped / 20 warnings / 893.78 s / `PYTEST_EXIT=0`**，197 个测试文件 / **2430 项**；与 221 记录 2410/0/20 **逐项相同**（0 新增用例项、产品零改动），warnings 数随轮次波动（221 记录 23 条、本轮 20 条）不作结论 | `logs/full-suite.txt` |
+| 集合口径 | `--collect-only -q` = **2429** node id + 收集期 1 条 `mcp` `importorskip` = **2430 项**（14.90 s），与 221 同口径 | `logs/collect-only.txt` |
+| 清单机械重取 | `inspect_ci_list_221b.py` 用 `yaml.safe_load` 读 `ci.yml`：portable **45** 条、无重复、0 缺失、末位即本卡文件；`enterprise-contract` **38**；MCP 协议步骤仍在 | `logs/ci-list-inspect.txt`（`CI_LIST_OK=1`） |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed!**（exit 0）、`git diff --check` 干净、CI 前置 `init_db()` INITDB_EXIT=0 | `logs/gates.txt` |
+| 字节 | 测试 506 行 `b3490549e9d41d129fffdc6109b215e7`、`ci.yml` 346 行 `13d24bab8fe451d3121de6b4efc4ad20`，均纯 CRLF 孤立 LF/CR 各 0；`mcp_readonly.py` md5 未变 | — |
+
+### 28.4 反向验证（4 组，全部 `RED_OK`，破坏后按字节恢复）
+
+脚本 `output/qwen221b/reverse_proofs_221b.py`（未进仓库，`output/` 已被 `.gitignore` 忽略）：每组只改 `mcp_readonly.py` 一处，跑本卡测试文件，记录 summary，再从备份按字节恢复并断言 md5 回到 `6eea05e5fef4622ae314f9e1e1654e03`。
+
+| 组 | 单层破坏 | 结果 |
+|---|---|---|
+| rp01 | `_scope` 的 `role="planner"` → `"tutor"` | **1 failed / 17 passed**（`RED_OK=1`） |
+| rp02 | search 的 `role="tutor"` → `"planner"` | **1 failed / 17 passed** |
+| rp03 | search 改把 base `scope` 交给 broker（而非 `tutor_scope`） | **1 failed / 17 passed** |
+| rp04 | `get_recent_mistakes` 转发成 `get_learning_profile` | **1 failed / 17 passed** |
+
+收尾：`RESTORED_MD5=6eea05e5fef4622ae314f9e1e1654e03 MATCH=1`、`GIT_DIFF_EMPTY=1`、`ALL_PROOFS_VALID=1`（`logs/reverse-proofs.txt`）。
+
+### 28.5 边界与未做
+
+- **539 的口径**：Lead 预期 539 = 44 文件 521 + 本卡文件既有 18。本卡按 107b/107c 的既有先例**扩展既有用例、不新增用例项**（否则 45 文件清单会变成 539 + 新增数），所以 18 → 18、清单仍是 539/1。若 Lead 希望 MCP 角色回归是独立用例项，可另开小卡（会让 CI 计数再 +N）。
+- **未挂 fail-closed socket 探针**：本轮只显式设 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none`、用隔离 SQLite 与全新 `--basetemp`、未读 `.env`、未新增任何网络依赖；因此**不主张** `outbound attempts=0 unique_hosts=0` 探针值（前几卡的探针脚本未随仓库管理）。零计费仍由离线开关与改动面（测试 + CI 清单 + 文档）共同支撑。
+- **未跑 GitHub `quality` job 真实回执**（本机无 `gh`，属 remote 证据、由 Lead 判读）；**未跑 PG `enterprise-contract` 38 文件**（本卡零 PG 面改动，同 §22–§27 口径）。
+- **§2 任务板第 75 行仍是撤回前的旧描述**（「`mcp_readonly.py` 角色 planner→tutor」），与 §3-78/79 更正及实际代码矛盾。本卡无权改 §0/§2/§3（Lead 维护），已在 `[DONE]` 中提请 Lead 更新；本卡落地的是更正版范围。
+- **起点事实按 git 记录**：开工时 `main`=`ec29cf4`、`qwen/wave2-tools`=`9c926ce`（比 `main` 多一条 Lead 的 `docs(collab)` 更正提交；`git diff --stat main...HEAD` 只有 `docs/QWEN_LEAD_DIALOGUE.md`），working tree clean。Lead 口述的「main = 9c926ce」与 `git log` 不符，以代码事实为准。
+- **未动 QWEN-231**：按指令完成即停、hold 等验收。
+- 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执与 PG 层不属本卡主张。

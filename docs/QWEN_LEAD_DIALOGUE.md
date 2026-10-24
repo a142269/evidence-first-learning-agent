@@ -2182,3 +2182,17 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-24 19:58] Qwen → Lead | [DONE] QWEN-221b（更正版）：不改 MCP 角色，补 4 工具 scope 角色回归 + 权限测试进 CI 45 文件，同形 **539/1**、全量 2410/0/20
+
+- 任务：QWEN-221b（更正版；按你 19:35 `[CORRECTION]` 执行，产品角色未改）
+- 结论：完成（未碰 `main`、未合并、未开 231，hold 等验收）
+- 改动：6 文件 —— `tests/a/test_tool_registry_permissions.py`（MCP 用例扩展：`ast` 静态 + 假 `mcp` 注入的录制 broker 动态，钉住 search 用 `tutor`、profile/mistakes/prereqs 用 `planner`；**18 → 18，0 新增用例项**，沿用 107b/107c 先例）、`.github/workflows/ci.yml`（快清单 44 → 45）、`README.md`（`:56`/`:58`）、`docs/TEST_MATRIX.md`（§25）、`docs/CLAIMS_LEDGER.md`（§28）、`docs/QWEN_LEAD_DIALOGUE.md`（本节）；`backend/app/mcp_readonly.py` 一字未动（md5 `6eea05e5fef4622ae314f9e1e1654e03` 仍 = 221 交付值）
+- 测试：① 定向 4 文件（本卡 + `test_v2_learning_tools` + `test_agent_tools` + `test_mcp_readonly_protocol`）**32 passed / 1 skipped / 2.67 s**（唯一 skip = `test_mcp_readonly_protocol.py:11` 的 `mcp` `importorskip`，既有行为保留）；② 按 `ci.yml:218` 同形旗标 `--no-cov --benchmark-disable -q -rs` + 前置 `init_db()` 跑 **45 文件**：**539 passed / 1 skipped / 4 warnings / 121.79 s，PYTEST_EXIT=0**（= 44 文件的 521 + 该文件既有 18，与你预计 **539/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18`）；③ 全量 `pytest tests/`：**2410 passed / 0 failed / 20 skipped / 893.78 s**（197 文件 / 2430 项；与 221 记录逐项相同，本轮 0 新增用例项）；④ `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed、`git diff --check` 干净。环境一律 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 隔离 SQLite + 全新 `--basetemp output/qwen221b/*`
+- 证据等级：offline（零计费模型调用、未读 `.env`；**本轮未挂 fail-closed socket 探针**，故不主张 `outbound attempts=0` 探针值）
+- 反向验证：4 组单层破坏 `mcp_readonly.py`（`_scope` planner→tutor / search tutor→planner / search 改交 base scope / planner 工具转发错名），每组 **1 failed / 17 passed**、全部 `RED_OK`；按字节恢复后 md5 一致、`git diff -- backend/app/mcp_readonly.py` 为空（`ALL_PROOFS_VALID=1`）
+- 未验证 / 风险：GitHub `quality` 真实回执未跑（remote 证据、由你判读）；PG `enterprise-contract` 38 文件未跑（本卡零 PG 面改动）；**起点事实更正**：开工时 `main`=`ec29cf4`、`qwen/wave2-tools`=`9c926ce`（比 main 多一条你那条 `docs(collab)` 更正提交；`git diff --stat main...HEAD` 只有该文档），不是你说的 `main = 9c926ce`——按 git 事实记录，不影响本卡
+- 下一步：hold 等验收；验收后再开 **231**
+- 给 Lead 的问题：**§2 任务板第 75 行仍是撤回前的旧描述**（「`mcp_readonly.py` 角色 planner→tutor」），与 §3-78/79 更正及实际代码矛盾；我无权改 §0/§2/§3，请你更新。另：539 是按「扩展现有用例、不新增用例项」实现的（否则 45 文件清单会变成 539 + 新增数）；若你要 MCP 角色回归成为独立用例项，另开小卡即可（CI 计数会再 +N）。
+
+— Qwen
+
