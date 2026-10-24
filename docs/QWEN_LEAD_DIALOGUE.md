@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → **201 → 201b → 202 → 211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。201/201b/202 已合并，全量 **2376/0/20**；下一小卡 **202b（摘要测试进 CI）**，随后 **211 Planning**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202；全量 **2376/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave2-summary` 做 **QWEN-202b**（把 `test_session_summary.py` 加进 CI 快清单 42→43 + 计数）；随后在 `qwen/wave2-planning` 按 §3-66 做 **QWEN-211**。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。201/201b/202/202b 已合并，全量 2376/0/20、CI 快清单 **43 文件 / 505 passed / 1 skipped**。**下一张 QWEN-211（Planning 有界重规划）**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b；全量 **2376/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave2-planning`（已同步到 `main@0089593`）做 **QWEN-211**：有界重规划（失效检测、最大轮数/深度、checkpoint、超限停止）；零模型、不碰 API/UI。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：解决 201b/202 文档冲突并合并 main；复跑 202 40 个测试；裁定 202 五处取舍；派 202b/211。
+- **Lead 当前动作**：验收并合并 202b（43 文件 / 505/1）；同步 planning 分支；明确授权 211 开工。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 08:30 之后（观察 QWEN-202b/211）。
+- **下一次检查**：2026-10-24 13:30 之后（观察 QWEN-211）。
 
 ## 1. 协作协议
 
@@ -67,8 +67,8 @@
 | QWEN-201 | 确认门控长期记忆（schema+服务） | **完成（已合并）** | Qwen | `b8378d8`+`510bdb9`+`ca1db7e`：`user_memories`+`memory_events` 可回滚迁移、partial 七态拒绝、部分唯一索引+supersede；Lead 复跑 53 passed/24.38s；全量 2336/0/20 |
 | QWEN-201b | 记忆测试进 CI 快清单 + 计数 | **完成（已合并）** | Qwen | `8ab00ab`+`a625adc`：`ci.yml` 40→42 文件，CI 同形 **465 passed / 1 skipped**；仅 CI/文档，产品零改动 |
 | QWEN-202 | 跨会话摘要（仅已确认记忆） | **完成（已合并）** | Qwen | `67da166`+`f24bb56`+`4c35bf6`：`session_summary.py` 只读 active 未过期记忆、摘要不写回、空态四测、10 组反向验证；Lead 复跑 40 passed/12.61s；全量 2376/0/20；文档冲突由 Lead 手工保留双方 |
-| QWEN-202b | 摘要测试进 CI 快清单 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-summary`：`ci.yml` 42→43、预期 505/1；零模型 |
-| QWEN-211 | Planning 有界重规划 | 未开始 | — | Lead 已预建 `qwen/wave2-planning`；202b 后按 §3-66；零模型 |
+| QWEN-202b | 摘要测试进 CI 快清单 | **完成（已合并）** | Qwen | `195b051`+`747b97a`+`0089593`：`ci.yml` 42→43 文件，CI 同形 **505 passed / 1 skipped**；仅 CI/文档 |
+| QWEN-211 | Planning 有界重规划 | **待 Qwen 认领** | Qwen | 分支 `qwen/wave2-planning` 已同步 main@0089593；失效检测、最大轮数/深度、checkpoint、超限停止；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -142,6 +142,8 @@
 64. **QWEN-202 验收通过**：`67da166`+`f24bb56`+`4c35bf6` 已合并 main；Lead 复跑 `test_session_summary.py` **40 passed / 12.61s**；只读 active/未过期、`persisted=False`、四种空态、10 组反向验证、源 run 降级读侧复核均接受；全量 2376/0/20。**合并时 201b/202 文档追加冲突由 Lead 手工保留双方**（台账 §21→§22、矩阵 §18→§19、对话 19:05→21:56），编号不变。
 65. **202 五处取舍裁定**：① `3/20/80/600/320` 默认值与 `100_000` 硬上限**接受**（只影响限额，不涉计费）；② `conversation_memory.py:21` 的 `.limit(3)` **本轮不改**——那是请求路径运行时行为，留到 203/211 有产品需求时再开卡；③ 无 `source_run_id` 的手填记忆**允许**参与摘要（无 run 可复核≠不可信，来源由 confirm actor 负责）；④ 空态拆两个 `reason` **接受**；⑤ `test_session_summary.py` 纳入 CI 由 **202b** 完成。
 66. **QWEN-202b + QWEN-211 派发**：(a) 202b 继续 `qwen/wave2-summary`，把摘要测试加入 `ci.yml` 快清单 42→43，预期 **505/1**，更新 README/矩阵，零模型；(b) 211 在 `qwen/wave2-planning`（Lead 已预建）实现 **有界重规划**：计划失效检测（工具失败/新证据）、最大重规划轮数/深度、保留 checkpoint、禁止无限循环；测试覆盖超限停止与恢复；零模型、不碰 API/UI；完成后 `[DONE]` 附重规划次数与 checkpoint 证据。
+67. **QWEN-202b 验收通过**：`195b051`+`747b97a`+`0089593` 已合并 main；`ci.yml` 42→43 文件，CI 同形 **505 passed / 1 skipped**（+40 摘要项）；仅 CI/文档，产品零改动；接受。
+68. **QWEN-211 开工授权**：`qwen/wave2-planning` 已 fast-forward 到 `main@0089593`；**允许开工，不适用交付后 hold**；按 §3-66(b) 执行，零模型、不读 `.env`；若最大轮数/深度等阈值需产品裁定，先给基线常量并在 `[DONE]` 中标明，不要擅自扩到 API/UI；完成后 `[DONE]` 附重规划次数、超限停止日志与 checkpoint 恢复证据。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1775,3 +1777,25 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - **QWEN-211 未开工**：你说「202b 后开工」，分支 `qwen/wave2-planning` 已由你预建。本节交付后我 hold，等你验收 202b 再动，不擅自起卡。
 
 — Qwen
+
+### [2026-10-24 12:25] Lead → Qwen | [DONE] QWEN-202b 验收通过；QWEN-211 明确开工
+
+**QWEN-202b：验收通过，已合并 main。**
+
+- `ci.yml` 快清单 42→43 文件，加入 `test_session_summary.py`；CI 同形 **505 passed / 1 skipped**（+40 摘要项）；仅 CI/文档，产品零改动；接受。
+
+**QWEN-211：现在开工（允许，不适用交付后 hold）**
+
+- `qwen/wave2-planning` 已由我 fast-forward 到 `main@0089593`，直接在该分支工作，无需建分支。
+- 范围（§3-66b）：
+  1. 计划失效检测：工具失败 / 新证据与当前计划假设冲突时触发重规划；
+  2. **最大重规划轮数与深度**硬上限（给基线常量即可，`[DONE]` 中标明；不要无限循环）；
+  3. 每次重规划保留 checkpoint / 当前状态，可从 checkpoint 恢复；
+  4. 超限时**停止并给出明确状态**，不是继续尝试；
+  5. 测试覆盖：正常重规划、超轮数停止、超深度停止、checkpoint 恢复；
+- 只改 planner/agent runtime/测试/文档，不碰 API/UI；零模型、不读 `.env`；完成后 `[DONE]` 附重规划次数、超限停止与 checkpoint 恢复证据。
+
+**之后的顺序**（用户已批准）：211 → 221（统一 ToolRegistry+权限）→ 231（Observation/claim-support 进主链）→ 301（Run 队列/Worker）→ 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404；P2 后置。每张 `[DONE]` 后等我验收再开下一张。
+
+— Lead
+
