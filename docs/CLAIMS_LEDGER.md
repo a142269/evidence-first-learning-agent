@@ -1029,6 +1029,8 @@ Lead §4（`[2026-10-24 16:15]`，提交 `1ffc282`）先验收 **QWEN-211c**（�
 
 **本卡零改动（逐字节断言）**：`backend/app/mcp_readonly.py`（70 行、md5 `6eea05e5fef4622ae314f9e1e1654e03`，与 HEAD 相同——本机未装 `mcp`，改了也无法本地验证，改为用新用例做 `ast` 平价）、`.github/workflows/ci.yml`（345 行、md5 `3658e9f11738a4633e72551947994080`；`quality` 快清单仍 **44** 文件、`enterprise-contract` 仍 **38**，`inspect_ci_list_221.py` 经 `yaml.safe_load` 机械重取并断言 md5 → `CI_UNTOUCHED=1`）、`backend/app/api/v2/learning_runs.py`（431 行、md5 `8d2730e73b6dd54ee284a64cc14ac417`，`LearningRuntime.call_tool` 仍是那层薄适配）、`backend/app/agent_runtime/learning_package.py`（769 行、md5 `39365d91586918122d7e72454f1ad498`）。
 
+「与 HEAD 相同」在这一轮用三条判据同时成立来定（`logs/final-bytes.txt`）：工作树 md5 = 前一轮（§25/§26）记录值、EOL 归一化后与 `git show HEAD:` 的 blob 逐字节相同、`git diff HEAD -- <file>` 为空。原因是本仓存 LF、本机检出 CRLF，blob md5 与工作树 md5 天然不同（`ci.yml` blob `f43925…` vs 工作树 `3658e9…`），单看 md5 字符串会把这条主机事实误读成改动。
+
 ### 27.2 基线权限矩阵与语义
 
 矩阵由 `matrix_dump_221.py` **从目录本身导出**（`logs/permission-matrix.txt`，`MATRIX_DUMP_OK=1`），不是手写：
