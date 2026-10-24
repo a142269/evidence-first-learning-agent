@@ -213,6 +213,7 @@ jobs:
             tests/a/test_user_memory_service.py \
             tests/a/test_user_memory_migration.py \
             tests/a/test_session_summary.py \
+            tests/a/test_learning_package_replan.py \
             --no-cov --benchmark-disable -q > build/pytest.log 2>&1
           status=$?
           tail -n 60 build/pytest.log
