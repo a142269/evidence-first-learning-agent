@@ -953,3 +953,49 @@ Lead §4（`[2026-10-24 14:30]`，提交 `9d730fe`）派本卡，三条范围逐
 - **未开始 QWEN-221**：Lead 明示「211b 后」，分支 `qwen/wave2-tools` 已预建；本节交付后 hold，等你验收。
 - **顺带更正 §24.3 / 矩阵 §21 的两处 warnings 数**：那两行写的是 `11 warnings`，来自脚本在日志正文里**首次**匹配到「N warnings」，不是 pytest 的 summary 行；按 summary 行重取为 **20**（记录数轮 `full-suite-repeat.txt`）与 **21**（首跑轮 `full-suite-final.txt`），本卡把这两行改成正确数值（矩阵 §21 同步），passed/skipped/时长/项数等其余结论一字未动。本卡的解析器只从 summary 行取数（`write_docs_211b.py::summary`），故不再受正文里同类字符串影响。
 - 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执属 remote、PG 层未触及，均不属本卡主张。
+
+## 26. QWEN-211c 版本防漂移断言（钉住 `PROMPT_VERSION` 字面值）（2026-10-24，分支 `qwen/wave2-planning`，零模型调用、产品逻辑与 CI 零改动）
+
+Lead §4（`[2026-10-24 15:35]`，提交 `4ba955a`）先验收 **QWEN-211b**（「`PROMPT_VERSION=v2.9`，文档保留双时态…CI 43→44 文件，同形 **520 passed / 1 skipped**；全量 **2391/0/20**；接受。」「主计划 `docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:252` 的 v2.8 引用**由我同步为 v2.9**」「你登记的 warnings 数更正（11→20/21）接受」），再派本卡，四条逐字：「在 `tests/a/test_learning_package_replan.py` 内加一条断言 `PROMPT_VERSION == "learning-package-v2.9"`（**只加用例项，不新增文件**）；」「预期全量 **2392/0/20**、CI 快清单 **521/1**；更新 README/矩阵计数；」「**只改测试/计数文档，不碰产品逻辑**；完成后 `[DONE]`。」「之后 **QWEN-221** 在 `qwen/wave2-tools`（已预建）开工」。§25.2 登记的「全仓没有任何测试断言 `PROMPT_VERSION` 的字面值，bump 在测试面上静默」这一缺口由本卡关闭。
+
+### 26.1 改动（1 个测试文件的纯尾部追加 + 4 个文档文件，另加 §4 汇报）
+
+| 文件 | 改动 | 锚点与字节 |
+|---|---|---|
+| `tests/a/test_learning_package_replan.py` | 追加**一条**无 fixture 的用例 `test_prompt_version_is_tagged_for_the_added_replan_instruction()`，断言 `PROMPT_VERSION == "learning-package-v2.9"`；既有 15 项一字未动 | `git diff --numstat` = **8 insertions(+), 0 deletions(-)**，hunk `@@ -300,0 +301,8 @@`（纯尾部追加，前 300 行在 LF 归一化下与 `git show HEAD:` 逐字节相同）；308 行、纯 CRLF、孤立 LF/CR 各 0，md5 `49d2b437e07459ea3af918657892e56b` → **`a530f5a6342dcfa7eb6c145539cccfaa`**；新断言在 `:308` |
+| `docs/CLAIMS_LEDGER.md` | 新增本节 §26（追加，不回改 §24/§25） | — |
+| `docs/TEST_MATRIX.md` | 新增 §23 | — |
+| `README.md` | `:56` 全量行换成本卡 2392/0/20 记录、211 与 211b 的 2391/0/20 降为同格历史；`:58` CI 行换成本卡 521/1、211b 的 520/1 降为同格历史 | `:56`、`:58` |
+| `docs/00-评委30秒导览.md` | `:106`「测试用例」行随全量计数改为 **2412 项**（2392 passed / 0 failed / 20 skipped），QWEN-211 那轮降为同格历史 | `:106` |
+| `docs/QWEN_LEAD_DIALOGUE.md` | 本节对应的 §4 `[DONE]` 汇报 | — |
+
+**零改动**：`backend/app/agent_runtime/learning_package.py`（769 行、md5 仍 `39365d91586918122d7e72454f1ad498`，与 211b 交付时逐字节相同）与 `.github/workflows/ci.yml`（345 行、md5 仍 `3658e9f11738a4633e72551947994080`，快清单仍 44 个文件、`enterprise-contract` 仍 38）——`inspect_ci_list_211c.py` 从本轮 `ci.yml` 自身字节经 `yaml.safe_load` 机械重取并断言 md5，输出 `CI_UNTOUCHED=1`。
+
+### 26.2 语义：这条断言钉住的是什么
+
+- **钉的是产品字面值，不是文档字符串**：用例 `from backend.app.agent_runtime.learning_package import PROMPT_VERSION` 后与字面量比较，因此 `backend/app/agent_runtime/learning_package.py:23` 一旦漂移（例如后续卡片补提示词却忘记 bump，或反向把已 bump 的版本改回去），CI 快清单里这条用例当场转红。反向验证（§26.3）就是按此执行：把常量临时改回 v2.8，**整文件 15 passed / 1 failed**、单跑新用例 **1 failed**，恢复字节后复跑 **16 passed**。
+- **三方一致性由只读脚本机械核对**（`check_version_consistency_211c.py` → `logs/version-consistency.txt`，`PRODUCT_TEST_DOC_AGREEMENT=1`）：产品 `:23` = 测试 `:308` = `docs/LEARNING_PACKAGE_GUIDE.md:93` = `docs/V2_TEN_MODULE_IMPLEMENTATION.md:58` 都是 `learning-package-v2.9`；主计划 `:252` 现也写 v2.9（Lead 在 §4 `[2026-10-24 15:35]` 自行同步，本卡未动计划件）；台账 claim 表区（前 200 行）仍点名 v2.x 的只剩 `:68`/`:140` 两条带日期历史行。
+- **§25.2 的缺口登记就此关闭**：211b 交付时「没有测试钉住版本、只能靠只读脚本」的状态已被本卡替换；§25 正文按其交付当时的事实保留，不回改。
+
+### 26.3 实测（offline，零模型调用，每条日志均记 `CMD:` 与 `PYTEST_EXIT`，探针 `outbound attempts=0 unique_hosts=0`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新文件（16 项 = 15 + 1） | **16 passed / 0 failed / 8.45 s**，`PYTEST_EXIT=0` | `logs/new-file.txt` |
+| 既有回归面 | 10 个学习包/生命周期文件 **207 passed / 43.31 s**；合并 **223 passed / 52.34 s**（= 207 + 16） | `logs/targeted-package.txt`、`logs/combined-package.txt` |
+| **CI 同形子集（44 文件）** | **521 passed / 1 skipped / 0 failed / 4 warnings / 148.33 s**，旗标按 `ci.yml:217` 同形（`--no-cov --benchmark-disable -q -rs`）+ 前置 `init_db()`；相对 211b 的 520 恰好 **+1** = 本卡新增用例项数，与 Lead 派工预计 **521/1** **实测吻合**；唯一 skip 仍是 `test_auth_restart.py:18` | `logs/ci-portable.txt`（去 NUL 副本 `ci-portable-clean.txt`）、`logs/portable-list.txt`、`logs/ci-init-db.txt` |
+| **全量（记录数）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + `--basetemp output/qwen211c-2026-10-24/pytest-full-suite`）**2392 passed / 0 failed / 20 skipped / 853.50 s / 23 warnings**，196 个测试文件 / **2412 项** | `logs/full-suite.txt`（去 NUL 副本 `full-suite-clean.txt`）；与 Lead 预计 **2392/0/20** 一致 = §25 的 2391 + 本卡 1 项 |
+| 集合口径 | **2411** 个 node id +（`test_mcp_readonly_protocol.py` 收集期 `mcp` `importorskip`）1 条 = **2412 项**，收集 14.99 s | `logs/collect-only.txt` |
+| 反向验证 | 临时把 `:23` 改为 v2.8（**未提交**，`finally` 内按字节恢复）：整文件 **1 failed / 15 passed / 8.60 s**，失败的正是新用例；单跑新用例 **1 failed / 2.31 s**；恢复后 md5 = `39365d91586918122d7e72454f1ad498`、`git diff --stat -- backend/` 为空，再复跑 **16 passed / 7.29 s** | `logs/reverse-with-patched-constant.txt`、`logs/reverse-new-case-only.txt`、`logs/post-restore.txt`、`tmp/product-v2.9-backup.bin` |
+| CI 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed（exit 0）；`compileall backend/app tests/` exit 0；前置 `init_db()` exit 0 | `logs/gates.txt`、`logs/ci-init-db.txt` |
+| 字节与行尾 | `ci.yml` 345 行 md5 `3658e9f11738a4633e72551947994080`（**本卡未动**）、产品 769 行 md5 `39365d91586918122d7e72454f1ad498`（**本卡未动**）、测试 308 行纯 CRLF md5 `a530f5a6342dcfa7eb6c145539cccfaa`；`git diff --check` 干净 | `logs/ci-list-inspect.txt`、`logs/append-verify.txt`、`logs/baseline-bytes.txt` |
+
+### 26.4 边界与未做
+
+- **只加用例项、不新增文件**（Lead 原话）：文件内 14 个 `def test_` 增至 15 个，条目 15 → 16（`@pytest.mark.parametrize` 那条仍贡献 2 项）；未新建测试文件、未动既有任何一行。
+- **未碰产品逻辑与 CI**：见 §26.1 末段的 md5 断言；反向验证里对产品常量的临时改动**只存在于工作树**，运行结束即按字节恢复，未进任何提交。
+- **未跑** GitHub `quality` job 真实回执（本机无 `gh`，属 remote 证据）、未跑 PG `enterprise-contract` 38 文件清单（本卡零 PG 面改动，同 §23/§25 口径）。
+- **`docs/QWEN_LEAD_DIALOGUE.md:1890`（§25 的 §4 汇报）与 §25 正文一字未改**；本卡的汇报作为新的 §4 一节追加。
+- **两轮作废记录保留、不掩盖**：`logs/void-append-crash.txt` 是追加脚本自己的行数预期写错（漏算了顶层 `def` 前需要两行空行，307 → 实际 308），`AssertionError` 在写完文件之后才触发；随后用 `verify_append_211c.py` 独立复核「前 300 行与 HEAD 逐字节相同 + 只追加 8 行 + 只多 1 个 `def`」，结论不受影响。`logs/void-reverse-*.txt` 是反向验证首跑：`PYTHONPATH` 把轮次目录错拼成 `ROOT/目录名`，pytest 在插件导入阶段就报 `ImportError: qwen_net_probe`，那两次 `exit=1` **属脚手架错误、不是红点**，所以整轮作废重跑；修正后的驱动加了三条断言（必须有 pytest summary 行、日志不得含 ImportError、红点必须点名新用例），结果见 `logs/reverse-summary.txt`。
+- 计数与预期全部按 pytest summary 行取数（`parse_211c.py::summary`），不看日志正文里第一次出现的「N warnings」；本轮全量 23 条 warnings（§24 记录数轮 20、§25 轮 21）随轮次波动，不作结论。
+- 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执与 PG 层不属本卡主张。
