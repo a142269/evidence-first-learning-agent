@@ -1887,3 +1887,44 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-24 15:03] Qwen → Lead | [DONE] QWEN-211b：`PROMPT_VERSION` v2.8→v2.9（1 行）+ 重规划测试进 CI 快清单，44 文件同形复跑 **520 passed / 1 skipped**（与你的预计一致），全量 2391/0/20 在 v2.9 字节上复跑逐项一致
+
+**范围对齐**：按你 §4 `[2026-10-24 14:30]`（提交 `9d730fe`）三条逐字执行——bump 版本 + 同步点名文档且**不改历史行**、把 15 项重规划测试纳入快清单 43→44、**只改版本常量/文档/CI，不碰产品逻辑**。**零模型调用、未读 `.env`、未碰 API/UI/迁移/DB/评测 harness**；证据等级 **offline**。台账 §25、矩阵 §22、README `:56`/`:58` 已同步。
+
+#### 1. `PROMPT_VERSION` v2.8 → v2.9（`learning_package.py:23`，1 insertion / 1 deletion）
+
+- 除这一行外，产品文件 768 行逐字节不动（769 行、纯 CRLF、孤立 LF/CR 各 0，md5 `39365d91586918122d7e72454f1ad498`；211 交付时 `f63b20beb98799dbb8c296321c0f3eba`）。路由 `:413-421`、两条上限 `:258-259`、`_invalidate_plan` `:390-411`、`plan.replanned` 载荷 `:305-310` 均未变，故 §24 的语义主张全部继承，10 组反向验证不需重跑（本卡也没重跑）。
+- **为什么算提示词变更（与你判定同因）**：211 在 `_planner` 失效分支向 Planner 的 `instruction` 追加固定失效指令（`:456-460`），`instruction` 由 `_ask` 拼进每个角色的 system prompt（`:322-324`，版本号插值就在 `:324`）并写进检查点与审计。bump 前，v2.8 标签下同时存在「无重规划指令」与「带重规划指令」两种真实提示词文本，而 QWEN-102 云端采集与本批契约评测用的是前者。
+- **同步的三处（你点名）**：`LEARNING_PACKAGE_GUIDE.md:93`（同时保留「v2.8 是 QWEN-102 云端采集与本批契约评测所用版本」）、`V2_TEN_MODULE_IMPLEMENTATION.md:58`（常量与行号 `:20`→`:23`，行号后移因 211 在该文件新增常量与状态字段）、台账 R4/T1/S7（`:31`/`:68`/`:98`）改成「现 v2.9；当时复核/采集为 v2.8」的双时态。
+- **保留的 v2.8 历史行（你的「不要改已有历史行」）**：台账 `:140`（T1 在 103 修复时的复核记录）、`:901`（§24.4 交付当时记「未动 `PROMPT_VERSION`」）、`docs/OPTIMIZATION_STATUS_2026-10-18.md:86`、`evals/results/independent-2026-10-19.md:3`、`evals/results/structured-output-20261018.md:16`、本对话 `:1859`。后三处是**带日期的采集/修复证据本身的口径**，改成 v2.9 等于伪造当时的采集条件。
+- **一处活文档我没擅改，登记请你裁定**：`docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:252` 仍写 `PROMPT_VERSION=learning-package-v2.8`。主计划不在你点名的三个文件里，它是计划件，越界改动我按规矩只做登记；你说一句「同步 252」我就改。
+- **缺口登记（要不要补请裁定）**：全仓**没有任何测试断言 `PROMPT_VERSION` 的字面值**（既有桩只看结构化输出，不看 system prompt 版本号），所以 bump 在测试面上是**静默**的。补这一项属产品/测试面，超出本卡「只改版本常量/文档/CI」，我没有擅自加用例。替代的机械校验是只读脚本 `output/qwen211b-2026-10-24/check_version_consistency.py`：解析产品常量与其行号、与两处文档锚点（各自唯一命中）逐字符比对、并列出台账 claim 表区（脚本取前 200 行，窗口外的 §24/§25 叙述行属明示历史）内仍点名 v2.x 的行只剩带日期的 `:68`/`:140` —— 输出 `VERSION_CONSISTENT=1`（`logs/version-consistency.txt`）。
+
+#### 2. `ci.yml` 快清单 43 → 44
+
+- 新行在 `:216`，**尾部追加**（沿用 201b/202b 口径：diff 为纯 `+1` 行、不动既有行序、最易复核），同形旗标行顺移到 **`:217`**，hunk `@@ -213,6 +213,7 @@`，位置在 `:215 test_session_summary.py` 之后；`ci.yml` 344→345 行、纯 CRLF、md5 `3658e9f11738a4633e72551947994080`。`enterprise-contract` 的 38 文件 PG 清单、覆盖率门槛步、MCP stdio 步未动。插入位置仍属自主取舍，若要按主题与 `test_learning_package.py` 相邻，是一次纯位置改动、计数不变。
+- 清单用 `inspect_ci_list.py` 经 `yaml.safe_load` **机械重取**，不照抄上一轮：`quality` step#8 = **44** 文件、44 条路径存在性 **0 缺失、无重复**、末位即本卡纳入的文件；`enterprise-contract` step#4 = **38**（`logs/ci-list-inspect.txt`、`logs/portable-list.txt`）。
+- **同形复跑（`--no-cov --benchmark-disable -q -rs` + 前置 `init_db()`，`--basetemp output/qwen211b-2026-10-24/pytest-ci-portable`）：520 passed / 1 skipped / 0 failed / 4 warnings / 145.34 s，`PYTEST_EXIT=0`，探针 `outbound attempts=0 unique_hosts=0`** —— 与你派工的预计 **520/1** 逐项吻合；相对 202b 的 505 恰好 **+15** = §24 的重规划用例项数，既有 505 项**零转红、零消失**；唯一 skip 仍是 `test_auth_restart.py:18`（要求一次性 PostgreSQL，CI 上同样 skip，两侧口径一致）。日志 `logs/ci-portable.txt`（去 NUL 副本 `ci-portable-clean.txt`）。
+
+#### 3. 其余实测（offline，全在 `output/qwen211b-2026-10-24/logs/`，每条记 `CMD:` 与 `PYTEST_EXIT=0`）
+
+| 量 | 值 |
+|---|---|
+| **全量 `pytest tests/`（v2.9 最终字节）** | **2391 passed / 0 failed / 20 skipped / 1308.53 s / 21 warnings**，196 个测试文件 / **2411 项**，探针 `attempts=0 unique_hosts=0`；passed / skipped / 项数与 §24 的 2391/0/20 **逐项一致**（本卡零新增用例），warnings 数随轮次波动（§24 记录数轮 20 条、本轮 21 条），不作结论 |
+| 集合口径 | `--collect-only` = **2410** 个 node id +（`test_mcp_readonly_protocol.py` 收集期 `mcp` `importorskip`）1 条 = **2411 项** |
+| 新文件单跑 / 既有面 / 合并 | **15 passed** / 7.62 s；10 个学习包与生命周期文件 **207 passed** / 39.83 s；合并 **222 passed** / 45.86 s（= 207 + 15） |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → All checks passed（exit 0）、`compileall backend/app tests/` exit 0、`init_db()` exit 0 |
+| 测试文件字节 | `tests/a/test_learning_package_replan.py` **一字未动**：300 行、纯 CRLF、md5 仍 `49d2b437e07459ea3af918657892e56b` |
+
+#### 4. 边界与未做
+
+- 未跑 GitHub `quality` job 的真实回执（本机无 `gh`，**属 remote 证据、由你判读**）；未跑 PG `enterprise-contract` 38 文件清单（本卡零 PG 面改动，同 §23 口径）。
+- 未改 `docs/00-评委30秒导览.md:106`：那行讲的是**全量**用例数（仍 2411 项 / 2391 passed），本卡零新增故数值不动，你本卡只点名 README 与 TEST_MATRIX。
+- 未重跑 §24 的 10 组反向验证：产品逻辑零改动，被验证的行为未变。
+- **顺带更正 §24.3 / 矩阵 §21 各两行的 warnings 数**（台账 `:883`/`:884`、矩阵 `:516`/`:517`）：原写 `11 warnings` 取的是日志正文里第一次出现的「N warnings」，不是 pytest summary 行；按 summary 行重取为 **20**（记录数轮）与 **21**（首跑轮）。passed/skipped/时长/项数与所有结论一字未动，已在台账 §25.4 说明。若你视之为改动历史行，这一处是我主动请求你追认的例外。
+
+**提交**（只推 `qwen/wave2-planning`）：`feat(qwen-211b)` 版本常量、`ci(qwen-211b)` 44 文件清单、`docs(qwen-211b)` 台账 §25 / 矩阵 §22 / README、`docs(collab)` 本节。台账与矩阵是**追加**，R4/T1/S7 三行是**改写双时态**，README 两行是**换最新记录 + 保留同格历史**。
+
+**之后**：按你的顺序是 **QWEN-221**（统一 ToolRegistry、deny-by-default 权限矩阵 + 审计，分支 `qwen/wave2-tools` 已预建，不碰 API/UI/前端）。本卡交付后 hold，等你验收；语义级失效检测也等你另卡（§24.4 已按你的裁定关闭）。
+
+— Qwen
