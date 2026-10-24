@@ -17,7 +17,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from backend.app.agent_runtime.learning_graph import EvidenceFirstGraph, LearningState
+from backend.app.agent_runtime.observation import Observation, failure_observation
 from backend.app.agent_runtime.usage_meter import record_model_usage
+from backend.app.evaluation.claim_support import evaluate_rule_based_support
 
 
 PROMPT_VERSION = "learning-package-v2.9"
@@ -100,8 +102,9 @@ def _looks_truncated(raw: object, finish_reason: object) -> bool:
 
 
 class PackageFailure(RuntimeError):
-    def __init__(self, code: str):
+    def __init__(self, code: str, observation: Observation | None = None):
         self.code = code
+        self.observation = observation
         super().__init__(code)
 
 
@@ -246,6 +249,9 @@ class PackageState(LearningState, total=False):
     tool_audit: list[dict[str, Any]]
     practice_error: str
     partial_completion: dict[str, Any]
+    claim_support: dict[str, Any]
+    claim_support_checked: bool
+    delivery_observations: list[dict[str, Any]]
 
 
 class LearningPackageGraph(EvidenceFirstGraph):
@@ -268,7 +274,7 @@ class LearningPackageGraph(EvidenceFirstGraph):
 
         builder = StateGraph(PackageState)
         for name in ("guard", "planner", "decide", "tool", "tutor", "practice", "review",
-                     "compose", "approval", "verify", "rejected", "safe_decline"):
+                     "compose", "claim_check", "approval", "verify", "rejected", "safe_decline"):
             builder.add_node(name, self._observed(name, on_event))
         builder.add_edge(START, "guard")
         builder.add_conditional_edges("guard", lambda s: "safe_decline" if s.get("safety_blocked") else "planner")
@@ -280,7 +286,11 @@ class LearningPackageGraph(EvidenceFirstGraph):
         builder.add_edge("tutor", "practice")
         builder.add_edge("practice", "review")
         builder.add_conditional_edges("review", self._route_package_review)
-        builder.add_conditional_edges("compose", self._needs_review)
+        # The rule-based claim-support backstop runs on the composed package,
+        # immediately before any delivery or human review.  It never calls a
+        # model and never opens a second retry loop.
+        builder.add_edge("compose", "claim_check")
+        builder.add_conditional_edges("claim_check", self._needs_review)
         builder.add_conditional_edges("approval", self._route_review_decision)
         for name in ("verify", "rejected", "safe_decline"):
             builder.add_edge(name, END)
@@ -293,9 +303,30 @@ class LearningPackageGraph(EvidenceFirstGraph):
 
         async def run(state):
             local = dict(state)
-            result = await observed(local)
+            try:
+                result = await observed(local)
+            except PackageFailure as exc:
+                # A failed node still yields one normalized observation before
+                # the stable error code is propagated unchanged.
+                observation = exc.observation or failure_observation(name, exc.code)
+                if on_event:
+                    await on_event("observation.recorded", observation.to_dict())
+                raise
+            except Exception:
+                # Never copy exception text; the stable API error stays unchanged.
+                if on_event:
+                    await on_event("observation.recorded",
+                                   failure_observation(name, "run_execution_failed").to_dict())
+                raise
             if "budget" in local:
                 result["budget"] = local["budget"]
+            observation_events = result.pop("_observation_events", [])
+            if observation_events:
+                result["delivery_observations"] = [
+                    *local.get("delivery_observations", []), *observation_events]
+                if on_event:
+                    for item in observation_events:
+                        await on_event("observation.recorded", item)
             tool_events = result.pop("_tool_events", [])
             if tool_events:
                 result["tool_audit"] = [*local.get("tool_audit", []), *tool_events]
@@ -517,12 +548,18 @@ class LearningPackageGraph(EvidenceFirstGraph):
                         "observations": [*state.get("observations", []),
                                          {"query": query, "results": [], "tool_status": tool.status}],
                         "retrieval_ms": int((time.perf_counter() - started) * 1000),
-                        "_tool_events": [tool.audit()], **invalidation}
+                        "_tool_events": [tool.audit()],
+                        "_observation_events": [self._retrieval_observation(
+                            "failed", tool_status=tool.status, result_count=0,
+                            evidence_count=len(state.get("evidence", [])), retryable=True)],
+                        **invalidation}
             hits = tool.data or []
             tool_events = [tool.audit()]
+            tool_status = tool.status
         else:
             hits = await asyncio.to_thread(self.runtime.retrieve, query, state["course_id"])
             tool_events = []
+            tool_status = "success" if hits else "no_data"
         evidence = {item["chunk_id"]: item for item in state.get("evidence", [])}
         observations = []
         for item in hits[:5]:
@@ -536,7 +573,22 @@ class LearningPackageGraph(EvidenceFirstGraph):
                 "searches": [*state.get("searches", []), query.casefold()],
                 "observations": [*state.get("observations", []), {"query": query, "results": observations}],
                 "retrieval_ms": int((time.perf_counter() - started) * 1000),
-                "_tool_events": tool_events}
+                "_tool_events": tool_events,
+                "_observation_events": [self._retrieval_observation(
+                    "success" if observations else "partial", tool_status=tool_status,
+                    result_count=len(hits), valid_count=len(observations),
+                    evidence_count=len(evidence), retryable=not observations)]}
+
+    @staticmethod
+    def _retrieval_observation(status, *, tool_status: str, result_count: int,
+                               evidence_count: int, valid_count: int = 0,
+                               retryable: bool = False) -> dict[str, Any]:
+        """Project one retrieval outcome into the unified observation schema."""
+        return Observation(
+            node="tool", status=status, retryable=retryable,
+            detail={"tool_status": tool_status, "result_count": result_count,
+                    "valid_count": valid_count, "evidence_count": evidence_count},
+        ).to_dict()
 
     def _step(self, state, role):
         plan = LearningPlan.model_validate(state["plan"])
@@ -747,12 +799,60 @@ class LearningPackageGraph(EvidenceFirstGraph):
             package["partial_completion"] = partial
         return {"answer": "\n\n".join(text), "learning_package": package}
 
+    async def _claim_check(self, state):
+        """One rule-based claim-support check on the composed, deliverable package.
+
+        The check runs after composition and before human review or delivery;
+        it never calls a model.  A failure is fail-closed with the existing
+        stable error code, so no new retry loop or user-visible code is added.
+        """
+        package = state.get("learning_package") or {}
+        if not package:
+            raise PackageFailure("learning_package_quality_failed")
+        if state.get("claim_support_checked"):
+            return {}
+        lesson = package.get("lesson") or {}
+        items = [{"text": lesson.get("explanation", ""), "source_ids": lesson.get("source_ids", [])}]
+        for exercise in package.get("exercises", []):
+            text = " ".join(str(exercise.get(key, "")) for key in ("question", "answer", "explanation"))
+            items.append({"text": text, "source_ids": exercise.get("source_ids", [])})
+        support = evaluate_rule_based_support(items, state.get("evidence", []))
+        citation_failure = bool(support["missing_citations"] or support["invalid_citations"])
+        observation = Observation(
+            node="claim_check",
+            status=("failed" if not support["passed"]
+                    else "partial" if package.get("partial_completion") else "success"),
+            error_class=None if support["passed"] else ("citation" if citation_failure else "claim_support"),
+            retryable=False,
+            evidence_strength=support["evidence_strength"],
+            citation_support=support["citation_support"],
+            detail={"item_count": support["item_count"],
+                    "evaluated_items": support["evaluated_items"],
+                    "supported_items": support["supported_items"],
+                    "unsupported_items": support["unsupported_items"],
+                    "missing_citations": support["missing_citations"],
+                    "invalid_citations": support["invalid_citations"],
+                    "reasons": support["reasons"],
+                    "partial": bool(package.get("partial_completion"))},
+        )
+        if not support["passed"]:
+            code = ("learning_package_invalid_citation" if citation_failure
+                    else "learning_package_quality_failed")
+            raise PackageFailure(code, observation=observation)
+        return {"claim_support": {**support, "checked": True},
+                "claim_support_checked": True,
+                "_observation_events": [observation.to_dict()]}
+
     def _approval(self, state, config):
         updates = super()._approval({**state, "evidence": self._used_evidence(state)}, config)
         # A human-edited answer replaces the rendered package, not its old copy.
         if "answer" in updates or updates["review_status"] == "rejected":
             updates["learning_package"] = {}
             updates["partial_completion"] = {}
+            # A human replacement is not model content, so the model-side
+            # claim-support verdict and observations no longer apply.
+            updates["claim_support"] = {}
+            updates["delivery_observations"] = []
         return updates
 
     async def _verify(self, state):
@@ -760,6 +860,8 @@ class LearningPackageGraph(EvidenceFirstGraph):
         result = await super()._verify({**state, "evidence": self._used_evidence(state)})
         result["quality"]["reviewer_passed"] = bool(state.get("learning_package") and state.get("package_review", {}).get("approved"))
         result["quality"]["human_edited"] = not bool(state.get("learning_package"))
+        result["quality"]["claim_support"] = state.get("claim_support") or {}
+        result["quality"]["delivery_observations"] = state.get("delivery_observations", [])
         partial = state.get("partial_completion") or {}
         if partial:
             # Mark the delivery so reviewers/clients cannot mistake it for a

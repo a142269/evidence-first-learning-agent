@@ -1,6 +1,8 @@
 """Aggregate independently annotated claim/evidence judgments; never infer support."""
 from __future__ import annotations
 
+import re
+
 
 def evaluate_claims(claims: list[dict], evidence_ids: list[str]) -> dict:
     """Evaluate two independent reviews per claim and citation.
@@ -76,4 +78,98 @@ def evaluate_claims(claims: list[dict], evidence_ids: list[str]) -> dict:
         "severe_error_count": severe if complete else None,
         "citation_precision": relevant / citations if complete and citations else None,
         "citation_validity": sum(s in evidence_ids for c in claims for s in c["source_ids"]) / citations if citations else None,
+    }
+
+
+# A cited evidence chunk shorter than this is a fixture or metadata stub; lexical
+# support is reported as "not judged" instead of being guessed from too little
+# text.  This keeps the rule deterministic and avoids failing on tiny fixtures.
+MIN_EVIDENCE_CHARS = 40
+MIN_SUPPORT_RATE = 0.5
+
+_TOKEN = re.compile(r"[0-9A-Za-z\u4e00-\u9fff]+")
+
+
+def _bigrams(text: str) -> set[str]:
+    grams: set[str] = set()
+    for token in _TOKEN.findall((text or "").lower()):
+        if len(token) < 2:
+            continue
+        grams.update(token[index:index + 2] for index in range(len(token) - 1))
+    return grams
+
+
+def evaluate_rule_based_support(items: list[dict], evidence: list[dict]) -> dict:
+    """Rule-based claim-support backstop; never calls a model or a network.
+
+    Each item is ``{"text": str, "source_ids": list[str]}`` and each evidence
+    row is ``{"chunk_id": str, "content": str}``.  An item passes only when all
+    of its cited IDs resolve to retrieved evidence and, for evidence long enough
+    to judge, the artifact and the cited text share at least one character
+    bigram.  ``evidence_strength`` is the fraction of judged items that pass and
+    is ``None`` when no cited evidence is long enough to judge.
+    """
+    if not isinstance(items, list) or not items:
+        raise ValueError("at least one artifact is required")
+    if not isinstance(evidence, list):
+        raise ValueError("evidence must be a list")
+    by_id: dict[str, dict] = {}
+    for row in evidence:
+        if not isinstance(row, dict):
+            raise ValueError("evidence rows must be objects")
+        chunk_id = row.get("chunk_id")
+        if not isinstance(chunk_id, str) or not chunk_id:
+            raise ValueError("evidence chunk_id is required")
+        by_id[chunk_id] = row
+
+    total = missing = invalid = 0
+    evaluated = supported = 0
+    reasons: list[str] = []
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("text"), str) or not item["text"].strip():
+            raise ValueError("artifact text is required")
+        source_ids = item.get("source_ids")
+        if not isinstance(source_ids, list) or any(not isinstance(x, str) or not x for x in source_ids):
+            raise ValueError("source_ids must be a list of nonempty strings")
+        unique = list(dict.fromkeys(source_ids))
+        if not unique:
+            missing += 1
+            reasons.append("citation_missing")
+            continue
+        rows = []
+        for source_id in unique:
+            total += 1
+            row = by_id.get(source_id)
+            if row is None or not isinstance(row.get("content"), str) or not row["content"].strip():
+                invalid += 1
+                reasons.append("citation_invalid")
+            else:
+                rows.append(row)
+        if len(rows) != len(unique):
+            continue
+        contents = [row["content"] for row in rows]
+        if not any(len(content) >= MIN_EVIDENCE_CHARS for content in contents):
+            continue
+        evaluated += 1
+        claim_grams = _bigrams(item["text"])
+        if any(claim_grams & _bigrams(content) for content in contents):
+            supported += 1
+        else:
+            reasons.append("evidence_unsupported")
+
+    citation_support = (total - invalid) / total if total else None
+    evidence_strength = supported / evaluated if evaluated else None
+    passed = (not missing and not invalid
+              and (evidence_strength is None or evidence_strength >= MIN_SUPPORT_RATE))
+    return {
+        "passed": passed,
+        "citation_support": round(citation_support, 3) if citation_support is not None else None,
+        "evidence_strength": round(evidence_strength, 3) if evidence_strength is not None else None,
+        "item_count": len(items),
+        "evaluated_items": evaluated,
+        "supported_items": supported,
+        "unsupported_items": evaluated - supported,
+        "missing_citations": missing,
+        "invalid_citations": invalid,
+        "reasons": list(dict.fromkeys(reasons)),
     }
