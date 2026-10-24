@@ -2218,3 +2218,29 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+### [2026-10-24 21:23] Qwen → Lead | [DONE] QWEN-231 统一 Observation + 交付前规则版 claim-support（零模型调用）
+
+- 任务：QWEN-231
+- 结论：完成（未碰 API/UI/前端/迁移/容器；未合并 main；hold 等验收）
+- 改动（8 个关键文件；完整清单见台账 §29.1）：`backend/app/agent_runtime/observation.py`（新）、`backend/app/agent_runtime/learning_package.py`、`backend/app/evaluation/claim_support.py`、`tests/a/test_observation_claim_support.py`（新）、`tests/a/test_claim_support.py`、`docs/CLAIMS_LEDGER.md` §29、`docs/TEST_MATRIX.md` §26、`docs/QWEN_LEAD_DIALOGUE.md` §4；同步文档：`docs/LEARNING_PACKAGE_GUIDE.md`、`docs/V2_TEN_MODULE_IMPLEMENTATION.md`（`:23`→`:25`）、`README.md`、`docs/00-评委30秒导览.md`
+- 实现：
+  1. **Observation schema**（`observation.py`）：`node` / `status`（success/partial/failed/skipped）/ `error_class` / `retryable` / `evidence_strength`（0..1）/ `citation_support`（0..1）/ `detail`（只放计数与稳定 code）；`classify_failure()` 把既有错误码映射到 `(error_class, retryable)`；`failure_observation()` 不写异常文本。
+  2. **接入观察/交付路径**：`_observed` 在节点失败时发 `observation.recorded`，成功时把 `_observation_events` 并入 `delivery_observations` 并发同一事件；`_tool` 把每次检索投影成 Observation；新增 `claim_check` 节点（compose → claim_check → approval/verify），`claim_support_checked` 保证单次执行最多一次；`quality` 增加 `claim_support` / `delivery_observations`；人工替换清空两者。既有 `observations` 搜索载荷、事件名、错误码、checkpoint 结构与交付包形状**不变**。
+  3. **规则版 claim-support**（`evaluate_rule_based_support`）：逐内容单元检查引用 ID 是否全部指向本次检索证据且内容非空；证据 ≥40 字符时用字符二元组判词面支持；支持率 <0.5 或任一缺失/非法引用即失败；短证据标为“未判定”。失败 **fail-closed**：引用不足 → `learning_package_invalid_citation`，支持不足 → `learning_package_quality_failed`，不新增重试、不重复调用 Reviewer；既有 Reviewer 一次有界返工路径原样保留。
+- 提示词：**未 bump**，仍 `learning-package-v2.9`；本卡没有新增模型可见固定文本（规则失败即停，不向模型追加 Reviewer 反馈）。
+- 测试（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，零计费）：
+  - 新文件单跑 **10 passed / 0 failed / 7.16 s**（`output/qwen231/logs/new-file.txt`）；
+  - 定向 5 文件（新文件 + `test_claim_support` + `test_learning_package` + `_replan` + `_partial`）**96 passed / 0 failed / 60.92 s**（`logs/targeted.txt`）；
+  - 相关面 7 文件（collection/evaluator/structured_output/ablation/lifecycle/retry_guidance/reconciliation）**150 passed / 0 failed / 38.77 s**（`logs/related.txt`）；
+  - 全量 `pytest tests/` **2424 passed / 0 failed / 20 skipped / 24 warnings / 1431.51 s (0:23:51)**，198 个测试文件 / **2444 项**，`PYTEST_EXIT=0`（`output/qwen231/full-suite.txt`）；
+  - CI 45 文件快清单同形复跑 **543 passed / 1 skipped / 0 failed / 4 warnings / 288.83 s**，`CI45_EXIT=0`（`logs/ci45.txt`；= 539 + `test_claim_support.py` 规则用例 4，唯一 skip 仍 `test_auth_restart.py:18`）；
+  - 门：`ruff check --select=F821,F823,E9 backend/app scripts/ tests/` **All checks passed**（RUFF_EXIT=0）、`git diff --check` **DIFFCHECK_EXIT=0**（仅 CRLF 归一化 warning）。
+  - **计数更正**：新增 **14 项**（新文件 10 + `test_claim_support.py` 9→13 的 4），故 2410+14=**2424**；`test_claim_support.py` 基线是 9 项（含 3 个参数化），不是我先前口头估算的 8 项。CI 同理由 539→**543**。
+  - **两次环境假红（如实登记）**：① 首次全量用未初始化的隔离 SQLite → cockpit 报 `no such table: knowledge_points` 等 6 个假红；② 用之前被定向跑污染的 `dev.db` → cockpit/协作面 6 个假红。最终计数改用**全新 `full-clean.db` + 前置 `init_db()` + 全新 basetemp**；两次日志归档为 `full-suite-preclean-empty-db.txt` / `full-suite-preclean-dirty-db.txt`，未删。
+- 证据等级：offline（零计费模型调用、未读 `.env`、未装依赖；本轮**未挂 fail-closed socket 探针**，故不主张 `outbound attempts=0` 探针值）。
+- 反向验证：本轮未做破坏式反向验证；以失败路径用例（支持不足→不交付、引用不足→citation 失败、失败后零额外模型调用）作为证据。若你要求反向破坏证明，我可另补。
+- 未验证 / 风险：规则版是**词面启发式**，不证明语义蕴含；短证据（<40 字符）不判定；支持率阈值 0.5 是基线常量；新测试文件**未加入 `ci.yml` 快清单**（沿用 201b/202b/211b/221b 的“CI 纳入另卡”先例）；GitHub `quality` 真实回执与 PG `enterprise-contract` 未跑。
+- 下一步：hold 等验收；验收后再开 **301**。
+- 给 Lead 的问题：请把 §2 任务板 QWEN-231 的状态由“待 Qwen 认领”更新为“待验收/完成”；§0 的“下一张任务”也请同步。我按规则未改 §0/§2/§3。
+

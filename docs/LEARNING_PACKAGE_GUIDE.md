@@ -85,8 +85,8 @@ Reviewer 是一次模型质量检查，不是事实正确性的证明；引用�
 ```
 
 省略 mode 或传 `answer` 使用普通问答，也能读取同一范围的会话历史。
-返回 SSE 的 node.started / node.completed 是实际节点事件；retrieval.completed 只包含证据数量与耗时。
-run.completed 中包含 learning_package（计划、讲解、练习、审核结果和返工次数）、budget、memory_run_ids；部分交付时另含 partial_completion，且 learning_package 只包含已交付内容。
+返回 SSE 的 node.started / node.completed 是实际节点事件；retrieval.completed 只包含证据数量与耗时。observation.recorded 是 QWEN-231 新增的统一观察事件（状态 / 错误类 / 是否可重试 / 证据强度 / 引用支持度 / 有界计数），只做审计，不替代既有节点事件或错误码。
+run.completed 中包含 learning_package（计划、讲解、练习、审核结果和返工次数）、budget、memory_run_ids；部分交付时另含 partial_completion，且 learning_package 只包含已交付内容。quality 中新增 claim_support（规则版交付前校验结果）与 delivery_observations（本次运行的观察投影）。
 等待人工审核时只向请求者发送 review.required。教师使用任务编号查询草稿，再调用 `/{run_id}/resume` 提交 approved。
 教师用 edited_answer 替换答案时，不再交付旧结构化学习包，最终 citations 置空；替换文本没有经过来源映射校验，不能继承旧引用。模型审核结果也不标记为对新文本的验证。替换部分交付草稿时同样清除 `partial_completion`，按人工替换内容处理。
 
@@ -101,6 +101,7 @@ run.completed 中包含 learning_package（计划、讲解、练习、审核结�
 - 未被任何内容单元使用的证据不会进入引用列表或服务端生成的参考资料。完整 `evidence` 仍用于检索审计，与“实际引用”分开。
 - 页面在讲解下方和每道题下方分别展示来源及分块 ID；审核草稿的文本也逐项标注依据，教师审核列表同样只包含已使用的来源。持久化结果与 SSE 交付遵循相同契约。
 - Reviewer 返工后只引用最终产物使用的来源。此校验确认来源身份及映射关系，不证明句子与来源之间的语义蕴含；讲解目前为单个内容单元，尚未拆成逐句引用。
+- 交付前另有一次**规则版** claim-support 二次校验（`claim_check` 节点，规则实现见 `backend/app/evaluation/claim_support.py`）：逐内容单元检查引用 ID 是否指向本次检索证据，并在证据文本足够长（≥40 字符）时用字符二元组重叠判断是否存在词面支持；不支持则按既有稳定错误码失败（`learning_package_invalid_citation` / `learning_package_quality_failed`），不调用额外模型、不新增重试循环。该检查是启发式下界，不证明语义蕴含，也不替代人工审核。
 
 ## 验证与尚未完成的内容
 

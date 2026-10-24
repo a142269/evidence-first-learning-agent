@@ -65,7 +65,7 @@
 
 | # | 位置 | 声明 | 状态 | 证据等级 | 依据与说明 | 建议动作 |
 |---|---|---|---|---|---|---|
-| T1 | §8 L58 | "`PROMPT_VERSION=learning-package-v2.4`" | 措辞需修正（过期） | offline | 复核当时代码为 **v2.8**（`learning_package.py:20`；现 **v2.9**、`:23`，见 §25）；`WORKFLOW_VERSION=learning-workflows-v2.3`（`run_lifecycle.py:29`）。文档头部日期 2026-10-15 未随后续批次更新。 | QWEN-103：全文按当前代码刷新版本号与批次差异 |
+| T1 | §8 L58 | "`PROMPT_VERSION=learning-package-v2.4`" | 措辞需修正（过期） | offline | 复核当时代码为 **v2.8**（`learning_package.py:20`；现 **v2.9**、`:25`，见 §25；QWEN-231 新增两行 import 后行号由 `:23` 后移）；`WORKFLOW_VERSION=learning-workflows-v2.3`（`run_lifecycle.py:29`）。文档头部日期 2026-10-15 未随后续批次更新。 | QWEN-103：全文按当前代码刷新版本号与批次差异 |
 | T2 | 接口/验收节 L81 | "新版 Golden Set……仍需完整在线采样" | 措辞需修正（过期） | cloud | 同 E1：10-16 已完成两轮在线；学习包 24 条完整在线质量与人审仍未完成。 | 同 E1 |
 | T3 | §10 L75 | "2026-10-15 真实浏览器配本地模拟 API 验证……尚未真实后端+在线模型浏览器联调" | 有证据 + 待人工 | offline（浏览器 mock 走查） | 措辞如实标注"模拟 API"；10-15 晚些时候做过一次真实后端+桩模型的浏览器复核（UPGRADE 文档），真实在线模型浏览器 E2E 仍未做。 | Wave 3 QWEN-331 Playwright E2E |
 | T4 | §4 | MCP `mcp==2.3.0` 只读、生产启动器待验收 | 有证据 | offline | `requirements-mcp.txt` 钉 2.3.0 ✓；协议测试在 enterprise 可选步骤；"生产启动器和真实部署仍待验收"表述正确。 | 保持 |
@@ -1152,3 +1152,61 @@ Lead §4（`[2026-10-24 16:15]`，提交 `1ffc282`）先验收 **QWEN-211c**（�
 - **起点事实按 git 记录**：开工时 `main`=`ec29cf4`、`qwen/wave2-tools`=`9c926ce`（比 `main` 多一条 Lead 的 `docs(collab)` 更正提交；`git diff --stat main...HEAD` 只有 `docs/QWEN_LEAD_DIALOGUE.md`），working tree clean。Lead 口述的「main = 9c926ce」与 `git log` 不符，以代码事实为准。
 - **未动 QWEN-231**：按指令完成即停、hold 等验收。
 - 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执与 PG 层不属本卡主张。
+
+## 29. QWEN-231 统一 Observation + 交付前规则版 claim-support（2026-10-24，分支 `qwen/wave2-observation`，零模型调用）
+
+Lead §4（`[2026-10-24 20:05]`）派工逐字：「(a) 统一 `Observation` schema：状态（success/partial/failed 等）、错误类、是否可重试、证据强度/引用支持度；接入学习包观察/交付路径，保持既有事件与错误码兼容；(b) V2 交付前最多一次 **claim-support 二次校验**，默认规则版、不额外付费；校验失败→**不交付或返工**（沿用既有 Reviewer 路径），并写审计；测试覆盖通过/失败/返工/引用不足；零模型、不碰 API/UI/前端；完成后 `[DONE]` 附 schema、失败路径与审计证据。之后 **301**。」
+
+### 29.1 改动（3 个产品/评测文件 + 1 个新测试文件 + 1 个既有测试文件 + 7 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `backend/app/agent_runtime/observation.py`（新） | 统一 `Observation` Pydantic schema：`node` / `status`（success/partial/failed/skipped）/ `error_class` / `retryable` / `evidence_strength`（0..1）/ `citation_support`（0..1）/ `detail`（只放计数与稳定 code）；`classify_failure()` 把既有错误码映射为 `(error_class, retryable)`；`failure_observation()` 不写异常文本 | `:36`（`class Observation`）、`_FAILURE_POLICY`（`:18`） |
+| `backend/app/agent_runtime/learning_package.py` | `PackageState` 新增 `claim_support` / `claim_support_checked` / `delivery_observations`；`_observed` 在节点失败时发 `observation.recorded`、成功时把 `_observation_events` 并入 `delivery_observations` 并发同一事件；`_tool` 把每次检索投影成 Observation（不替换既有 `observations` 载荷）；新增 `claim_check` 节点（compose → claim_check → approval/verify）；`_claim_check` 只读规则校验、`claim_support_checked` 保证每运行最多一次；失败 fail-closed 沿用 `learning_package_invalid_citation` / `learning_package_quality_failed`；`quality` 增加 `claim_support` 与 `delivery_observations`；人工替换清空两者 | `:25`（`PROMPT_VERSION` 仍 v2.9）、`:802`（`_claim_check`）、`:292`（compose→claim_check 边） |
+| `backend/app/evaluation/claim_support.py` | 新增纯规则 `evaluate_rule_based_support(items, evidence)`：引用 ID 必须全部指向本次检索证据且内容非空；证据文本 ≥40 字符时用字符二元组重叠判断词面支持；支持率 <0.5 或任一缺失/非法引用即失败；短证据（<40 字符）标为“未判定”，避免对既有小 fixture 编造结论 | `:87-88`（`MIN_EVIDENCE_CHARS=40` / `MIN_SUPPORT_RATE=0.5`）、`:102`（函数） |
+| `tests/a/test_observation_claim_support.py`（新） | **10 项**：Observation schema/错误分类、通过路径、支持不足→不交付+checkpoint、引用不足→citation 失败观察、既有 Reviewer 返工仍交付且只查一次、失败后零额外模型调用、既有事件不被替换、人工替换清空模型侧结论、数值边界/JSON 序列化 | — |
+| `tests/a/test_claim_support.py` | **9 → 13 项（+4）**：规则版通过、长证据不支持、缺失/非法引用、短 fixture 不判定 | — |
+| `docs/CLAIMS_LEDGER.md` | 本节 §29（追加） | — |
+| `docs/TEST_MATRIX.md` | §26（追加）+ 文件矩阵新增一行 | — |
+| `docs/LEARNING_PACKAGE_GUIDE.md` | 事件与 `quality` 新字段说明 + 规则版 claim-support 边界 | `:88-89`、`:104` |
+| `docs/V2_TEN_MODULE_IMPLEMENTATION.md` | `PROMPT_VERSION` 行号 `:23`→`:25`（新增两行 import 后移；版本值未变） | `:58` |
+| `README.md` / `docs/00-评委30秒导览.md` | 全量计数刷新；CI 快清单未改 | `:56`、`:58` / `:106` |
+| `docs/QWEN_LEAD_DIALOGUE.md` | §4 末尾 `[DONE]`；§0/§2/§3 未动 | — |
+
+**未改**：`PROMPT_VERSION` 仍 `learning-package-v2.9`（本卡没有新增模型可见固定文本；`claim_check` 是纯规则、失败即停，不向模型追加 Reviewer 反馈）；`.github/workflows/ci.yml`、API/UI/前端/迁移/容器一律未动。
+
+### 29.2 Observation 的统一口径
+
+- `status` 四态：`success` / `partial` / `failed` / `skipped`；失败观察的 `error_class` 来自既有错误码映射，未知码归 `runtime`。
+- `retryable` 只表示**既有有界恢复路径**能否在不换请求的情况下重试：`invalid_output`、`tool_failed`、`repeated_search` 为 `true`；预算、无证据、授权拒绝、质量失败、引用失败为 `false`。
+- `evidence_strength` / `citation_support` 均为 0..1；检索观察暂不填这两项（只给 `result_count` / `valid_count` / `evidence_count`），claim-support 观察填实际值。
+- 每次 `observation.recorded` 都落 `agent_checkpoints`（`node_name` = 观察的 `node`），SSE 与审计读取同一份数据；既有事件名、错误码、checkpoint 结构和 `learning_package` 交付形状不变。
+
+### 29.3 claim-support 二次校验（为什么选“不交付”）
+
+- 校验点在 `compose` 之后、人工审核/`verify` 之前，读的是**最终要交付的** `learning_package`（部分交付时只含实际交付的 lesson/exercises）。
+- `claim_support_checked` 让每运行最多执行一次；失败直接抛既有稳定错误码，**不新增重试、不重复调用 Reviewer、不增加模型/工具预算**。既有 Reviewer 的“一次有界返工”路径保持原样（`test_existing_reviewer_rework_delivers_after_one_support_check` 钉住）。
+- 引用不足 → `learning_package_invalid_citation`；证据词面支持不足 → `learning_package_quality_failed`；两种都在 `observation.recorded` 里带 `error_class=citation|claim_support`、`retryable=false`，且 `answer.delta` 不出现。
+- 既有引用校验（`_check_sources`）仍是第一道；本卡是交付前的第二道规则兜底，不替代人工审核。
+
+### 29.4 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 本卡新文件单跑 | **10 passed / 0 failed / 7.16 s**，`PYTEST_EXIT=0` | `output/qwen231/logs/new-file.txt` |
+| 定向 5 文件（新文件 + `test_claim_support` + `test_learning_package` + `test_learning_package_replan` + `test_learning_package_partial`） | **96 passed / 0 failed / 60.92 s**，`PYTEST_EXIT=0` | `output/qwen231/logs/targeted.txt` |
+| 相关面（collection/evaluator/structured_output/ablation/lifecycle/retry_guidance/reconciliation） | **150 passed / 0 failed / 38.77 s**，`PYTEST_EXIT=0` | `output/qwen231/logs/related.txt` |
+| 全量 `pytest tests/` | **2424 passed / 0 failed / 20 skipped / 24 warnings / 1431.51 s (0:23:51)**，`PYTEST_EXIT=0`，198 个测试文件 / **2444 项** | `output/qwen231/full-suite.txt` |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` + `git diff --check` | **RUFF_EXIT=0（All checks passed）；DIFFCHECK_EXIT=0**（仅 CRLF 归一化 warning） | `output/qwen231/logs/ruff.txt`、`output/qwen231/logs/gates.txt` |
+| CI 快清单 | 未改 `ci.yml`，仍 45 文件；`test_claim_support.py` 规则用例 +4 → **543 passed / 1 skipped / 0 failed / 4 warnings / 288.83 s**，`CI45_EXIT=0`；新测试文件未纳入 | `output/qwen231/logs/ci45.txt` |
+
+### 29.5 边界与未做
+
+- 规则版是**词面启发式**：字符二元组重叠只能说明“可能相关”，不证明语义蕴含；短证据（<40 字符）不判定；支持率阈值 0.5 是基线常量，可在后续卡按产品需要调整。
+- **未新增付费模型调用**、未读 `.env`、未安装依赖；本轮**未挂 fail-closed socket 探针**，故不主张 `outbound attempts=0` 探针值；零计费由 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` 与改动面（纯规则/测试/文档）共同支撑。
+- **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；**未跑 PG `enterprise-contract`**（本卡零 PG 面改动）。
+- **未把新测试文件加入 `ci.yml` 快清单**：沿用 201b/202b/211b/221b 的“CI 纳入另卡”先例；本卡未改 CI。
+- **未做反向验证**：本轮以正向通过 + 失败路径用例（支持不足/引用不足/失败即停）作为证据；若 Lead 要求反向破坏证明，可另开小卡或在本卡补跑后再验收。
+- **“最多一次”的边界**：`claim_support_checked` 在通过时写入检查点，单次执行内不会重复；失败的 run 停在 `claim_check`，显式 `/{run_id}/continue` 只重放该节点一次，属新的执行尝试，仍不会形成内部重试循环。
+- 未动 QWEN-301；完成 231 即停，hold 等验收。
+- 证据等级：**offline**。

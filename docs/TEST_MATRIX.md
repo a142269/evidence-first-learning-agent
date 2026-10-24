@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（192）
+## 2. Python 测试文件矩阵（198）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -100,6 +100,7 @@
 | tests/a/test_mistake_course_filter.py |  |  |  | ✓ |  |
 | tests/a/test_mobile_student_api.py |  |  |  | ✓ |  |
 | tests/a/test_multimodal_dashboard_recommendations.py |  |  |  | ✓ |  |
+| tests/a/test_observation_claim_support.py |  |  |  | ✓ | QWEN-231 统一 Observation + 交付前规则版 claim-support（10 项，离线 scripted；未进 fast 清单） |
 | tests/a/test_ocr.py |  |  |  | ✓ |  |
 | tests/a/test_orchestrator.py |  |  |  | ✓ |  |
 | tests/a/test_orchestrator_dm.py |  |  |  | ✓ |  |
@@ -602,3 +603,23 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` 38 文件 | 本卡零 PG 面改动，同 §22–§24 口径 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`；GitHub 真实回执与 PG 侧结论不属本卡主张。本节关闭 §24 结尾登记的「`mcp_readonly.py` 固定 `planner` 而 search 只给 `tutor`」的待裁定项——结论是**现状无误**：search 本就用 `tutor_scope`，无需改产品，已由用例钉住。
+
+## 26. QWEN-231 统一 Observation + 交付前规则版 claim-support 实测摘要（2026-10-24，分支 `qwen/wave2-observation`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| Observation schema | `backend/app/agent_runtime/observation.py` | `Observation`：`node` / `status`（success/partial/failed/skipped）/ `error_class` / `retryable` / `evidence_strength`（0..1）/ `citation_support`（0..1）/ `detail`；`classify_failure()` 映射既有稳定错误码；`failure_observation()` 不写异常文本 |
+| 观察接入 | `backend/app/agent_runtime/learning_package.py` | `_observed` 失败时发 `observation.recorded`、成功时把 `_observation_events` 并入 `delivery_observations`；`_tool` 的检索投影与 `claim_check` 的交付前校验共用同一 schema；既有 `observations` 搜索载荷、事件名、错误码、checkpoint 结构与交付包形状不变 |
+| claim_check 节点 | `compose → claim_check → approval/verify` | 只读最终交付包与本次证据；`claim_support_checked` 保证每运行最多一次；无模型/工具调用、不增加预算；失败 fail-closed 用既有 `learning_package_invalid_citation` / `learning_package_quality_failed`，不新增重试 |
+| 规则实现 | `backend/app/evaluation/claim_support.py` | `evaluate_rule_based_support()`：引用 ID 必须指向本次检索证据且内容非空；证据 ≥40 字符时用字符二元组重叠；支持率 <0.5 或任一缺失/非法引用即失败；短证据标为“未判定” |
+| 新文件单跑 | `tests/a/test_observation_claim_support.py` | **10 passed / 0 failed / 7.16 s**，`PYTEST_EXIT=0` |
+| 定向 5 文件 | 新文件 + `test_claim_support` + `test_learning_package` + `test_learning_package_replan` + `test_learning_package_partial` | **96 passed / 0 failed / 60.92 s**，`PYTEST_EXIT=0` |
+| 相关面 | collection / evaluator / structured_output / ablation / lifecycle / retry_guidance / reconciliation | **150 passed / 0 failed / 38.77 s**，`PYTEST_EXIT=0` |
+| **全量** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + `DATABASE_URL=sqlite:///./output/qwen231/full-clean.db`（先 `init_db()`）+ 全新 `--basetemp output/qwen231/base-full-clean2`） | **2424 passed / 0 failed / 20 skipped / 24 warnings / 1431.51 s (0:23:51)**，`PYTEST_EXIT=0`，198 个测试文件 / **2444 项** |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` + `git diff --check` | **RUFF_EXIT=0（All checks passed）；DIFFCHECK_EXIT=0**（仅 CRLF 归一化 warning） |
+| 提示词 | `PROMPT_VERSION` | **未 bump**：仍 `learning-package-v2.9`；本卡没有新增模型可见固定文本（规则失败即停，不向模型追加 Reviewer 反馈）；行号因两行 import 由 `:23` 后移到 `:25`，文档已同步 |
+| CI 清单 | `.github/workflows/ci.yml` | **未改**：快清单仍 45 文件；`test_claim_support.py` 规则用例 +4 → **543 passed / 1 skipped / 0 failed / 4 warnings / 288.83 s**，`CI45_EXIT=0`；新测试文件未纳入（沿用 201b/202b/211b/221b 的“CI 纳入另卡”先例） |
+| 失败路径 | 支持不足 / 引用不足 / 失败即停 | 支持不足 → `learning_package_quality_failed`、`answer.delta` 不出现、`observation.recorded` 带 `error_class=claim_support`；引用不足 → `learning_package_invalid_citation`、`error_class=citation`；两者 `retryable=false`，且落 `agent_checkpoints` |
+| 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动，同 §22–§25 口径 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`；规则版是词面启发式，不证明语义蕴含，也不替代人工审核。**本轮未挂 fail-closed socket 探针**，故不主张 `attempts=0` 探针值。
