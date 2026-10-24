@@ -27,8 +27,8 @@ V2 主线为 `POST /api/v2/learning-runs/stream`。服务端从 Bearer Session �
 
 ## 4. 工具调用（Tool Use）
 
-- **职责及输入输出**：[统一只读工具入口](../backend/app/services/v2_learning_tools.py) 提供课程证据、学习画像、近期错题、先修关系。Pydantic 拒绝额外参数；角色白名单限制 Planner 与 Tutor；身份、课程、Run 由服务端注入，模型只提交查询文本或知识点 ID。
-- **顺序与代码**：每次调用重查课程授权，再以超时包装同步读取；返回 `success / no_data / denied / invalid_args / timeout / failed`，审计仅记录工具名、版本、状态、耗时、参数摘要和条数。[可选本地 MCP 适配器](../backend/app/mcp_readonly.py) 用固定 `mcp==2.3.0` 的 stdio 服务复用工具 broker；可信启动器必须提供身份/课程环境作用域。
+- **职责及输入输出**：[统一只读工具入口](../backend/app/services/v2_learning_tools.py) 提供课程证据、学习画像、近期错题、先修关系。Pydantic 拒绝额外参数；工具名、允许角色、权限键、只读/副作用、超时、参数 schema 与截断上限集中在 [单一工具目录](../backend/app/services/tool_catalog.py)，运行时按 `decide_access()` 三层判定、deny-by-default（未知工具/未列角色/未持有权限键一律拒）；身份、课程、Run 由服务端注入，模型只提交查询文本或知识点 ID。
+- **顺序与代码**：每次调用重查课程授权，再以超时包装同步读取；返回 `success / no_data / denied / invalid_args / timeout / failed`，每次调用（含拒绝）另写一条统一审计事件（`tool/source/role/run_id/status/decision/reason/权限键/副作用/超时/耗时/参数摘要哈希`），事件不含提示词、参数值或检索文本。[可选本地 MCP 适配器](../backend/app/mcp_readonly.py) 用固定 `mcp==2.3.0` 的 stdio 服务复用工具 broker；可信启动器必须提供身份/课程环境作用域。
 - **持久化与故障**：`tool.completed` 关联 Run 事件序号；最终结果包含 `tool_audit`。只读 MCP 是本地受信进程接口，不是对公网开放的鉴权端点。固定 `mcp==2.3.0` 已在项目临时目录安装，并用真实 MCP 客户端完成进程内及独立 stdio 发现/调用；隔离 SQLite 授权撤销后调用返回 `denied`。生产启动器和真实部署仍待验收。
 - **证据与边界**：[工具权限测试](../tests/a/test_v2_learning_tools.py)、[MCP 协议测试](../tests/a/test_mcp_readonly_protocol.py)。没有代码执行、文件写入、外部 URL、任意数据库操作或可写 MCP Tool。
 

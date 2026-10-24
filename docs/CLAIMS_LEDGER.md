@@ -999,3 +999,93 @@ Lead §4（`[2026-10-24 15:35]`，提交 `4ba955a`）先验收 **QWEN-211b**（�
 - **两轮作废记录保留、不掩盖**：`logs/void-append-crash.txt` 是追加脚本自己的行数预期写错（漏算了顶层 `def` 前需要两行空行，307 → 实际 308），`AssertionError` 在写完文件之后才触发；随后用 `verify_append_211c.py` 独立复核「前 300 行与 HEAD 逐字节相同 + 只追加 8 行 + 只多 1 个 `def`」，结论不受影响。`logs/void-reverse-*.txt` 是反向验证首跑：`PYTHONPATH` 把轮次目录错拼成 `ROOT/目录名`，pytest 在插件导入阶段就报 `ImportError: qwen_net_probe`，那两次 `exit=1` **属脚手架错误、不是红点**，所以整轮作废重跑；修正后的驱动加了三条断言（必须有 pytest summary 行、日志不得含 ImportError、红点必须点名新用例），结果见 `logs/reverse-summary.txt`。
 - 计数与预期全部按 pytest summary 行取数（`parse_211c.py::summary`），不看日志正文里第一次出现的「N warnings」；本轮全量 23 条 warnings（§24 记录数轮 20、§25 轮 21）随轮次波动，不作结论。
 - 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执与 PG 层不属本卡主张。
+
+## 27. QWEN-221 单一工具目录（ToolRegistry 元数据）+ 运行时 deny-by-default + 统一审计（2026-10-24，分支 `qwen/wave2-tools`，零模型调用）
+
+Lead §4（`[2026-10-24 16:15]`，提交 `1ffc282`）先验收 **QWEN-211c**（「新增 `PROMPT_VERSION == "learning-package-v2.9"` 断言（15→16 项）；CI 快清单 **521/1**、全量 **2392/0/20**；产品与 `ci.yml` 零改动；接受」），再派本卡：「**QWEN-221：现在开工（允许，不适用交付后 hold）**」「`qwen/wave2-tools` 已由我 fast-forward 到 `main@13ea358`，直接在该分支工作，无需建分支」。范围五条逐字：
+
+1. 「**单一 ToolRegistry 元数据**：工具名、允许角色、参数 schema、只读/副作用、超时、权限键」；
+2. 「运行时 **deny-by-default**：未知工具、未授权角色、非法参数一律拒绝并写审计事件」；
+3. 「替换散落的工具白名单/注册，保留现有调用行为与稳定错误面」；
+4. 「测试覆盖越权拒绝、未知工具、schema 错误、审计；不碰 API/UI/前端；零模型、不读 `.env`」；
+5. 「`[DONE]` 附权限矩阵基线、越权测试与审计证据」。
+
+另两句约束照抄：「若工具角色划分需要产品裁定，先给基线矩阵并在 `[DONE]` 标明，不擅自扩到 API/UI」「**之后**：221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404；P2 后置」。§3-71 的原卡要求（「合并 V1 registry/V2 broker 接口；角色×课程×Run×参数校验；超时/配额/截断；统一审计」）与主计划验收口径（「迁移现有工具；矩阵测试；V2 回归全绿；新增工具只接一处」）一并作为本卡验收面。
+
+### 27.1 改动（2 个新模块 + 2 个既有注册面 + 1 个新测试文件 + 5 个文档文件）
+
+| 文件 | 改动 | 锚点与字节 |
+|---|---|---|
+| `backend/app/services/tool_catalog.py`（**新增**） | 9 个工具各一条 `ToolSpec`：工具名、来源（`v1`/`v2`）、描述、权限键、允许角色、只读/副作用、版本、超时与超时类、参数模型（V2 用 pydantic）或 JSON schema（V1 用 `parameters`/`required`）、结果截断上限、是否 MCP 暴露；另有 `ROLE_PERMISSIONS`（角色→权限键）、`decide_access()`、`matrix_violations()`、`source_specs()`、`tools_for_role()`、`v2_timeouts()`（默认超时从 spec 派生，不写字面量） | 215 行、纯 CRLF、孤立 LF/CR 各 0、md5 `3c13c4490298567bf34b6986e6c86656`；模块导入期 `assert len(TOOL_CATALOG) == len(_SPECS)` 拒绝重名 |
+| `backend/app/services/tool_audit.py`（**新增**） | 统一审计：14 个固定键（`tool/source/version/role/run_id/session_id/status/decision/reason/permission_key/side_effect/timeout_seconds/latency_ms/request_hash`）、`ToolAuditLog` 环形 500 条、`counts()` 汇总 `total/granted/refused/by_status/by_decision/by_tool`、`recent(tool=, decision=)`；键集漂移直接 `raise ValueError`，API 不收任何参数值（传 `query=` 是 `TypeError`） | 123 行、纯 CRLF、md5 `7cb62306d6677cbb980000240b5bab39` |
+| `backend/app/services/v2_learning_tools.py` | **删除** `ROLE_TOOLS`、`SCHEMAS`、`_Args`/`SearchArgs`/`EmptyArgs`/`PrerequisiteArgs`（迁到目录）；`call()` 的权限、参数校验、超时、截断全部改读 `ToolSpec`；每次调用仍重查持久课程授权；`TOOL_VERSION`、`ToolContext`、`ToolResult`、`V2LearningTools` 四个公开符号与六态错误面（`success/no_data/denied/invalid_args/timeout/failed`）、`audit()` 六键一字未动 | 171 行（HEAD `1ffc282` 为 180 行、md5 `ba7c1a49bda932a440eeeb6d6245be37`）、md5 `e17a28b1da38837f4b983e51b5635233`、`git diff --numstat` **46 / −55** |
+| `backend/app/services/agent_tools/registry.py` | 5 个 `ToolSchema` 字面量改为 `for spec in source_specs("v1")` 循环构造（handler 名字表仍在本文件）；`_traced_call` 入口加同一 `decide_access(INTERNAL_ROLE, tool)` 闸门：未登记名字**不再执行 handler**，返回既有结构化失败 `{success: False, error: "tool_access_denied: <reason>", tool}` 并写一条审计事件；放行/异常各写一条（`reason` 只存异常类名）；`ToolSchema`/`ToolRegistration`/`list_a_tools()`/`to_openai_tools()`/`ToolCallTrace` 全部保留 | 503 行（HEAD 为 527 行、md5 `c83f3c571d4d3ff5474d0c2b69fc2296`）、md5 `8b6844c70c32fd516d9ff4ef62b9693a`、`git diff --numstat` **47 / −71**；`to_openai_tools()` 与 `git show HEAD:` 版本逐字节相同（`compare_openai_export.py` → `OPENAI_EXPORT_IDENTICAL=1`、`ORDER_SAME=True`、`OWNER_SAME=True`） |
+| `tests/a/test_tool_registry_permissions.py`（**新增**） | 18 条用例，执行面一律换成 spy（拒绝类用例断言 spy `calls == []`）：目录 9 条唯一声明、基线矩阵逐字钉、**4 角色 × 9 工具全量越权扫**、未知工具/未知角色、错误面稳定、schema 四类非法参数（注入键 / 空 / 全空格 / 超长 / 缺必填 / 类型错）、空范围、超时+截断+执行失败+授权撤销、一调用一事件（6 种结局逐条比对顺序与状态）、事件元数据只从 spec 派生、V1 闸门与错误面、OpenAI 投影、MCP 的 `ast` 名字+入参名平价、散落白名单确已删除、V1/V2 两种 schema 风格分工 | 395 行、纯 CRLF、md5 `af49171bb284a43725e312b8571d8ef2`；零 DB、零模型、零网络（`mcp` 未安装也不影响：MCP 面用 `ast` 读源码） |
+| `docs/CLAIMS_LEDGER.md` / `docs/TEST_MATRIX.md` | 新增本节 §27 / 新增 §24（**追加**，不回改 §24/§25/§26 与各矩阵节） | — |
+| `README.md` | `:56` 全量行换成本卡记录、211c 那轮降为同格历史；`:58` CI 行换成本卡 44 文件同形复跑与 45 文件候选清单 | `:56`、`:58` |
+| `docs/00-评委30秒导览.md` | `:106`「测试用例」行随全量计数刷新 | `:106` |
+| `docs/V2_TEN_MODULE_IMPLEMENTATION.md` | `:30`/`:31`：工具名/角色/权限键/超时/参数模型的落点由 `v2_learning_tools.py` 改指 `tool_catalog.py`，并补记统一审计事件（拒绝也写） | `:30`、`:31` |
+| `docs/QWEN_LEAD_DIALOGUE.md` | 本节对应的 §4 `[DONE]` 汇报 | — |
+
+**本卡零改动（逐字节断言）**：`backend/app/mcp_readonly.py`（70 行、md5 `6eea05e5fef4622ae314f9e1e1654e03`，与 HEAD 相同——本机未装 `mcp`，改了也无法本地验证，改为用新用例做 `ast` 平价）、`.github/workflows/ci.yml`（345 行、md5 `3658e9f11738a4633e72551947994080`；`quality` 快清单仍 **44** 文件、`enterprise-contract` 仍 **38**，`inspect_ci_list_221.py` 经 `yaml.safe_load` 机械重取并断言 md5 → `CI_UNTOUCHED=1`）、`backend/app/api/v2/learning_runs.py`（431 行、md5 `8d2730e73b6dd54ee284a64cc14ac417`，`LearningRuntime.call_tool` 仍是那层薄适配）、`backend/app/agent_runtime/learning_package.py`（769 行、md5 `39365d91586918122d7e72454f1ad498`）。
+
+### 27.2 基线权限矩阵与语义
+
+矩阵由 `matrix_dump_221.py` **从目录本身导出**（`logs/permission-matrix.txt`，`MATRIX_DUMP_OK=1`），不是手写：
+
+| 工具 | 来源 | 允许角色 | 权限键 | 副作用 | 超时(秒) | 必填参数 | 全部参数 | 截断 | MCP |
+|---|---|---|---|---|---|---|---|---|---|
+| `search_course_evidence` | v2 | tutor | `course:evidence:search` | 否 | 30 (search) | `query` | `query` | 5 | 是 |
+| `get_learning_profile` | v2 | planner | `learning:profile:read` | 否 | 10 (standard) | (无) | (无) | - | 是 |
+| `get_recent_mistakes` | v2 | planner | `learning:mistakes:read` | 否 | 10 (standard) | (无) | (无) | - | 是 |
+| `get_prerequisites` | v2 | planner | `learning:prerequisites:read` | 否 | 10 (standard) | `knowledge_point_id` | `knowledge_point_id` | - | 是 |
+| `lookup_knowledge_point` | v1 | system | `knowledge:lookup` | 否 | -（handler 自持） | `kp_name` | `kp_name` | - | 否 |
+| `query_knowledge_graph` | v1 | system | `knowledge:graph:query` | 否 | -（handler 自持） | `kp_name` | `hop`/`kp_name` | - | 否 |
+| `execute_code` | v1 | system | `code:sandbox:execute` | **是** | -（沙箱自持） | `code` | `code`/`language`/`timeout` | - | 否 |
+| `search_resources` | v1 | system | `resource:search` | 否 | -（handler 自持） | `query` | `limit`/`query`/`resource_type` | - | 否 |
+| `generate_learning_materials` | v1 | system | `material:generate` | **是** | -（handler 自持） | `topic`/`types` | `description`/`pptx_template`/`topic`/`types` | - | 否 |
+
+角色侧：`planner` 3 键（画像/错题/先修）、`tutor` 1 键（课程证据）、`practice` 与 `reviewer` **有意 0 键 0 工具**（只消费计划已取回的东西）、内部角色 `system` 5 键（V1 全部）。
+
+`decide_access()` 的判定顺序与拒绝分类（deny-by-default：三层任一不 positively 命中即拒）：
+
+| reason | 含义 | 来源层 |
+|---|---|---|
+| `unknown_tool` | 名字不在目录里 | 目录注册层 |
+| `unknown_role` | 角色没有任何权限键（含 `student`/`teacher`/`admin` 等主体角色） | 角色层 |
+| `role_not_allowed` | 目录里该工具没列出这个角色 | 工具×角色层 |
+| `permission_not_granted` | 角色在工具上被列出、但实际不持有该工具的权限键（矩阵自相矛盾） | 权限键层 |
+| `granted` | 三层全部命中 | 放行 |
+
+- **基线是「等值迁移」，不是重新授权**：测试内嵌 221 之前 `ROLE_TOOLS` 的字面 dict，`{role: tools_for_role(role)} == 基线` 与 `matrix_violations() == []` 两条同时断言；越权扫（4 角色 × 9 工具 = 36 对）逐对核对 `decide_access` 的结论与拒绝理由。反向验证 rp02 证明这一层真能咬：把 `get_learning_profile` 的 `allowed_roles` 加上 tutor **并同时**给 tutor 补权限键（两层一致、`matrix_violations()` 仍为空）→ **4 failed / 14 passed**，红点正是基线钉与越权扫。
+- **错误面稳定**：六态状态、`ToolResult` 六字段、`audit()` 六键、V1 的 `{success, error, tool}` 三键全部由用例逐字钉住；拒绝与非法参数的 `data` 恒为 `None`、`result_count` 恒为 0；`missing_scope`（空 `user_id`/`course_id`）仍是拒绝而不会退化成更宽的默认范围。
+- **审计覆盖拒绝**：221 之前拒绝路径不写任何记录（V1 只有展示用 trace，V2 的 `audit()` 只在返回后才存在）。现在每个结局各写一条统一事件（rp07 把 `finish()` 绕回 221 之前的直接返回 → **3 failed / 15 passed**，红点正是「一调用一事件」与 refused 计数）。事件只存元数据与摘要哈希：rp08 把 `tool` 字段退回空串 → **4 failed / 14 passed**（未登记工具的名称是审计唯一的线索）。
+
+### 27.3 实测（offline，零模型调用，每条日志均记 `CMD:` 与 `PYTEST_EXIT=`，探针 `outbound attempts=0 unique_hosts=0`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新文件单跑 | **18 passed / 0 failed / 0.93 s**，`PYTEST_EXIT=0` | `logs/measure-221-newfile.txt` |
+| 既有工具面 | `test_agent_tools.py` + `test_v2_learning_tools.py` + `test_mcp_readonly_protocol.py` + 本卡新文件 = **32 passed / 1 skipped / 5.17 s**（前三个文件收集到 14 项，唯一 skip 仍是 `mcp` 未装的 `importorskip`） | `logs/measure-221-tools.txt` |
+| 学习包/运行时面 | 5 个文件（学习包、重规划、V2 runs、检索、图安全）**60 passed / 0 failed / 23.77 s** | `logs/measure-221-package.txt` |
+| **CI 同形子集（44 文件，未纳入本卡新文件）** | **521 passed / 1 skipped / 0 failed / 4 warnings / 147.78 s**，旗标按 `ci.yml:217` 同形 + `-rs`；与 211c 记录**逐数相同** = 本卡对既有行为零改变 | `logs/measure-221-ci44.txt`、`logs/portable-list.txt` |
+| 候选 45 文件清单（**仅证据，未采纳**） | **539 passed / 1 skipped / 0 failed / 4 warnings / 143.83 s**（= 521 + 本卡 18 项） | `logs/measure-221-ci45-candidate.txt`、`logs/candidate-list.txt` |
+| **全量（记录数）** | **2410 passed / 0 failed / 20 skipped / 1067.30 s / 23 warnings**（2026-10-24 QWEN-221 最终字节复跑，Windows + Python 3.12.15；口径不变：`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 全新 `--basetemp output/qwen221-2026-10-24/pytest-measure-221-full-suite`，挂同一个 fail-closed socket 探针，探针 **`outbound attempts=0 unique_hosts=0`**，零计费模型调用、未读 `.env`、无用例因阻断转红，`PYTEST_EXIT=0` 记入日志）＝ **2430 项**（passed + skipped）/ 197 个测试文件 = 211c 的 2412 项 + 本卡新增 18 项；既有 3 个工具文件 14 项与 5 个学习包/运行时文件 60 项在本卡最终字节上全部照旧通过（`32 passed, 1 skipped in 5.17s`、`60 passed in 23.77s`） | `logs/measure-221-full-suite.txt` |
+| 集合口径 | `--collect-only -q` 得 **2429** 个 node id，分布在 **196** 个文件（`2429 in 13.35s`）；node id 2429 + 收集期整文件跳过的 `test_mcp_readonly_protocol.py`（本机未装 `mcp` 的 `importorskip`）1 条 = **2430 项**，与全量 passed + skipped 逐数相同；因此全量那一轮实际触达 **197** 个文件（有 node id 的 196 + 那 1 个只贡献收集期 skip 的），与 211c 的 195 + 1 = 196 同口径 | `logs/measure-221-collect-only.txt` |
+| 反向验证 | 11 组，**全部 `RED_OK`**（每次只改一处、跑本卡测试文件、按字节恢复并断言 md5 相同；每组都有 pytest summary 行、红点点名用例、无 ImportError、探针 0/0）：rp01 权限键层 5 failed / rp02 两层一致扩权 4 / rp03 工具改名脱登记 5 / rp04 未知角色层 2 / rp05 V1 闸门不看名字 1 / rp06 `extra=ignore` 2 / rp07 拒绝不写审计 3 / rp08 审计丢 attempted 名 4 / rp09 截断回字面量 1 / rp10 MCP 改名 1 / rp11 OpenAI 导出丢 `required` 1；每组都是 `18 = failed + passed` 的完整收集 | `logs/reverse-proofs.txt`（驱动 `reverse_proofs_221.py`，`ALL_PROOFS_VALID=1`） |
+| 门 | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed!**（exit 0）、`compileall backend/app tests/` exit 0、CI 前置 `init_db()` INITDB_EXIT=0、`git diff --check` 干净 | `logs/gates.txt`、`logs/ci-init-db.txt` |
+| 字节与行尾 | 新目录 215 行 `3c13c4490298567bf34b6986e6c86656`、审计 123 行 `7cb62306d6677cbb980000240b5bab39`、broker 171 行 `e17a28b1da38837f4b983e51b5635233`、V1 注册表 503 行 `8b6844c70c32fd516d9ff4ef62b9693a`、测试 395 行 `af49171bb284a43725e312b8571d8ef2`，全部纯 CRLF（孤立 LF/CR 各 0）；`mcp_readonly.py`、`ci.yml`、`learning_runs.py`、`learning_package.py` md5 未变 | `logs/final-bytes.txt`、`logs/ci-list.txt`、`logs/openai-export-compare.txt`、`logs/baseline-bytes.txt` |
+| OpenAI 导出平价 | `HEAD tools=5 NEW tools=5 identical=True`、`ORDER_SAME=True`、`OWNER_SAME=True`、`OPENAI_EXPORT_IDENTICAL=1`（脚本 `git show HEAD:` 取旧版并排比对） | `logs/openai-export-compare.txt`、`tmp/head_registry.py` |
+
+### 27.4 边界与未做
+
+- **角色划分留给产品裁定，本卡只给基线**：矩阵按 221 之前的实际行为等值迁移，`practice`/`reviewer` 零权限、V1 五个工具只给内部角色 `system`（V1 只被进程内产品代码调用，没有能命名角色的外部调用方）都是**现状**而非主张。已在 `[DONE]` 列为待裁定的具体一条：`backend/app/mcp_readonly.py:25` 把范围固定成 `role="planner"`，而 `search_course_evidence` 的基线只给 `tutor`，所以 MCP 侧那个工具名会稳定返回 `denied`——**221 前后一致**（旧 `ROLE_TOOLS` 同样如此），本卡不擅自扩权也不擅自改名，登记待裁。既有 `tests/a/test_mcp_readonly_protocol.py` 的第一条用例注入的是假 broker，因此今天没有任何用例覆盖这一点。
+- **两处「声明了但运行时不消费」的 allowed_tools 未合并**：`backend/app/services/agent_config_service.py`（`:38`/`:133`/`:156`，配 `core/models.py:476` 的 JSON 列与 `agents/configurable_agent.py:4`）是持久化配置面，`backend/app/agent_runtime/contracts.py:20` 的 `RunPolicy.allowed_tools`（和 `RunContext.permissions`）目前没有任何消费者。运行时权限判定已统一走目录，这两处属配置/编排层，归后续卡（301/341/343）；`configurable_agent` 不执行工具，故本卡不存在「绕过矩阵」的路径。
+- **审计仍是进程内环形缓冲**（500 条、不落库、不经 API 暴露）：满足派工第 2 条「一律拒绝并写审计事件」，但持久化审计要定 schema 与迁移，超出 221「不碰 API/UI」的范围，归 341/343 观测面。
+- **超时语义**：V2 四个工具由 broker 统一 `asyncio.wait_for`（标准 10 s、检索 30 s，值从 spec 派生）；V1 五个工具 `timeout_seconds=None` 表示由 handler 自己持有（`execute_code` 的沙箱 `timeout` 参数），不是缺失。截断配额目前只有 `search_course_evidence` 的 5 条进目录；图内另有的 `hits[:5]`/`evidence[:15]` 编排层截断不在 221 范围。
+- **CI 快清单未改**（派工没有 CI 条款，按 201b/202b/211b 的先例那是独立一张卡）：44 文件同形复跑仍 **521/1** 就是「既有行为零改变」的证据；45 文件候选 **539/1** 只作采纳前的预演，顺序见 `logs/candidate-list.txt`。
+- **未跑 GitHub `quality` job 真实回执**（本机无 `gh`，属 remote 证据、由 Lead 判读）；**未跑 PG `enterprise-contract` 38 文件清单**（本卡零 PG 面改动，同 §22/§23/§25/§26 口径）。
+- **迭代与作废记录保留、不掩盖**：`logs/dev-new-permissions.txt` 是用例首稿的三轮迭代（首稿 3 处自身断言写错：`recent()` 是最新在前而非最旧、`by_status` 的 denied 数漏算 `missing_scope`、`ast` 只扫了模块顶层而漏掉 `create_server()` 里嵌套的装饰函数）；`logs/void-full-suite-stopped-midrun.txt` 是 16→18 项之间启动的全量跑，**主动中止、不作记录**；`logs/reverse-proofs.txt` 与四个 `measure-221-*.txt` 都在最终字节上重跑覆盖。
+- **文档脚本的首跑在写完文件之后才炸**，如实登记：`apply_docs_221.py` 第一次跑时，前四处改动（台账 §27、矩阵 §24、README `:56`/`:58`）都已落盘，到「评委导览计数格」那条 `assert old_body in after[index]` 才失败——那条断言只该用在「保留同格历史」的格子上，计数格是**故意**整体替换的。处置：五份文档全部从改动前的备份（`tmp/docs-before/`，md5 逐一比对一致、`git status --short` 回到只有 5 个 backend/tests 条目）恢复后重跑，脚本把该断言改为仅 `keep_history` 时生效；恢复过程中我自己在仓库根留下了 4 份同名副本（一条写错的 `cp` 列表），已删除、未进任何提交。
+- 计数一律按 pytest summary 行取数；warnings 数随轮次波动不作结论（本轮 CI 子集 4 warnings，与 211c 同数）。
+- 证据等级：**offline**。全部为同机同形复跑归档日志；GitHub 回执与 PG 层不属本卡主张。

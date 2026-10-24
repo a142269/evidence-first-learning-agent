@@ -561,3 +561,26 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG 专项 | 本卡零 CI/PG 面改动，同 §22 口径 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用；GitHub 真实回执与 PG 侧结论不属本卡主张。本节关闭 §25.2 登记的「没有任何测试断言 `PROMPT_VERSION` 字面值」缺口。
+
+## 24. QWEN-221 单一工具目录 + deny-by-default + 统一审计实测摘要（2026-10-24，分支 `qwen/wave2-tools`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 单一来源 | `backend/app/services/tool_catalog.py`（新增） | **9 个工具 = V2 四个只读 + V1 五个**，一条 `ToolSpec` 同时给出工具名、来源、描述、权限键、允许角色、只读/副作用、版本、超时与超时类、参数模型或 JSON schema、截断上限、MCP 暴露；`ROLE_PERMISSIONS` 给角色→权限键；215 行、纯 CRLF、md5 `3c13c4490298567bf34b6986e6c86656` |
+| 运行时 deny-by-default | `decide_access()` 三层：目录注册 → 角色列出 → 权限键持有 | 未知工具 `unknown_tool`、未列角色 `role_not_allowed`、矩阵自相矛盾 `permission_not_granted`、无权限键角色 `unknown_role`（含 `student`/`teacher`/`admin` 主体角色）一律拒；`practice`/`reviewer` 基线 0 键 0 工具 |
+| 散落注册点替换 | V2 broker + V1 registry | `ROLE_TOOLS`/`SCHEMAS`/三个 pydantic 参数模型**删除**（broker 171 行、md5 `e17a28b1da38837f4b983e51b5635233`、`git diff --numstat` 46/−55）；V1 的 5 个 `ToolSchema` 字面量改由 `source_specs("v1")` 循环构造（503 行、md5 `8b6844c70c32fd516d9ff4ef62b9693a`、47/−71），`_traced_call` 入口加闸门 |
+| 行为保留 | 错误面与导出 | 六态 `success/no_data/denied/invalid_args/timeout/failed`、`ToolResult` 六字段、`audit()` 六键、V1 `{success,error,tool}` 三键全部逐字钉住；`to_openai_tools()` 与 `git show HEAD:` **逐字节相同**（`OPENAI_EXPORT_IDENTICAL=1`、`ORDER_SAME=True`、`OWNER_SAME=True`） |
+| 统一审计 | `backend/app/services/tool_audit.py`（新增） | 14 个固定键、环形 500、`counts()`（total/granted/refused/by_status/by_decision/by_tool）；**每个结局各写一条**，拒绝也写；事件不收参数值（`query=` 传入即 `TypeError`），只存摘要哈希与异常类名；123 行、md5 `7cb62306d6677cbb980000240b5bab39` |
+| 基线矩阵 | `matrix_dump_221.py` 从目录机械导出 | `logs/permission-matrix.txt`（`MATRIX_DUMP_OK=1`）；`matrix_violations()` 为空；测试内嵌 221 之前 `ROLE_TOOLS` 字面 dict 做等值比对 |
+| 新用例 | `tests/a/test_tool_registry_permissions.py`（新增） | **18 条**、395 行、md5 `af49171bb284a43725e312b8571d8ef2`；含 4 角色 × 9 工具 = **36 对越权扫**（逐对核对结论、拒绝理由、`data is None`、`result_count=0`、执行面 `calls == []`）；单跑 **18 passed / 0.93 s** |
+| 既有工具面 | 3 个既有文件 + 本卡新文件 | **32 passed / 1 skipped / 5.17 s**（前三个文件 14 项；唯一 skip = `mcp` 未装的 `importorskip`） |
+| 学习包/运行时面 | 5 个文件 | **60 passed / 0 failed / 23.77 s** |
+| **CI 同形子集（44 文件，未纳入本卡新文件）** | `ci.yml:217` 同形旗标 + `-rs` + 前置 `init_db()` | **521 passed / 1 skipped / 0 failed / 4 warnings / 147.78 s** —— 与 211c 记录**逐数相同**，即本卡对既有行为零改变；`ci.yml` 一字未动（md5 `3658e9f11738a4633e72551947994080`、快清单仍 44、`enterprise-contract` 仍 38，`CI_UNTOUCHED=1`） |
+| 候选 45 文件清单（**仅证据，未采纳**） | 同形旗标 | **539 passed / 1 skipped / 0 failed / 4 warnings / 143.83 s**（= 521 + 18），顺序见 `logs/candidate-list.txt` |
+| **全量（记录数）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 全新 `--basetemp`） | **2410 passed / 0 failed / 20 skipped / 1067.30 s / 23 warnings**（2026-10-24 QWEN-221 最终字节复跑，Windows + Python 3.12.15；口径不变：`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 仓库默认 SQLite + 全新 `--basetemp output/qwen221-2026-10-24/pytest-measure-221-full-suite`，挂同一个 fail-closed socket 探针，探针 **`outbound attempts=0 unique_hosts=0`**，零计费模型调用、未读 `.env`、无用例因阻断转红，`PYTEST_EXIT=0` 记入日志）＝ **2430 项**（passed + skipped）/ 197 个测试文件 = 211c 的 2412 项 + 本卡新增 18 项；既有 3 个工具文件 14 项与 5 个学习包/运行时文件 60 项在本卡最终字节上全部照旧通过（`32 passed, 1 skipped in 5.17s`、`60 passed in 23.77s`） |
+| 集合口径 | `--collect-only -q` | `--collect-only -q` 得 **2429** 个 node id，分布在 **196** 个文件（`2429 in 13.35s`）；node id 2429 + 收集期整文件跳过的 `test_mcp_readonly_protocol.py`（本机未装 `mcp` 的 `importorskip`）1 条 = **2430 项**，与全量 passed + skipped 逐数相同；因此全量那一轮实际触达 **197** 个文件（有 node id 的 196 + 那 1 个只贡献收集期 skip 的），与 211c 的 195 + 1 = 196 同口径 |
+| 门 | ruff（`--select=F821,F823,E9`）+ `compileall` + 前置 `init_db()` + `git diff --check` | `ruff check --select=F821,F823,E9 backend/app scripts/ tests/` → **All checks passed!**（exit 0）、`compileall backend/app tests/` exit 0、CI 前置 `init_db()` INITDB_EXIT=0、`git diff --check` 干净 |
+| 反向验证 | 11 组单层破坏（工作树内临时改、按字节恢复、断言 md5 相同） | **全部 `RED_OK`**：权限键层 5 failed / 两层一致的扩权 4 / 工具改名脱登记 5 / 未知角色层 2 / V1 闸门不看名字 1 / `extra=ignore` 2 / 拒绝不写审计 3 / 审计丢 attempted 名 4 / 截断回字面量 1 / MCP 改名 1 / OpenAI 导出丢 `required` 1；每组收集均为 `18 = failed + passed`，无 ImportError，探针 `attempts=0 unique_hosts=0` —— `logs/reverse-proofs.txt`（`ALL_PROOFS_VALID=1`） |
+| 未跑 | GitHub `quality` 真实回执、PG 专项 38 文件 | 本卡零 CI/PG 面改动，同 §22/§23 口径 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、零 `.env` 读取；GitHub 真实回执与 PG 侧结论不属本卡主张。**待裁定登记**（详见台账 §27.4）：`mcp_readonly.py:25` 固定 `role="planner"` 而 `search_course_evidence` 基线只给 `tutor`，MCP 侧该工具恒 `denied`（221 前后一致）；`agent_config_service.allowed_tools` 与 `contracts.RunPolicy.allowed_tools` 两处声明运行时不消费；统一审计仍是进程内环形缓冲，未持久化。
