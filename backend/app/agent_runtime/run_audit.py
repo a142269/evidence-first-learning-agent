@@ -82,6 +82,43 @@ def start_run(
     _safe_write(write)
 
 
+def queue_run(
+    *,
+    run_id: str,
+    session_id: str,
+    user_id: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Create a queued run row for QWEN-301; a worker claims it later.
+
+    The row keeps the same shape as ``start_run`` but with status ``queued``,
+    no lease and a ``run.queued`` checkpoint, so existing readers (leases,
+    reconciliation, admin usage) treat it as an inert, not-yet-executed run.
+    """
+    def write(session: Session) -> None:
+        package = (metadata or {}).get("request", {}).get("mode") == "learning_package"
+        session.add(
+            AgentRunRecord(
+                id=run_id,
+                session_id=session_id,
+                user_id=user_id,
+                workflow_type="learning_package" if package else "evidence_first_learning",
+                agents=["planner", "tutor", "practice", "reviewer"] if package else ["retrieval", "tutor", "citation_review"],
+                status="queued",
+                execution_id=None,
+                event_sequence=1,
+                lease_expires_at=None,
+                metadata_data=metadata or {},
+            )
+        )
+        session.add(AgentCheckpointRecord(
+            id=str(uuid.uuid4()), run_id=run_id, thread_id=run_id,
+            node_name="started", status="run.queued", sequence=1,
+        ))
+
+    _safe_write(write)
+
+
 def find_idempotent_run(user_id: str, digest: str) -> tuple[str, str] | None:
     try:
         with SessionLocal() as session:

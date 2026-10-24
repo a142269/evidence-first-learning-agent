@@ -6,13 +6,14 @@ import hashlib
 import json
 import os
 import re
+import time
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
-from backend.app.agent_runtime import run_audit, run_leases
+from backend.app.agent_runtime import run_audit, run_leases, run_queue
 from backend.app.agent_runtime.learning_graph import EvidenceFirstGraph
 from backend.app.agent_runtime.learning_package import LearningPackageGraph
 from backend.app.agent_runtime.conversation_memory import load_conversation_memory
@@ -265,6 +266,61 @@ async def stream_learning_run(http_request: Request, request: LearningRunRequest
 
     return StreamingResponse(stream_result(run, operation, timeout=180 if request.mode == "learning_package" else 60), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.post("/enqueue")
+async def enqueue_learning_run(http_request: Request, request: LearningRunRequest) -> dict[str, Any]:
+    """Queue a run for worker execution (QWEN-301); returns a queryable run id.
+
+    Creation and execution are decoupled: this endpoint only persists a
+    ``queued`` run.  A queue worker claims it later (at-least-once) and settles
+    it through the same graph, lease and delivery contract as ``/stream``.
+    The synchronous ``/stream`` endpoint keeps its existing behaviour.
+    """
+    principal, course_id = await asyncio.to_thread(resolve_v2_principal,
+        authorization=http_request.headers.get("Authorization"),
+        requested_user_id=request.user_id, requested_course_id=request.course_id,
+    )
+    if request.mode == "learning_package" and not principal.authenticated:
+        raise HTTPException(status_code=401, detail="authorization_required")
+    graph = _package_graph if request.mode == "learning_package" else _graph
+    if request.mode == "learning_package" and not graph._builder_available:
+        raise HTTPException(status_code=503, detail="learning_package_unavailable")
+    run_id = str(uuid.uuid4())
+    request = request.model_copy(update={"user_id": principal.user_id, "course_id": course_id,
+                                          "session_id": request.session_id.strip() or run_id})
+    try:
+        await asyncio.to_thread(
+            run_audit.queue_run, run_id=run_id, session_id=request.session_id or run_id,
+            user_id=principal.user_id, metadata={
+                "request": request.model_dump(), "thread_id": run_id,
+                "workflow_version": WORKFLOW_VERSION,
+                "memory_eligible": principal.authenticated,
+                "queue": {"enqueued_at": time.time()},
+            })
+    except run_audit.RunPersistenceError:
+        raise HTTPException(status_code=503, detail="run_persistence_unavailable") from None
+    return {"run_id": run_id, "status": "queued", "session_id": request.session_id,
+            "workflow_version": WORKFLOW_VERSION}
+
+
+@router.post("/{run_id}/cancel")
+async def cancel_learning_run(http_request: Request, run_id: str) -> dict[str, Any]:
+    """Cancel a queue-originated run; running workers are fenced off by the lease."""
+    record, _principal = await authorized_run(http_request.headers.get("Authorization"), run_id)
+    if record.status not in {"queued", "running"}:
+        raise HTTPException(status_code=409, detail="run_not_cancellable")
+    try:
+        queued = await asyncio.to_thread(run_queue.queue_origin, run_id)
+        if not queued:
+            raise HTTPException(status_code=409, detail="run_not_queued")
+        cancelled = await asyncio.to_thread(run_queue.cancel_run, run_id)
+    except run_audit.RunPersistenceError:
+        raise HTTPException(status_code=503, detail="run_persistence_unavailable") from None
+    if not cancelled:
+        # Lost the race against a claim or another canceller.
+        raise HTTPException(status_code=409, detail="run_not_cancellable")
+    return {"run_id": run_id, "status": "cancelled"}
 
 
 @router.get("/{run_id}")
