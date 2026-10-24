@@ -1,8 +1,11 @@
-"""两步学习计划、受限 ReAct-style 检索决策循环及一次 Reviewer 返工。
+"""两步学习计划、受限 ReAct-style 检索决策循环、一次有界重规划及一次 Reviewer 返工。
 
 The planner chooses goals and dependency IDs within a two-role contract. Tool
 actions are only search_course / finish, with at most three searches. They are
 structured JSON, never executable model text, arbitrary URLs or an arbitrary DAG.
+A retrieval that fails, or a decision loop that repeats an already-used query
+without any evidence, marks the plan invalid: the Planner re-enters at most
+once and a second invalidation stops the run instead of looping.
 """
 from __future__ import annotations
 
@@ -100,6 +103,14 @@ class PackageFailure(RuntimeError):
     def __init__(self, code: str):
         self.code = code
         super().__init__(code)
+
+
+# Fixed, model-visible wording for a replan. It names only our own failure
+# classes, never the model's text or the retrieved content.
+_REPLAN_REASONS = {
+    "tool_failed": "课程检索工具本次调用失败",
+    "evidence_stalled": "重复使用已检索过的提问，仍未获得课程证据",
+}
 
 
 class Contract(BaseModel):
@@ -217,6 +228,10 @@ class QualityReview(Contract):
 
 class PackageState(LearningState, total=False):
     plan: dict[str, Any]
+    plan_version: int
+    replan_rounds: int
+    plan_invalidations: list[dict[str, Any]]
+    plan_invalidation: dict[str, Any]
     decision: dict[str, Any]
     artifacts: dict[str, Any]
     observations: list[dict[str, Any]]
@@ -238,6 +253,10 @@ class LearningPackageGraph(EvidenceFirstGraph):
     MAX_TOOL_CALLS = 3
     MAX_INPUT_CHARS = 100_000
     MAX_OUTPUT_TOKENS_PER_CALL = 2048
+    # Baseline replanning caps.  One invalid plan may be replaced once, so a run
+    # never carries more than two plans; a second invalidation stops the run.
+    MAX_REPLAN_ROUNDS = 1
+    MAX_REPLAN_DEPTH = 2
 
     async def invoke(self, state, on_event=None):
         if not self._builder_available:
@@ -254,8 +273,10 @@ class LearningPackageGraph(EvidenceFirstGraph):
         builder.add_edge(START, "guard")
         builder.add_conditional_edges("guard", lambda s: "safe_decline" if s.get("safety_blocked") else "planner")
         builder.add_edge("planner", "decide")
-        builder.add_conditional_edges("decide", lambda s: "tool" if s["decision"]["action"] == "search_course" else "tutor")
-        builder.add_edge("tool", "decide")
+        builder.add_conditional_edges("decide", self._route_decide,
+                                      {"tool": "tool", "tutor": "tutor", "planner": "planner"})
+        builder.add_conditional_edges("tool", self._route_after_tool,
+                                      {"decide": "decide", "planner": "planner"})
         builder.add_edge("tutor", "practice")
         builder.add_edge("practice", "review")
         builder.add_conditional_edges("review", self._route_package_review)
@@ -281,6 +302,12 @@ class LearningPackageGraph(EvidenceFirstGraph):
                 if on_event:
                     for item in tool_events:
                         await on_event("tool.completed", {"node": name, **item})
+            replan_events = result.pop("_replan_events", [])
+            if replan_events:
+                result["plan_invalidations"] = [*local.get("plan_invalidations", []), *replan_events]
+                if on_event:
+                    for item in replan_events:
+                        await on_event("plan.replanned", {"node": name, **item})
             if name == "tool" and on_event:
                 await on_event("retrieval.completed", {
                     "node": "tool", "evidence_count": len(result["evidence"]),
@@ -360,36 +387,88 @@ class LearningPackageGraph(EvidenceFirstGraph):
                     f"上一条输出未通过 {schema.__name__} JSON Schema 校验。{guidance}请仅输出符合该 Schema 的 JSON。"})
         raise PackageFailure("learning_package_invalid_output")
 
+    def _invalidate_plan(self, state, trigger: str, stop_code: str) -> dict[str, Any]:
+        """Mark the current plan invalid, or stop the run when the cap is used up.
+
+        The returned update drops plan-derived artifacts but never touches the
+        call/tool budgets, the searches already made, the evidence or the
+        revision counter, so a replan cannot launder any existing limit.  Once
+        the caps are spent the run stops with the failure code of the underlying
+        cause, so the documented user-facing codes do not change.
+        """
+        rounds = state.get("replan_rounds", 0)
+        version = state.get("plan_version", 1)
+        if rounds >= self.MAX_REPLAN_ROUNDS or version >= self.MAX_REPLAN_DEPTH:
+            raise PackageFailure(stop_code)
+        budget = state.get("budget", {})
+        entry = {"trigger": trigger, "round": rounds + 1, "plan_version": version,
+                 "model_calls": budget.get("model_calls", 0),
+                 "tool_calls": budget.get("tool_calls", 0),
+                 "input_chars": budget.get("input_chars", 0),
+                 "search_count": len(state.get("searches", [])),
+                 "evidence_count": len(state.get("evidence", []))}
+        return {"plan_invalidation": entry, "artifacts": {}, "practice_error": "",
+                "partial_completion": {}, "decision": {"action": "finish", "query": ""}}
+
+    @staticmethod
+    def _route_decide(state):
+        if state.get("plan_invalidation"):
+            return "planner"
+        return "tool" if state["decision"]["action"] == "search_course" else "tutor"
+
+    @staticmethod
+    def _route_after_tool(state):
+        return "planner" if state.get("plan_invalidation") else "decide"
+
     async def _planner(self, state):
-        planning_context: dict[str, Any] = {}
+        invalidation = state.get("plan_invalidation") or {}
+        replan = bool(invalidation)
         audits: list[dict[str, Any]] = []
-        if hasattr(self.runtime, "call_tool"):
-            for name in ("get_learning_profile", "get_recent_mistakes"):
-                tool = await self.runtime.call_tool(state, role="planner", name=name, arguments={})
-                audits.append(tool.audit())
-                if tool.status == "success":
-                    planning_context[name] = tool.data
-                elif tool.status not in {"no_data", "failed"}:
-                    raise PackageFailure("learning_package_tool_failed")
-            weak_points = planning_context.get("get_learning_profile", {}).get("weak_points", [])
-            if weak_points:
-                tool = await self.runtime.call_tool(state, role="planner", name="get_prerequisites",
-                    arguments={"knowledge_point_id": weak_points[0]["knowledge_point_id"]})
-                audits.append(tool.audit())
-                if tool.status == "success":
-                    planning_context["get_prerequisites"] = tool.data
-                elif tool.status not in {"no_data", "failed"}:
-                    raise PackageFailure("learning_package_tool_failed")
-        plan = await self._ask(state, "Planner", (
+        if replan:
+            # Reuse the checkpointed learning context: a replan must not spend a
+            # second round of profile, mistake or prerequisite reads.
+            planning_context = state.get("planning_context", {})
+        else:
+            planning_context = {}
+            if hasattr(self.runtime, "call_tool"):
+                for name in ("get_learning_profile", "get_recent_mistakes"):
+                    tool = await self.runtime.call_tool(state, role="planner", name=name, arguments={})
+                    audits.append(tool.audit())
+                    if tool.status == "success":
+                        planning_context[name] = tool.data
+                    elif tool.status not in {"no_data", "failed"}:
+                        raise PackageFailure("learning_package_tool_failed")
+                weak_points = planning_context.get("get_learning_profile", {}).get("weak_points", [])
+                if weak_points:
+                    tool = await self.runtime.call_tool(state, role="planner", name="get_prerequisites",
+                        arguments={"knowledge_point_id": weak_points[0]["knowledge_point_id"]})
+                    audits.append(tool.audit())
+                    if tool.status == "success":
+                        planning_context["get_prerequisites"] = tool.data
+                    elif tool.status not in {"no_data", "failed"}:
+                        raise PackageFailure("learning_package_tool_failed")
+        instruction = (
             "把学习需求拆成讲解和三道练习两个步骤；练习必须依赖讲解。"
             "严格使用两个步骤：第一步 id 为 tutor_explain、role 为 tutor、depends_on 为空数组；"
             "第二步 id 为 practice_apply、role 为 practice、depends_on 为 [\"tutor_explain\"]。"
             "只需根据学习需求填写两个 goal。"
-        ),
+        )
+        if replan:
+            instruction += (
+                f"第 {invalidation['round']} 次重规划：上一版计划失效（{_REPLAN_REASONS[invalidation['trigger']]}）。"
+                "保持两个步骤的契约不变，收紧两个 goal，并改用与原检索问题不同的学习路径。"
+            )
+        plan = await self._ask(state, "Planner", instruction,
                                {"learning_context": planning_context}, LearningPlan)
-        return {"plan": plan, "artifacts": {}, "evidence": [], "observations": [],
-                "searches": [], "revisions": 0, "planning_context": planning_context,
-                "_tool_events": audits}
+        if not replan:
+            return {"plan": plan, "artifacts": {}, "evidence": [], "observations": [],
+                    "searches": [], "revisions": 0, "planning_context": planning_context,
+                    "plan_version": 1, "replan_rounds": 0, "plan_invalidations": [],
+                    "_tool_events": audits}
+        return {"plan": plan, "artifacts": {}, "planning_context": planning_context,
+                "plan_version": invalidation["plan_version"] + 1,
+                "replan_rounds": invalidation["round"], "plan_invalidation": {},
+                "_tool_events": audits, "_replan_events": [invalidation]}
 
     async def _decide(self, state):
         searches = state.get("searches", [])
@@ -400,11 +479,13 @@ class LearningPackageGraph(EvidenceFirstGraph):
         decision = await self._ask(state, "Tutor", "选择 search_course 检索课程或 finish 开始讲解。"
                                    "需要证据才可 finish；根据 observation 判断是否需要改写问题继续检索。",
                                    {"plan": state["plan"], "observations": state.get("observations", [])}, ToolDecision)
+        # A model that tries to finish without evidence breaks the contract and
+        # stops immediately; that is never a plan invalidation.
         if decision["action"] == "finish" and not state.get("evidence"):
             raise PackageFailure("learning_package_no_evidence")
         if decision["action"] == "search_course" and decision["query"].casefold() in searches:
             if not state.get("evidence"):
-                raise PackageFailure("learning_package_repeated_search")
+                return self._invalidate_plan(state, "evidence_stalled", "learning_package_repeated_search")
             return {"decision": {"action": "finish", "query": ""}, "tool_stop_reason": "repeated_search"}
         return {"decision": decision}
 
@@ -423,8 +504,20 @@ class LearningPackageGraph(EvidenceFirstGraph):
         if hasattr(self.runtime, "call_tool"):
             tool = await self.runtime.call_tool(state, role="tutor", name="search_course_evidence",
                                                 arguments={"query": query})
-            if tool.status not in {"success", "no_data"}:
+            # A refusal is an authorization stop, not a transient failure: it is
+            # never answered by re-planning.
+            if tool.status in {"denied", "invalid_args"}:
                 raise PackageFailure("learning_package_tool_failed")
+            if tool.status not in {"success", "no_data"}:
+                invalidation = self._invalidate_plan(state, "tool_failed", "learning_package_tool_failed")
+                # The failed call is still charged: recording the query keeps the
+                # replanned plan from re-issuing it verbatim.
+                return {"evidence": state.get("evidence", []),
+                        "searches": [*state.get("searches", []), query.casefold()],
+                        "observations": [*state.get("observations", []),
+                                         {"query": query, "results": [], "tool_status": tool.status}],
+                        "retrieval_ms": int((time.perf_counter() - started) * 1000),
+                        "_tool_events": [tool.audit()], **invalidation}
             hits = tool.data or []
             tool_events = [tool.audit()]
         else:
