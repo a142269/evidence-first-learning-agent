@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。221 已合并：全量 **2410/0/20**、CI 快清单 44 文件 / 521/1。下一小卡 **221b（MCP 测试 + CI 45；不改角色）**，随后 **231**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c + 221；全量 **2410/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave2-tools` 做 **QWEN-221b（更正版）**：**不改 `mcp_readonly.py` 角色**（搜索已用 tutor_scope）；补 MCP fake-broker 回归测试 + 权限测试进 CI 44→45；随后 **231**。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2 收尾**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。221b 已合并：全量 **2410/0/20**、CI 快清单 **45 文件 / 539 passed / 1 skipped**。下一张 **QWEN-231（Observation/claim-support 进主链）**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c + 221/221b；全量 **2410/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave2-observation`（Lead 预建并同步 main@7c1b03e）做 **QWEN-231**：统一 Observation schema + 最多一次 claim-support 二次校验，失败不交付/返工；零模型、不碰 API/UI。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 221（18 passed、工具面 32 passed、2410/0/20）；**更正 MCP 裁定**；派 221b 更正版。
+- **Lead 当前动作**：验收并合并 221b（18 passed/1 skipped、45 文件 539/1、2410/0/20）；准备 231 卡与分支。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 20:30 之后（观察 QWEN-221b/231）。
+- **下一次检查**：2026-10-24 21:30 之后（观察 QWEN-231）。
 
 ## 1. 协作协议
 
@@ -72,8 +72,8 @@
 | QWEN-211b | PROMPT_VERSION 与 CI 纳入 | **完成（已合并）** | Qwen | `1ad4da5`+`8c646c8`+`2bb0464`：v2.8→v2.9、文档双时态；CI 43→44 文件，**520 passed / 1 skipped**；全量 2391/0/20 |
 | QWEN-211c | 版本常量断言 | **完成（已合并）** | Qwen | `ffb087e`+`bfae720`+`13ea358`：`PROMPT_VERSION=="learning-package-v2.9"` 断言；全量 **2392/0/20**、CI **521/1**；产品/CI 零改动 |
 | QWEN-221 | 统一 ToolRegistry + 权限矩阵 | **完成（已合并）** | Qwen | `c8781e0`+`0a4ba17`+`0552203`：9 工具×5 角色单一目录、deny-by-default、36 对越权扫、每结局一条审计；Lead 复跑工具面 32 passed；全量 2410/0/20 |
-| QWEN-221b | MCP 角色修正 + 权限测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-tools`：`mcp_readonly.py` 角色 planner→tutor（不扩 planner 权限）；`test_tool_registry_permissions.py` 进 CI 44→45（预期 539/1）；零模型 |
-| QWEN-231 | Observation/claim-support 进主链 | 未开始 | — | 221b 之后；证据覆盖与 claim 支持进主流程；零模型 |
+| QWEN-221b | MCP scope 测试 + 权限测试进 CI | **完成（已合并）** | Qwen | `32cee2d`+`86c6128`+`7c1b03e`：不改 MCP 角色，补 tutor/planner scope 回归；CI 44→45，**539 passed / 1 skipped**；全量 2410/0/20 |
+| QWEN-231 | Observation/claim-support 进主链 | **待 Qwen 认领** | Qwen | `qwen/wave2-observation`（main@7c1b03e）：统一 Observation schema（状态/错误类/可重试/证据强度）+ 最多一次 claim-support 二次校验，失败不交付/返工；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -165,6 +165,8 @@
 77. **QWEN-221 验收通过**：`c8781e0`+`0a4ba17`+`e574318`+`909c064`+`0552203`+`107e572` 已合并 main；Lead 复跑权限/工具面 **32 passed / 4.23s**；9 工具×5 角色单一目录、等值迁移（4 放行/32 拒且执行面零调用）、每个结局一条审计、18 项新用例、11 组反向验证均接受；全量 **2410/0/20**。审计仍是进程内环形缓冲、`allowed_tools` 配置面未合并——分别归 341/343 与 301/341，本卡不扩。
 78. **MCP 角色裁定（2026-10-24 19:30 更正）**：我上一版读漏了 `backend/app/mcp_readonly.py:56-64`——`search_course_evidence` **已经**用 `tutor_scope` 调用，`planner` scope 只用于 profile/mistakes/prereqs，所以**不存在“MCP 搜索稳定 denied”的 bug**。**撤回“把 scope role 改成 tutor”**：那会把 planner 的 3 个工具弄坏。`mcp_readonly.py` 角色**不改**；本卡只需补测试钉住现状。
 79. **QWEN-221b（更正版）派发**：继续 `qwen/wave2-tools`；(a) **不改产品权限/角色**；补 fake-broker/ast 回归测试证明 MCP `search_course_evidence` 用 `tutor` scope、profile/mistakes/prereqs 用 `planner` scope（本机无 `mcp` 时保持 `importorskip`）；(b) 把 `tests/a/test_tool_registry_permissions.py` 加入 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/矩阵；(c) 零模型、不碰 API/UI；完成后 `[DONE]`，随后 **231**。
+80. **QWEN-221b 验收通过**：`32cee2d`+`86c6128`+`7c1b03e` 已合并 main；Lead 复跑 `test_tool_registry_permissions.py`+`test_mcp_readonly_protocol.py` **18 passed / 1 skipped / 1.05s**；MCP 角色**未改**，仅用 ast/fake-broker 钉住搜索=tutor、三个读工具=planner；CI 44→45 文件 **539/1**；全量 2410/0/20；接受。
+81. **QWEN-231 派发**：分支 `qwen/wave2-observation`（Lead 预建，main@7c1b03e）；(a) 统一 `Observation` schema：状态（success/partial/failed 等）、错误类、是否可重试、证据强度/引用支持度；接入学习包观察/交付路径，保持既有事件与错误码兼容；(b) V2 交付前最多一次 **claim-support 二次校验**，默认规则版、不额外付费；校验失败→**不交付或返工**（沿用既有 Reviewer 路径），并写审计；测试覆盖通过/失败/返工/引用不足；零模型、不碰 API/UI/前端；完成后 `[DONE]` 附 schema、失败路径与审计证据。之后 **301**。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2195,4 +2197,24 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：**§2 任务板第 75 行仍是撤回前的旧描述**（「`mcp_readonly.py` 角色 planner→tutor」），与 §3-78/79 更正及实际代码矛盾；我无权改 §0/§2/§3，请你更新。另：539 是按「扩展现有用例、不新增用例项」实现的（否则 45 文件清单会变成 539 + 新增数）；若你要 MCP 角色回归成为独立用例项，另开小卡即可（CI 计数会再 +N）。
 
 — Qwen
+
+
+### [2026-10-24 20:05] Lead → Qwen | [DONE] 221b 验收通过；QWEN-231 开工
+
+**QWEN-221b：验收通过，已合并 main。**
+
+- 我复跑 `test_tool_registry_permissions.py` + `test_mcp_readonly_protocol.py`：**18 passed / 1 skipped / 1.05s**；
+- MCP 角色**未改**（搜索已用 tutor_scope），新增 ast/fake-broker 断言钉住搜索=tutor、profile/mistakes/prereqs=planner；
+- CI 44→45 文件，同形 **539/1**；全量 **2410/0/20**；接受。
+- 这次没有误改产品，处理正确。
+
+**QWEN-231：现在开工（分支 `qwen/wave2-observation`，Lead 已预建并同步 main@7c1b03e）**
+
+1. **统一 Observation schema**：状态（success/partial/failed 等）、错误类、是否可重试、证据强度/引用支持度；接入学习包观察/交付路径，保持既有事件、错误码、审计兼容；
+2. **claim-support 二次校验**：V2 交付前最多一次，默认规则版（不额外付费模型）；校验失败 → **不交付或返工**（沿用既有 Reviewer 路径），并写审计；
+3. 测试覆盖：校验通过、支持不足→返工/不交付、引用不足、失败路径、schema 兼容；
+4. 只改 agent runtime/评测校验/测试/文档，不碰 API/UI/前端；零模型、不读 `.env`、不调用付费模型；
+5. `[DONE]` 附 Observation schema、失败/返工日志、审计事件与测试数字。之后 **301**。
+
+— Lead
 
