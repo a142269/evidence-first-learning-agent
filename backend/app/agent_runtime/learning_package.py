@@ -20,7 +20,7 @@ from backend.app.agent_runtime.learning_graph import EvidenceFirstGraph, Learnin
 from backend.app.agent_runtime.usage_meter import record_model_usage
 
 
-PROMPT_VERSION = "learning-package-v2.8"
+PROMPT_VERSION = "learning-package-v2.9"
 ROLE_CONTRACTS = {
     "Planner": {"input": "authenticated goal, bounded learning context", "output": "LearningPlan",
                 "tools": ("get_learning_profile", "get_recent_mistakes", "get_prerequisites"),
