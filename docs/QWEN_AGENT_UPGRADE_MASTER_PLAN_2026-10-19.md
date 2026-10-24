@@ -249,7 +249,7 @@
 **现状与证据**
 
 - 各角色 system prompt + Pydantic 契约 + 动态拼接问题/记忆/画像/证据（`learning_package.py`）。
-- `PROMPT_VERSION=learning-package-v2.8`；各 Agent `prompt_version` 类属性（`agents/base.py`）。
+- `PROMPT_VERSION=learning-package-v2.9`；各 Agent `prompt_version` 类属性（`agents/base.py`）。QWEN-211 加入重规划固定提示词后由 v2.8 bump；v2.8 是 QWEN-102 云端采集与既有契约评测所用版本。
 - 重试/截断指导（`_TRUNCATION_GUIDANCE`）；契约测试与结构化输出测试。
 - 边界：无跨模型 A/B、无自动 prompt 优化、无独立发布/回滚。
 

@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。211 已合并，全量 **2391/0/20**。下一小卡 **211b（PROMPT_VERSION 与 CI 纳入）**，随后 **221 ToolRegistry**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211；全量 **2391/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave2-planning` 做 **QWEN-211b**（PROMPT_VERSION v2.8→v2.9 + 文档引用；replan 测试进 CI 43→44）；随后在 `qwen/wave2-tools` 做 **QWEN-221**。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。211/211b 已合并，`PROMPT_VERSION=v2.9`、CI 快清单 **44 文件 / 520 passed / 1 skipped**。下一小卡 **211c（版本常量断言）**，随后 **221 ToolRegistry**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b；全量 **2391/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave2-planning` 做 **QWEN-211c**（加一条 `PROMPT_VERSION=="learning-package-v2.9"` 断言并更新计数）；随后在 `qwen/wave2-tools` 做 **QWEN-221**。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 211（15 passed/8.91s）；接受 `MAX_REPLAN_ROUNDS=1`/`DEPTH=2`；派 211b/221。
+- **Lead 当前动作**：验收并合并 211b；同步主计划 v2.9；派 211c；准备 221 验收。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 15:30 之后（观察 QWEN-211b/221）。
+- **下一次检查**：2026-10-24 16:30 之后（观察 QWEN-211c/221）。
 
 ## 1. 协作协议
 
@@ -69,8 +69,9 @@
 | QWEN-202 | 跨会话摘要（仅已确认记忆） | **完成（已合并）** | Qwen | `67da166`+`f24bb56`+`4c35bf6`：`session_summary.py` 只读 active 未过期记忆、摘要不写回、空态四测、10 组反向验证；Lead 复跑 40 passed/12.61s；全量 2376/0/20；文档冲突由 Lead 手工保留双方 |
 | QWEN-202b | 摘要测试进 CI 快清单 | **完成（已合并）** | Qwen | `195b051`+`747b97a`+`0089593`：`ci.yml` 42→43 文件，CI 同形 **505 passed / 1 skipped**；仅 CI/文档 |
 | QWEN-211 | Planning 有界重规划 | **完成（已合并）** | Qwen | `d11960e`+`55ff0bf`+`55520f3`：2 类失效信号、`MAX_REPLAN_ROUNDS=1`/`DEPTH=2`、checkpoint/审计、超限停止；Lead 复跑 15 passed/8.91s；全量 2391/0/20 |
-| QWEN-211b | PROMPT_VERSION 与 CI 纳入 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-planning`：v2.8→v2.9 + 文档引用；replan 测试进 CI 43→44（预期 520/1）；零模型 |
-| QWEN-221 | 统一 ToolRegistry + 权限矩阵 | 未开始 | — | Lead 将预建 `qwen/wave2-tools`；211b 后开工；单一工具元数据/参数 schema/权限/审计；零模型 |
+| QWEN-211b | PROMPT_VERSION 与 CI 纳入 | **完成（已合并）** | Qwen | `1ad4da5`+`8c646c8`+`2bb0464`：v2.8→v2.9、文档双时态；CI 43→44 文件，**520 passed / 1 skipped**；全量 2391/0/20 |
+| QWEN-211c | 版本常量断言 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-planning`：在 `test_learning_package_replan.py` 加 `PROMPT_VERSION=="learning-package-v2.9"` 断言；预期全量 2392/0/20、CI 521/1；零模型 |
+| QWEN-221 | 统一 ToolRegistry + 权限矩阵 | 未开始 | — | Lead 已预建 `qwen/wave2-tools`；211c 后开工；单一工具元数据/参数 schema/权限/审计；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -149,6 +150,9 @@
 69. **QWEN-211 验收通过**：`d11960e`+`55ff0bf`+`55520f3` 已合并 main；Lead 复跑 `test_learning_package_replan.py` **15 passed / 8.91s**；2 类失效信号、`MAX_REPLAN_ROUNDS=1`/`MAX_REPLAN_DEPTH=2`、预算/检索不洗白、checkpoint/`plan.replanned` 审计、超限停止均接受；全量 2391/0/20。**语义级失效判定**（相关性/假设冲突）需额外模型或规则，另卡，不在本卡扩。
 70. **QWEN-211b 派发**：继续 `qwen/wave2-planning`；(a) **bump `PROMPT_VERSION` v2.8→v2.9**（重规划追加了固定提示词，属提示词变更），同步 `LEARNING_PACKAGE_GUIDE.md`、`V2_TEN_MODULE_IMPLEMENTATION.md`、`CLAIMS_LEDGER` 的 T1/v2.8 引用；(b) 把 `tests/a/test_learning_package_replan.py` 加入 `ci.yml` 快清单 43→44，预期 **520/1**，更新 README/矩阵；零模型、不碰产品逻辑（仅版本常量/文档/CI）。
 71. **QWEN-221 派发（211b 后）**：分支 `qwen/wave2-tools`（Lead 预建）；统一 ToolRegistry：单一来源登记工具名、允许角色、参数 schema、副作用/超时/权限；运行时 deny-by-default 权限矩阵 + 审计事件；替换散落的注册/白名单；测试覆盖越权拒绝、未知工具、schema 错误、审计；不碰 API/UI/前端；零模型；完成后 `[DONE]` 附权限矩阵与越权测试证据。
+72. **QWEN-211b 验收通过**：`1ad4da5`+`8c646c8`+`2bb0464` 已合并 main；`PROMPT_VERSION=v2.9`、文档双时态（v2.8 保留为 QWEN-102 采集版本）；CI 43→44 文件，**520/1**；全量 2391/0/20；接受。Lead 已同步主计划 `:252` 的版本引用。
+73. **QWEN-211c 派发（版本防漂移）**：继续 `qwen/wave2-planning`；在 `tests/a/test_learning_package_replan.py` 增加断言 `PROMPT_VERSION == "learning-package-v2.9"`（只加用例项、不新增文件），预期全量 **2392/0/20**、CI **521/1**；更新计数；零模型、不碰产品逻辑；完成后 `[DONE]`。之后 **221**。
+74. **QWEN-221 开工**：211c 验收后在 `qwen/wave2-tools`（已预建）按 §3-71 执行；允许开工、不适用 hold；若权限矩阵需要产品裁定（例如工具角色划分），先给基线矩阵并在 `[DONE]` 标明，不擅自扩到 API/UI。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1928,3 +1932,23 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 **之后**：按你的顺序是 **QWEN-221**（统一 ToolRegistry、deny-by-default 权限矩阵 + 审计，分支 `qwen/wave2-tools` 已预建，不碰 API/UI/前端）。本卡交付后 hold，等你验收；语义级失效检测也等你另卡（§24.4 已按你的裁定关闭）。
 
 — Qwen
+
+### [2026-10-24 15:35] Lead → Qwen | [DONE] QWEN-211b 验收通过；补 211c（版本断言）后开 221
+
+**QWEN-211b：验收通过，已合并 main。**
+
+- `PROMPT_VERSION=v2.9`，文档保留双时态（v2.8 = QWEN-102 采集/既有契约评测版本）；CI 43→44 文件，同形 **520 passed / 1 skipped**；全量 **2391/0/20**；接受。
+- 主计划 `docs/QWEN_AGENT_UPGRADE_MASTER_PLAN_2026-10-19.md:252` 的 v2.8 引用由我同步为 v2.9，并注明 v2.8 是采集版本。
+- 你登记的 warnings 数更正（11→20/21）接受；两处历史行按“主动请求追认”处理，不改数字结论。
+
+**QWEN-211c：版本防漂移（继续 `qwen/wave2-planning`，零模型）**
+
+- 在 `tests/a/test_learning_package_replan.py` 内加一条断言 `PROMPT_VERSION == "learning-package-v2.9"`（只加用例项，不新增文件）；
+- 预期全量 **2392/0/20**、CI 快清单 **521/1**；更新 README/矩阵计数；
+- 只改测试/计数文档，不碰产品逻辑；完成后 `[DONE]`。
+- 之后 **QWEN-221** 在 `qwen/wave2-tools`（已预建）开工，按 §3-71：ToolRegistry 单一元数据 + deny-by-default 权限矩阵 + 审计，不碰 API/UI，零模型。
+
+**顺序提醒**：211c → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404；P2 后置。每张 `[DONE]` 后等我验收。
+
+— Lead
+
