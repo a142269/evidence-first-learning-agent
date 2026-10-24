@@ -100,7 +100,7 @@
 | tests/a/test_mistake_course_filter.py |  |  |  | ✓ |  |
 | tests/a/test_mobile_student_api.py |  |  |  | ✓ |  |
 | tests/a/test_multimodal_dashboard_recommendations.py |  |  |  | ✓ |  |
-| tests/a/test_observation_claim_support.py |  |  |  | ✓ | QWEN-231 统一 Observation + 交付前规则版 claim-support（10 项，离线 scripted；未进 fast 清单） |
+| tests/a/test_observation_claim_support.py | F |  |  | ✓ | QWEN-231 统一 Observation + 交付前规则版 claim-support（10 项，离线 scripted）；QWEN-231b 起进 fast/quality 快清单（45→46） |
 | tests/a/test_ocr.py |  |  |  | ✓ |  |
 | tests/a/test_orchestrator.py |  |  |  | ✓ |  |
 | tests/a/test_orchestrator_dm.py |  |  |  | ✓ |  |
@@ -623,3 +623,16 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动，同 §22–§25 口径 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`；规则版是词面启发式，不证明语义蕴含，也不替代人工审核。**本轮未挂 fail-closed socket 探针**，故不主张 `attempts=0` 探针值。
+
+## 27. QWEN-231b Observation 测试纳入 CI 快清单实测摘要（2026-10-24，分支 `qwen/wave2-observation`，零模型调用、产品与测试逻辑零改动）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **45 → 46 个文件**：在 `tests/a/test_tool_registry_permissions.py` 后加 `tests/a/test_observation_claim_support.py`（新行 `:218`，旗标行顺延 `:219`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍在 |
+| 清单机械重取 | 脚本用 `yaml.safe_load` 读 `ci.yml` | **46** 条、无重复、0 缺失、末位即本卡文件（`output/qwen231b/logs/portable-list.txt`） |
+| 门 | `git diff --check` | exit 0（仅 CRLF 归一化 warning） |
+| **CI 同形子集（46 文件）** | `ci.yml:219` 同形旗标 `--no-cov --benchmark-disable -q -rs` + 前置 `init_db()`，`DATABASE_URL=sqlite:///./output/qwen231b/ci.db`（全新） | **553 passed / 1 skipped / 0 failed / 4 warnings / 281.02 s (0:04:41)**，`CI46_EXIT=0`；= 231 记录的 543/1 + 该文件既有 **10** 项，与 Lead 预计 **553/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` —— `output/qwen231b/logs/ci46.txt`、`ci46-exit.txt` |
+| 全量 | 未重跑 | 本卡 0 新增用例项、产品零改动，全量记录数仍为 231 的 **2424/0/20 / 2444 项**（§26） |
+| 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。

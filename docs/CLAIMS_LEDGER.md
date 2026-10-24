@@ -1205,8 +1205,40 @@ Lead §4（`[2026-10-24 20:05]`）派工逐字：「(a) 统一 `Observation` sch
 - 规则版是**词面启发式**：字符二元组重叠只能说明“可能相关”，不证明语义蕴含；短证据（<40 字符）不判定；支持率阈值 0.5 是基线常量，可在后续卡按产品需要调整。
 - **未新增付费模型调用**、未读 `.env`、未安装依赖；本轮**未挂 fail-closed socket 探针**，故不主张 `outbound attempts=0` 探针值；零计费由 `A3_OFFLINE_DEMO=true LLM_PROVIDER=none` 与改动面（纯规则/测试/文档）共同支撑。
 - **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；**未跑 PG `enterprise-contract`**（本卡零 PG 面改动）。
-- **未把新测试文件加入 `ci.yml` 快清单**：沿用 201b/202b/211b/221b 的“CI 纳入另卡”先例；本卡未改 CI。
+- **未把新测试文件加入 `ci.yml` 快清单**：沿用 201b/202b/211b/221b 的“CI 纳入另卡”先例；本卡未改 CI。（本条由 **QWEN-231b** 关闭，见 §30。）
 - **未做反向验证**：本轮以正向通过 + 失败路径用例（支持不足/引用不足/失败即停）作为证据；若 Lead 要求反向破坏证明，可另开小卡或在本卡补跑后再验收。
 - **“最多一次”的边界**：`claim_support_checked` 在通过时写入检查点，单次执行内不会重复；失败的 run 停在 `claim_check`，显式 `/{run_id}/continue` 只重放该节点一次，属新的执行尝试，仍不会形成内部重试循环。
 - 未动 QWEN-301；完成 231 即停，hold 等验收。
+- 证据等级：**offline**。
+
+## 30. QWEN-231b Observation 测试纳入 CI 快清单（2026-10-24，分支 `qwen/wave2-observation`，零模型调用、产品与测试逻辑零改动）
+
+Lead §4（`[2026-10-24 21:45]`）派工逐字：「把 `tests/a/test_observation_claim_support.py` 加入 `ci.yml` 快清单 45→46，预期 **553/1**；更新 README/矩阵计数；只改 CI/文档；完成后 `[DONE]`。」
+
+### 30.1 改动（1 个 CI 文件 + 3 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `.github/workflows/ci.yml` | `quality` job portable 快清单 **45 → 46 个文件**：在 `tests/a/test_tool_registry_permissions.py` 后加 `tests/a/test_observation_claim_support.py`（新行 `:218`，旗标行 `--no-cov --benchmark-disable -q` 顺延 `:219`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍在 | `:218` |
+| `README.md` | `:58` CI 行换成本卡 46 文件 **553/1** 记录，231 的 543/1 降为同格「再前」 | `:58` |
+| `docs/TEST_MATRIX.md` | 文件矩阵 `test_observation_claim_support.py` 行补 `F` 标记并更新备注；新增 §27（追加） | `:103`、§27 |
+| `docs/CLAIMS_LEDGER.md` | §29.5「未把新测试文件加入快清单」条目标注由本卡关闭；新增本节 §30（追加） | — |
+
+**未改**：任何 `backend/`、`tests/`、`scripts/` 文件；`PROMPT_VERSION`、产品逻辑、测试逻辑一字未动。
+
+### 30.2 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`：portable **46** 条、无重复、0 缺失、末位即本卡文件 | `output/qwen231b/logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen231b/ci.db`） | — |
+| **CI 同形子集（46 文件）** | **553 passed / 1 skipped / 0 failed / 4 warnings / 281.02 s (0:04:41)**，`CI46_EXIT=0`；= 231 记录的 543/1 + 该文件既有 **10** 项，与 Lead 预计 **553/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` | `output/qwen231b/logs/ci46.txt`、`ci46-exit.txt` |
+| 门 | `git diff --check` | exit 0（仅 CRLF 归一化 warning） |
+| 全量 | **未重跑**：本卡 0 新增用例项、产品零改动，记录数仍为 231 的 **2424/0/20 / 2444 项** | §29.4 |
+
+### 30.3 边界与未做
+
+- 本卡只改 CI/文档，零模型调用、未读 `.env`、未装依赖、未跑探针（不主张 `attempts=0` 探针值）。
+- **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；全量与 PG 面未重跑（本卡零产品/零用例项改动，记录数不变）。
+- 随后开工 QWEN-301（`qwen/wave3-queue`）。
 - 证据等级：**offline**。
