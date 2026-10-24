@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import ast
 from dataclasses import fields
-import time
+import importlib
 from pathlib import Path
+import sys
+import time
+import types
 
 import pytest
 
@@ -327,20 +330,128 @@ def test_registry_openai_export_is_a_projection_of_the_catalog():
         for spec in source_specs("v1")]
 
 
-def test_mcp_adapter_exposes_exactly_the_catalog_mcp_tools():
+class _McpBroker:
+    """Minimal stand-in for V2LearningTools.call that records every scope it is handed."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[ToolContext, str, dict]] = []
+
+    async def call(self, scope: ToolContext, name: str, arguments: dict) -> ToolResult:
+        self.calls.append((scope, name, arguments))
+        hit = name == "search_course_evidence"
+        return ToolResult(name, TOOL_VERSION_V2, "success" if hit else "no_data",
+                          [{"chunk_id": "own-1"}] if hit else None, 0, "mcp-scope-test")
+
+
+class _FakeMCPServer:
+    """Stands in for mcp.server.MCPServer so the adapter can be exercised without the SDK."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.tools: dict = {}
+
+    def tool(self):
+        def register(function):
+            self.tools[function.__name__] = function
+            return function
+        return register
+
+    def run(self, transport=None):
+        raise AssertionError("no test may start the MCP transport")
+
+
+def _mcp_function_nodes() -> dict:
+    tree = ast.parse(MCP_SOURCE.read_text(encoding="utf-8"))
+    return {node.name: node for node in ast.walk(tree)
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))}
+
+
+def _tool_context_roles(node) -> list[str]:
+    """The `role=` literals of every ToolContext(...) call inside one adapter function."""
+    roles = []
+    for call in ast.walk(node):
+        if (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+                and call.func.id == "ToolContext"):
+            roles.append(next(kw for kw in call.keywords if kw.arg == "role").value.value)
+    return roles
+
+
+def _load_mcp_adapter(monkeypatch):
+    """Import the adapter against a fake `mcp` package, leaving sys.modules as found."""
+    fake_server = types.ModuleType("mcp.server")
+    fake_server.MCPServer = _FakeMCPServer
+    fake_mcp = types.ModuleType("mcp")
+    fake_mcp.__path__ = []  # a package, so `from mcp.server import MCPServer` resolves
+    monkeypatch.setitem(sys.modules, "mcp", fake_mcp)
+    monkeypatch.setitem(sys.modules, "mcp.server", fake_server)
+    saved = sys.modules.pop("backend.app.mcp_readonly", None)
+    try:
+        return importlib.import_module("backend.app.mcp_readonly")
+    finally:
+        sys.modules.pop("backend.app.mcp_readonly", None)
+        if saved is not None:
+            sys.modules["backend.app.mcp_readonly"] = saved
+
+
+async def test_mcp_adapter_mirrors_the_catalog_tools_and_their_scope_roles(monkeypatch):
+    # Static half: the role is fixed where the adapter is written, so swapping tutor
+    # and planner fails here even before anything executes.
+    functions = _mcp_function_nodes()
+    assert _tool_context_roles(functions["_scope"]) == ["planner"]
+    assert _tool_context_roles(functions["search_course_evidence"]) == ["tutor"]
+    for name in ("get_learning_profile", "get_recent_mistakes", "get_prerequisites"):
+        forwarded = [call.args[0].value for call in ast.walk(functions[name])
+                     if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+                     and call.func.id == "_call"]
+        assert forwarded == [name]
+    search = functions["search_course_evidence"]
+    broker_calls = [call for call in ast.walk(search) if isinstance(call, ast.Call)
+                    and isinstance(call.func, ast.Attribute) and call.func.attr == "call"]
+    assert len(broker_calls) == 1
+    assert isinstance(broker_calls[0].args[0], ast.Name)
+    assert broker_calls[0].args[0].id == "tutor_scope"
+    assert broker_calls[0].args[1].value == "search_course_evidence"
+
     exposed = {}
-    for node in ast.walk(ast.parse(MCP_SOURCE.read_text(encoding="utf-8"))):
-        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
-            for decorator in node.decorator_list:
-                func = decorator.func if isinstance(decorator, ast.Call) else decorator
-                if isinstance(func, ast.Attribute) and func.attr == "tool":
-                    exposed[node.name] = [argument.arg for argument in node.args.args]
+    for node in functions.values():
+        for decorator in node.decorator_list:
+            func = decorator.func if isinstance(decorator, ast.Call) else decorator
+            if isinstance(func, ast.Attribute) and func.attr == "tool":
+                exposed[node.name] = [argument.arg for argument in node.args.args]
     assert set(exposed) == set(V2_NAMES)
     assert all(TOOL_CATALOG[name].mcp_exposed for name in exposed)
     assert not any(TOOL_CATALOG[name].mcp_exposed for name in V1_NAMES)
     for name, arguments in exposed.items():
         allowed = set(TOOL_CATALOG[name].args_model.model_fields)
         assert set(arguments) <= allowed, (name, arguments)
+
+    # The role is load-bearing: only tutor may search, so `tutor_scope` is what makes
+    # the MCP tool reachable while the planner scope covers the other three.
+    assert decide_access("tutor", "search_course_evidence").allowed is True
+    assert decide_access("planner", "search_course_evidence").allowed is False
+
+    # Dynamic half: run the adapter against a recording broker. The fake `mcp` package
+    # keeps the optional pinned SDK out of the environment, so this runs offline.
+    monkeypatch.setenv("V2_MCP_RUN_ID", "run-mcp")
+    monkeypatch.setenv("V2_MCP_USER_ID", "alice")
+    monkeypatch.setenv("V2_MCP_COURSE_ID", "course-a")
+    broker = _McpBroker()
+    server = _load_mcp_adapter(monkeypatch).create_server(broker=broker)
+    assert set(server.tools) == set(V2_NAMES)
+    assert await server.tools["search_course_evidence"](query="RAG") == {
+        "status": "success", "data": [{"chunk_id": "own-1"}]}
+    for name in ("get_learning_profile", "get_recent_mistakes"):
+        assert await server.tools[name]() == {"status": "no_data", "data": None}
+    await server.tools["get_prerequisites"](knowledge_point_id="kp-1")
+
+    assert [(scope.role, name) for scope, name, _ in broker.calls] == [
+        ("tutor", "search_course_evidence"),
+        ("planner", "get_learning_profile"),
+        ("planner", "get_recent_mistakes"),
+        ("planner", "get_prerequisites")]
+    assert all((scope.run_id, scope.user_id, scope.course_id)
+               == ("run-mcp", "alice", "course-a") for scope, _, _ in broker.calls)
+    assert broker.calls[-1][2] == {"knowledge_point_id": "kp-1"}
 
 
 def test_the_scattered_role_whitelist_and_schema_map_are_gone():
