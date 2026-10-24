@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2 收尾**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。221b 已合并：全量 **2410/0/20**、CI 快清单 **45 文件 / 539 passed / 1 skipped**。下一张 **QWEN-231（Observation/claim-support 进主链）**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c + 221/221b；全量 **2410/0/20**。
-- **Qwen 当前任务**：在 `qwen/wave2-observation`（Lead 预建并同步 main@7c1b03e）做 **QWEN-231**：统一 Observation schema + 最多一次 claim-support 二次校验，失败不交付/返工；零模型、不碰 API/UI。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2 收尾**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。231 已合并：全量 **2424/0/20**、CI 快清单 **543/1**。下一小卡 **231b（Observation 测试进 CI 46）**，随后 **301 Run 队列/Worker**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c + 221/221b + 231；全量 **2424/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave2-observation` 做 **231b**（CI 45→46、预期 553/1）；随后在 `qwen/wave3-queue` 做 **301**（Run 队列/Worker）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 221b（18 passed/1 skipped、45 文件 539/1、2410/0/20）；准备 231 卡与分支。
+- **Lead 当前动作**：验收并合并 231（10+4 测试、2424/0/20、543/1）；派 231b/301；预建 queue 分支。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 21:30 之后（观察 QWEN-231）。
+- **下一次检查**：2026-10-24 22:30 之后（观察 231b/301）。
 
 ## 1. 协作协议
 
@@ -73,7 +73,9 @@
 | QWEN-211c | 版本常量断言 | **完成（已合并）** | Qwen | `ffb087e`+`bfae720`+`13ea358`：`PROMPT_VERSION=="learning-package-v2.9"` 断言；全量 **2392/0/20**、CI **521/1**；产品/CI 零改动 |
 | QWEN-221 | 统一 ToolRegistry + 权限矩阵 | **完成（已合并）** | Qwen | `c8781e0`+`0a4ba17`+`0552203`：9 工具×5 角色单一目录、deny-by-default、36 对越权扫、每结局一条审计；Lead 复跑工具面 32 passed；全量 2410/0/20 |
 | QWEN-221b | MCP scope 测试 + 权限测试进 CI | **完成（已合并）** | Qwen | `32cee2d`+`86c6128`+`7c1b03e`：不改 MCP 角色，补 tutor/planner scope 回归；CI 44→45，**539 passed / 1 skipped**；全量 2410/0/20 |
-| QWEN-231 | Observation/claim-support 进主链 | **待 Qwen 认领** | Qwen | `qwen/wave2-observation`（main@7c1b03e）：统一 Observation schema（状态/错误类/可重试/证据强度）+ 最多一次 claim-support 二次校验，失败不交付/返工；零模型 |
+| QWEN-231 | Observation/claim-support 进主链 | **完成（已合并）** | Qwen | `481fe9a`+`ff550b8`+`7be9a3d`：Observation schema、规则版 claim-support 门禁、失败 fail-closed、10+4 测试；Lead 复跑 58 passed/11.13s；全量 2424/0/20；CI 543/1 |
+| QWEN-231b | Observation 测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-observation`：`ci.yml` 45→46，预期 **553/1**；零模型 |
+| QWEN-301 | Run 队列/Worker | 未开始 | — | `qwen/wave3-queue`（Lead 预建）；创建/执行解耦、租约/心跳/取消/超时、崩溃重领、API 兼容；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -167,6 +169,9 @@
 79. **QWEN-221b（更正版）派发**：继续 `qwen/wave2-tools`；(a) **不改产品权限/角色**；补 fake-broker/ast 回归测试证明 MCP `search_course_evidence` 用 `tutor` scope、profile/mistakes/prereqs 用 `planner` scope（本机无 `mcp` 时保持 `importorskip`）；(b) 把 `tests/a/test_tool_registry_permissions.py` 加入 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/矩阵；(c) 零模型、不碰 API/UI；完成后 `[DONE]`，随后 **231**。
 80. **QWEN-221b 验收通过**：`32cee2d`+`86c6128`+`7c1b03e` 已合并 main；Lead 复跑 `test_tool_registry_permissions.py`+`test_mcp_readonly_protocol.py` **18 passed / 1 skipped / 1.05s**；MCP 角色**未改**，仅用 ast/fake-broker 钉住搜索=tutor、三个读工具=planner；CI 44→45 文件 **539/1**；全量 2410/0/20；接受。
 81. **QWEN-231 派发**：分支 `qwen/wave2-observation`（Lead 预建，main@7c1b03e）；(a) 统一 `Observation` schema：状态（success/partial/failed 等）、错误类、是否可重试、证据强度/引用支持度；接入学习包观察/交付路径，保持既有事件与错误码兼容；(b) V2 交付前最多一次 **claim-support 二次校验**，默认规则版、不额外付费；校验失败→**不交付或返工**（沿用既有 Reviewer 路径），并写审计；测试覆盖通过/失败/返工/引用不足；零模型、不碰 API/UI/前端；完成后 `[DONE]` 附 schema、失败路径与审计证据。之后 **301**。
+82. **QWEN-231 验收通过**：`481fe9a`+`ff550b8`+`7be9a3d` 已合并 main；Lead 复跑 observation/claim-support/学习包 **58 passed / 11.13s**；统一 Observation（node/status/error_class/retryable/evidence_strength/citation_support/detail）、规则版 claim-support fail-closed、既有事件/错误码/checkpoint 兼容均接受；全量 **2424/0/20**、CI **543/1**。局限（词面启发式、短证据不判定、阈值 0.5、未挂探针）登记；本卡未做破坏式反向验证，但失败路径用例覆盖，接受。
+83. **QWEN-231b 派发**：继续 `qwen/wave2-observation`；把 `tests/a/test_observation_claim_support.py` 加入 `ci.yml` 快清单 45→46，预期 **553/1**；更新 README/矩阵；零模型、不碰产品；完成后 `[DONE]`。
+84. **QWEN-301 派发（231b 后）**：分支 `qwen/wave3-queue`（Lead 预建）；按主计划：Run 创建与执行解耦；Worker 租约领取/心跳/取消/超时；崩溃后租约过期可重领；API 兼容（创建返回可查询 ID）；**不声称 exactly-once**；测试覆盖跨进程领取/心跳/取消/超时/杀进程恢复；零模型、不碰 UI；完成后 `[DONE]` 附队列状态机、租约恢复与 API 兼容证据。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2243,4 +2248,26 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 未验证 / 风险：规则版是**词面启发式**，不证明语义蕴含；短证据（<40 字符）不判定；支持率阈值 0.5 是基线常量；新测试文件**未加入 `ci.yml` 快清单**（沿用 201b/202b/211b/221b 的“CI 纳入另卡”先例）；GitHub `quality` 真实回执与 PG `enterprise-contract` 未跑。
 - 下一步：hold 等验收；验收后再开 **301**。
 - 给 Lead 的问题：请把 §2 任务板 QWEN-231 的状态由“待 Qwen 认领”更新为“待验收/完成”；§0 的“下一张任务”也请同步。我按规则未改 §0/§2/§3。
+
+
+### [2026-10-24 21:45] Lead → Qwen | [DONE] QWEN-231 验收通过；派 231b 与 QWEN-301
+
+**QWEN-231：验收通过，已合并 main。**
+
+- 我复跑 observation/claim-support/学习包：**58 passed / 11.13s**；全量 **2424/0/20**、CI **543/1** 接受。
+- 统一 Observation（node/status/error_class/retryable/evidence_strength/citation_support/detail）与规则版 claim-support fail-closed 均接受；既有事件、错误码、checkpoint 兼容。
+- 局限登记：词面启发式、短证据（<40 字）不判定、支持率阈值 0.5、本轮未挂探针故不主张 `attempts=0`；未做破坏式反向验证，但失败路径用例已覆盖，接受。
+- 未 bump PROMPT_VERSION 正确（没有新增模型可见固定文本）。
+
+**QWEN-231b（继续 `qwen/wave2-observation`，零模型）**
+
+- 把 `tests/a/test_observation_claim_support.py` 加入 `ci.yml` 快清单 45→46，预期 **553/1**；更新 README/矩阵计数；只改 CI/文档；完成后 `[DONE]`。
+
+**QWEN-301（231b 后，分支 `qwen/wave3-queue`，Lead 已预建，零模型）**
+
+- Run 创建与执行解耦；Worker 租约领取/心跳/取消/超时；崩溃后租约过期可重领；创建返回可查询 ID、API 兼容；
+- **不声称 exactly-once**；测试覆盖跨进程领取/心跳/取消/超时/杀进程恢复；
+- 不碰 UI/前端/付费模型；完成后 `[DONE]` 附队列状态机、租约恢复与 API 兼容证据。
+
+— Lead
 
