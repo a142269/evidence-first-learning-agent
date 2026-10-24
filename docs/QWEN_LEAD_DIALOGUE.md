@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。201/201b/202/202b 已合并，全量 2376/0/20、CI 快清单 **43 文件 / 505 passed / 1 skipped**。**下一张 QWEN-211（Planning 有界重规划）**。
-- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b；全量 **2376/0/20**。
-- **Qwen 当前任务**：在 `qwen/wave2-planning`（已同步到 `main@0089593`）做 **QWEN-211**：有界重规划（失效检测、最大轮数/深度、checkpoint、超限停止）；零模型、不碰 API/UI。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。211 已合并，全量 **2391/0/20**。下一小卡 **211b（PROMPT_VERSION 与 CI 纳入）**，随后 **221 ToolRegistry**。
+- **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211；全量 **2391/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave2-planning` 做 **QWEN-211b**（PROMPT_VERSION v2.8→v2.9 + 文档引用；replan 测试进 CI 43→44）；随后在 `qwen/wave2-tools` 做 **QWEN-221**。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 202b（43 文件 / 505/1）；同步 planning 分支；明确授权 211 开工。
+- **Lead 当前动作**：验收并合并 211（15 passed/8.91s）；接受 `MAX_REPLAN_ROUNDS=1`/`DEPTH=2`；派 211b/221。
 - **阻塞**：无。
-- **下一次检查**：2026-10-24 13:30 之后（观察 QWEN-211）。
+- **下一次检查**：2026-10-24 15:30 之后（观察 QWEN-211b/221）。
 
 ## 1. 协作协议
 
@@ -68,7 +68,9 @@
 | QWEN-201b | 记忆测试进 CI 快清单 + 计数 | **完成（已合并）** | Qwen | `8ab00ab`+`a625adc`：`ci.yml` 40→42 文件，CI 同形 **465 passed / 1 skipped**；仅 CI/文档，产品零改动 |
 | QWEN-202 | 跨会话摘要（仅已确认记忆） | **完成（已合并）** | Qwen | `67da166`+`f24bb56`+`4c35bf6`：`session_summary.py` 只读 active 未过期记忆、摘要不写回、空态四测、10 组反向验证；Lead 复跑 40 passed/12.61s；全量 2376/0/20；文档冲突由 Lead 手工保留双方 |
 | QWEN-202b | 摘要测试进 CI 快清单 | **完成（已合并）** | Qwen | `195b051`+`747b97a`+`0089593`：`ci.yml` 42→43 文件，CI 同形 **505 passed / 1 skipped**；仅 CI/文档 |
-| QWEN-211 | Planning 有界重规划 | **待 Qwen 认领** | Qwen | 分支 `qwen/wave2-planning` 已同步 main@0089593；失效检测、最大轮数/深度、checkpoint、超限停止；零模型 |
+| QWEN-211 | Planning 有界重规划 | **完成（已合并）** | Qwen | `d11960e`+`55ff0bf`+`55520f3`：2 类失效信号、`MAX_REPLAN_ROUNDS=1`/`DEPTH=2`、checkpoint/审计、超限停止；Lead 复跑 15 passed/8.91s；全量 2391/0/20 |
+| QWEN-211b | PROMPT_VERSION 与 CI 纳入 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave2-planning`：v2.8→v2.9 + 文档引用；replan 测试进 CI 43→44（预期 520/1）；零模型 |
+| QWEN-221 | 统一 ToolRegistry + 权限矩阵 | 未开始 | — | Lead 将预建 `qwen/wave2-tools`；211b 后开工；单一工具元数据/参数 schema/权限/审计；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -144,6 +146,9 @@
 66. **QWEN-202b + QWEN-211 派发**：(a) 202b 继续 `qwen/wave2-summary`，把摘要测试加入 `ci.yml` 快清单 42→43，预期 **505/1**，更新 README/矩阵，零模型；(b) 211 在 `qwen/wave2-planning`（Lead 已预建）实现 **有界重规划**：计划失效检测（工具失败/新证据）、最大重规划轮数/深度、保留 checkpoint、禁止无限循环；测试覆盖超限停止与恢复；零模型、不碰 API/UI；完成后 `[DONE]` 附重规划次数与 checkpoint 证据。
 67. **QWEN-202b 验收通过**：`195b051`+`747b97a`+`0089593` 已合并 main；`ci.yml` 42→43 文件，CI 同形 **505 passed / 1 skipped**（+40 摘要项）；仅 CI/文档，产品零改动；接受。
 68. **QWEN-211 开工授权**：`qwen/wave2-planning` 已 fast-forward 到 `main@0089593`；**允许开工，不适用交付后 hold**；按 §3-66(b) 执行，零模型、不读 `.env`；若最大轮数/深度等阈值需产品裁定，先给基线常量并在 `[DONE]` 中标明，不要擅自扩到 API/UI；完成后 `[DONE]` 附重规划次数、超限停止日志与 checkpoint 恢复证据。
+69. **QWEN-211 验收通过**：`d11960e`+`55ff0bf`+`55520f3` 已合并 main；Lead 复跑 `test_learning_package_replan.py` **15 passed / 8.91s**；2 类失效信号、`MAX_REPLAN_ROUNDS=1`/`MAX_REPLAN_DEPTH=2`、预算/检索不洗白、checkpoint/`plan.replanned` 审计、超限停止均接受；全量 2391/0/20。**语义级失效判定**（相关性/假设冲突）需额外模型或规则，另卡，不在本卡扩。
+70. **QWEN-211b 派发**：继续 `qwen/wave2-planning`；(a) **bump `PROMPT_VERSION` v2.8→v2.9**（重规划追加了固定提示词，属提示词变更），同步 `LEARNING_PACKAGE_GUIDE.md`、`V2_TEN_MODULE_IMPLEMENTATION.md`、`CLAIMS_LEDGER` 的 T1/v2.8 引用；(b) 把 `tests/a/test_learning_package_replan.py` 加入 `ci.yml` 快清单 43→44，预期 **520/1**，更新 README/矩阵；零模型、不碰产品逻辑（仅版本常量/文档/CI）。
+71. **QWEN-221 派发（211b 后）**：分支 `qwen/wave2-tools`（Lead 预建）；统一 ToolRegistry：单一来源登记工具名、允许角色、参数 schema、副作用/超时/权限；运行时 deny-by-default 权限矩阵 + 审计事件；替换散落的注册/白名单；测试覆盖越权拒绝、未知工具、schema 错误、审计；不碰 API/UI/前端；零模型；完成后 `[DONE]` 附权限矩阵与越权测试证据。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -1858,3 +1863,27 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 **证据等级：offline**（本机同形复跑 + 归档日志；GitHub 真实回执与 PG 侧结论不属本卡主张；`remote` 仅指已推送 `qwen/wave2-planning` 分支本身）。提交：`feat(qwen-211)` 产品 + `docs(qwen-211)` 文档 + 本节。等你验收后再开 221。
 
 — Qwen
+
+### [2026-10-24 14:30] Lead → Qwen | [DONE] QWEN-211 验收通过；派 211b（版本/CI）与 QWEN-221
+
+**QWEN-211：验收通过，已合并 main。**
+
+- 我复跑 `test_learning_package_replan.py`：**15 passed / 8.91s**；2 类确定性失效信号、`MAX_REPLAN_ROUNDS=1` / `MAX_REPLAN_DEPTH=2`、预算/检索不洗白、checkpoint + `plan.replanned` 审计、超限停止均接受；全量 2391/0/20。
+- 基线常量裁定：**接受** `MAX_REPLAN_ROUNDS=1` / `MAX_REPLAN_DEPTH=2`（先固定，按课程/角色分档是后续配置面）。
+- 语义级失效（相关性/假设冲突）**另卡**，需要模型或规则库，不在本卡扩。
+
+**QWEN-211b（继续 `qwen/wave2-planning`，零模型）**
+
+- **bump `PROMPT_VERSION` v2.8 → v2.9**：重规划追加了固定提示词，属提示词变更；同步 `docs/LEARNING_PACKAGE_GUIDE.md`、`docs/V2_TEN_MODULE_IMPLEMENTATION.md`、`docs/CLAIMS_LEDGER.md` 的 T1/v2.8 引用；不要改已有历史行。
+- 把 `tests/a/test_learning_package_replan.py` 加进 `ci.yml` 快清单 43→44，预期 **520/1**；更新 README/TEST_MATRIX；
+- 只改版本常量/文档/CI，不碰产品逻辑；完成后 `[DONE]`。
+
+**QWEN-221（211b 后，分支 `qwen/wave2-tools` 已预建，零模型）**
+
+- 统一 ToolRegistry：单一来源登记工具名、允许角色、参数 schema、副作用/超时/权限；
+- 运行时 **deny-by-default** 权限矩阵 + 审计事件；替换散落的注册/白名单；
+- 测试覆盖越权拒绝、未知工具、schema 错误、审计；不碰 API/UI/前端；
+- 完成后 `[DONE]` 附权限矩阵与越权测试证据。
+
+— Lead
+
