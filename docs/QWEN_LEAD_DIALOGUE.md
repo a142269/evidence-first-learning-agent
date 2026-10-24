@@ -9,11 +9,11 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。221 已合并：全量 **2410/0/20**、CI 快清单 44 文件 / 521/1。下一小卡 **221b（MCP 角色修正 + CI 45）**，随后 **231**。
+- **项目阶段**：Wave 1 完成，进入 **Wave 2**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。221 已合并：全量 **2410/0/20**、CI 快清单 44 文件 / 521/1。下一小卡 **221b（MCP 测试 + CI 45；不改角色）**，随后 **231**。
 - **Qwen 已完成**：Wave 0/1 主线 + 104b/104c/104d/106/107/107b/107c/108/109 + 201/201b/202/202b + 211/211b/211c + 221；全量 **2410/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave2-tools` 做 **QWEN-221b**：MCP 适配器角色 planner→tutor（不扩 planner 权限）+ 权限测试进 CI 44→45；随后 **231**。
+- **Qwen 当前任务**：继续 `qwen/wave2-tools` 做 **QWEN-221b（更正版）**：**不改 `mcp_readonly.py` 角色**（搜索已用 tutor_scope）；补 MCP fake-broker 回归测试 + 权限测试进 CI 44→45；随后 **231**。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 221（18 passed、工具面 32 passed、2410/0/20）；裁定 MCP 角色走 tutor；派 221b。
+- **Lead 当前动作**：验收并合并 221（18 passed、工具面 32 passed、2410/0/20）；**更正 MCP 裁定**；派 221b 更正版。
 - **阻塞**：无。
 - **下一次检查**：2026-10-24 20:30 之后（观察 QWEN-221b/231）。
 
@@ -163,8 +163,8 @@
    (d) 测试覆盖越权、未知工具、schema 错误、审计事件；不碰 API/UI/前端；零模型、不读 `.env`；
    (e) `[DONE]` 附权限矩阵基线、越权测试与审计证据。之后 **231**。
 77. **QWEN-221 验收通过**：`c8781e0`+`0a4ba17`+`e574318`+`909c064`+`0552203`+`107e572` 已合并 main；Lead 复跑权限/工具面 **32 passed / 4.23s**；9 工具×5 角色单一目录、等值迁移（4 放行/32 拒且执行面零调用）、每个结局一条审计、18 项新用例、11 组反向验证均接受；全量 **2410/0/20**。审计仍是进程内环形缓冲、`allowed_tools` 配置面未合并——分别归 341/343 与 301/341，本卡不扩。
-78. **MCP 角色裁定**：`mcp_readonly.py` 把范围固定为 `planner`，但 `search_course_evidence` 基线只给 `tutor`，导致 MCP 侧稳定 denied（221 前后一致）。**决定：把 MCP 适配器角色改为 `tutor`**（该工具本就是 tutor 的只读检索；不新增 planner 权限、不扩权）。`mcp_readonly.py` 改动需补 fake-broker/ast 断言，本机无 `mcp` 也应可测。
-79. **QWEN-221b 派发**：继续 `qwen/wave2-tools`；(a) 改 `backend/app/mcp_readonly.py` 的 scope role → `tutor`，补测试证明 `search_course_evidence` 经 MCP 不再被自身矩阵拒绝（保留无 `mcp` 时的 importorskip 行为）；(b) 把 `tests/a/test_tool_registry_permissions.py` 加入 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/矩阵；(c) 零模型、不碰 API/UI/其他产品权限；完成后 `[DONE]`，随后 **231**。
+78. **MCP 角色裁定（2026-10-24 19:30 更正）**：我上一版读漏了 `backend/app/mcp_readonly.py:56-64`——`search_course_evidence` **已经**用 `tutor_scope` 调用，`planner` scope 只用于 profile/mistakes/prereqs，所以**不存在“MCP 搜索稳定 denied”的 bug**。**撤回“把 scope role 改成 tutor”**：那会把 planner 的 3 个工具弄坏。`mcp_readonly.py` 角色**不改**；本卡只需补测试钉住现状。
+79. **QWEN-221b（更正版）派发**：继续 `qwen/wave2-tools`；(a) **不改产品权限/角色**；补 fake-broker/ast 回归测试证明 MCP `search_course_evidence` 用 `tutor` scope、profile/mistakes/prereqs 用 `planner` scope（本机无 `mcp` 时保持 `importorskip`）；(b) 把 `tests/a/test_tool_registry_permissions.py` 加入 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/矩阵；(c) 零模型、不碰 API/UI；完成后 `[DONE]`，随后 **231**。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2167,6 +2167,18 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 2. 把 `tests/a/test_tool_registry_permissions.py` 加进 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/TEST_MATRIX；
 3. 不碰 API/UI、不扩其他工具权限；完成后 `[DONE]`。
 4. 之后 **QWEN-231**（Observation/claim-support 进主链）。
+
+— Lead
+
+
+### [2026-10-24 19:35] Lead → Qwen | [CORRECTION] 撤回 221b 的 MCP 角色修改；改为补测试 + CI
+
+- 我上一版 §3-78 读漏了 `backend/app/mcp_readonly.py:56-64`：`search_course_evidence` **已经**用 `tutor_scope` 调用；`planner` scope 只用于 `get_learning_profile`/`get_recent_mistakes`/`get_prerequisites`。所以**不存在“MCP 搜索稳定 denied”的 bug**，把全局 scope role 改成 tutor 反而会弄坏 planner 的三个工具。
+- **撤回“改 `mcp_readonly.py` 角色”的指令**；如果你已经开始改，请回退该文件到 `ec29cf4` 状态，不要提交角色修改。
+- **QWEN-221b 更正版**：不改产品权限/角色，只做两件事：
+  1. 补 fake-broker/ast 回归测试，证明 MCP `search_course_evidence` 用 `tutor` scope、profile/mistakes/prereqs 用 `planner` scope（本机无 `mcp` 时保持 `importorskip`）；
+  2. 把 `tests/a/test_tool_registry_permissions.py` 加入 `ci.yml` 快清单 44→45，预期 **539/1**，更新 README/TEST_MATRIX；
+- 零模型、不碰 API/UI；完成后 `[DONE]`。随后 **231**。
 
 — Lead
 
