@@ -1,4 +1,10 @@
-"""Read-only, course-scoped business tools for the V2 learning workflow."""
+"""Read-only, course-scoped business tools for the V2 learning workflow.
+
+The names, allowed roles, argument schemas, timeouts and truncation limits of
+these tools are not defined here: they come from the single tool catalog, and
+access goes through its deny-by-default matrix. Every outcome - including each
+refusal - writes one unified audit event.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +13,7 @@ import hashlib
 import time
 from typing import Any, Callable, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from backend.app.core.database import SessionLocal
@@ -16,39 +22,14 @@ from backend.app.core.models import (
     BktStateRecord, KnowledgePointRecord, KnowledgeRelationRecord, MistakeRecord, ProfileRecord,
 )
 from backend.app.repositories.auth_repo import AuthRepository
+from backend.app.services.tool_audit import record_tool_event
+from backend.app.services.tool_catalog import (
+    TOOL_CATALOG, TOOL_VERSION_V2, ToolArgs, decide_access, v2_timeouts,
+)
 
 
-TOOL_VERSION = "v2-readonly-1"
-ROLE_TOOLS: dict[str, frozenset[str]] = {
-    "planner": frozenset({"get_learning_profile", "get_recent_mistakes", "get_prerequisites"}),
-    "tutor": frozenset({"search_course_evidence"}),
-    "practice": frozenset(),
-    "reviewer": frozenset(),
-}
-
-
-class _Args(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-
-class SearchArgs(_Args):
-    query: str = Field(min_length=1, max_length=500)
-
-
-class EmptyArgs(_Args):
-    pass
-
-
-class PrerequisiteArgs(_Args):
-    knowledge_point_id: str = Field(min_length=1, max_length=128)
-
-
-SCHEMAS: dict[str, type[_Args]] = {
-    "search_course_evidence": SearchArgs,
-    "get_learning_profile": EmptyArgs,
-    "get_recent_mistakes": EmptyArgs,
-    "get_prerequisites": PrerequisiteArgs,
-}
+TOOL_VERSION = TOOL_VERSION_V2
+DEFAULT_TIMEOUT_SECONDS, DEFAULT_SEARCH_TIMEOUT_SECONDS = v2_timeouts()
 
 
 @dataclass(frozen=True)
@@ -77,11 +58,14 @@ class ToolResult:
 
 class V2LearningTools:
     def __init__(self, retrieve: Callable[[str, str], list[dict[str, Any]]] | None = None,
-                 *, timeout_seconds: float = 10.0, search_timeout_seconds: float = 30.0,
+                 *, timeout_seconds: float | None = None,
+                 search_timeout_seconds: float | None = None,
                  session_factory=SessionLocal):
         self.retrieve = retrieve
-        self.timeout_seconds = timeout_seconds
-        self.search_timeout_seconds = search_timeout_seconds
+        self.timeout_seconds = (DEFAULT_TIMEOUT_SECONDS if timeout_seconds is None
+                                else timeout_seconds)
+        self.search_timeout_seconds = (DEFAULT_SEARCH_TIMEOUT_SECONDS if search_timeout_seconds is None
+                                       else search_timeout_seconds)
         self.session_factory = session_factory
 
     async def call(self, context: ToolContext, name: str, arguments: dict[str, Any]) -> ToolResult:
@@ -90,33 +74,40 @@ class V2LearningTools:
             f"{context.run_id}:{context.role}:{name}:{sorted((arguments or {}).items())}".encode()
         ).hexdigest()[:16]
 
-        def result(status: str, data: Any = None) -> ToolResult:
+        def finish(status: str, data: Any = None, *, decision: str, reason: str = "") -> ToolResult:
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            record_tool_event(tool=name, spec=TOOL_CATALOG.get(name), role=context.role,
+                              status=status, decision=decision, reason=reason,
+                              latency_ms=latency_ms, request_hash=request_hash,
+                              run_id=context.run_id)
             return ToolResult(name=name, version=TOOL_VERSION, status=status, data=data,
-                              latency_ms=int((time.perf_counter() - started) * 1000),
-                              request_hash=request_hash)
+                              latency_ms=latency_ms, request_hash=request_hash)
 
-        if name not in ROLE_TOOLS.get(context.role, frozenset()) or not context.course_id or not context.user_id:
-            return result("denied")
-        schema = SCHEMAS.get(name)
-        if schema is None:
-            return result("denied")
+        access = decide_access(context.role, name)
+        if not access.allowed:
+            return finish("denied", decision=access.reason)
+        if not context.course_id or not context.user_id:
+            # Scope is server-injected; an empty scope is a refusal, never a wider default.
+            return finish("denied", decision="granted", reason="missing_scope")
+        spec = access.spec
         try:
-            parsed = schema.model_validate(arguments or {})
+            parsed = spec.args_model.model_validate(arguments or {})
         except ValidationError:
-            return result("invalid_args")
+            return finish("invalid_args", decision="granted", reason="args_schema_rejected")
         try:
-            timeout = self.search_timeout_seconds if name == "search_course_evidence" else self.timeout_seconds
+            timeout = (self.search_timeout_seconds if spec.timeout_class == "search"
+                       else self.timeout_seconds)
             data = await asyncio.wait_for(asyncio.to_thread(
                 self._execute, context, name, parsed), timeout=timeout)
         except asyncio.TimeoutError:
-            return result("timeout")
-        except PermissionError:
-            return result("denied")
+            return finish("timeout", decision="granted", reason="timeout")
+        except PermissionError as exc:
+            return finish("denied", decision="granted", reason=str(exc) or "access_denied")
         except Exception:
-            return result("failed")
-        return result("success" if data else "no_data", data)
+            return finish("failed", decision="granted", reason="execution_failed")
+        return finish("success" if data else "no_data", data, decision="granted")
 
-    def _execute(self, context: ToolContext, name: str, args: _Args) -> Any:
+    def _execute(self, context: ToolContext, name: str, args: ToolArgs) -> Any:
         # Recheck the persisted course grant at tool time, so a revoked grant
         # cannot continue accessing profile or course evidence mid-run.
         from backend.app.api.v2.access import _database_course_scope
@@ -131,7 +122,7 @@ class V2LearningTools:
 
             if get_learning_run_guard().decide(args.query).blocked:
                 raise PermissionError("unsafe_query")
-            return self.retrieve(args.query, context.course_id)[:5]
+            return self.retrieve(args.query, context.course_id)[:TOOL_CATALOG[name].max_result_items]
 
         with self.session_factory() as db:
             if name == "get_learning_profile":

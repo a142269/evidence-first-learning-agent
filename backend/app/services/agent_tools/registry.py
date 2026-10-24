@@ -17,12 +17,18 @@ execute_code / search_resources），全部接真实服务层：
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 import threading
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Deque, Dict, List, Optional
+
+from backend.app.services.tool_audit import record_tool_event
+from backend.app.services.tool_catalog import (
+    INTERNAL_ROLE, TOOL_CATALOG, decide_access, source_specs,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -161,8 +167,17 @@ def reset_tool_trace() -> None:
 # ============================================================
 # 内部：traced_call 包装器
 # ================================================================
+def _request_hash(tool: str, kwargs: Dict[str, Any]) -> str:
+    """Digest only — the unified audit never keeps an argument value."""
+    payload = f"v1:{tool}:{sorted((str(k), repr(v)) for k, v in kwargs.items())}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
 def _traced_call(tool: str, fn: Callable[..., Any], **kwargs: Any) -> Any:
     """统一记录 tool 调用耗时与成败。Service 异常吞掉并转成 dict。
+
+    单一目录的 deny-by-default：未在 ``tool_catalog`` 登记的工具名不再执行 handler，
+    返回结构化失败并写审计事件，所以"绕过注册表自己拼一个工具名"不会落到执行面。
 
     设计：fn 都是 closure 已经从外层捕获入参，所以这里**不**把 kwargs 透传给
     fn（否则 closure 函数会因为收到未声明的 kwarg 抛 TypeError）。kwargs 仅
@@ -170,9 +185,20 @@ def _traced_call(tool: str, fn: Callable[..., Any], **kwargs: Any) -> Any:
     args 字段供前端展示。
     """
     session_id = str(kwargs.pop("__session_id__", "") or "")
+    access = decide_access(INTERNAL_ROLE, tool)
+    if not access.allowed:
+        get_tool_trace().record(
+            ToolCallRecord(tool=tool, args={}, success=False, latency_ms=0.0,
+                           error=f"tool_access_denied: {access.reason}"),
+            session_id=session_id)
+        record_tool_event(tool=tool, spec=None, role=INTERNAL_ROLE, status="denied",
+                          decision=access.reason, latency_ms=0,
+                          request_hash=_request_hash(tool, kwargs), session_id=session_id)
+        return {"success": False, "error": f"tool_access_denied: {access.reason}", "tool": tool}
     started = time.perf_counter()
     success = True
     error = ""
+    error_class = ""
     result: Any = None
     try:
         # 修复：fn 是 closure，已经捕获入参；kwargs 仅用于 trace 记录，不再回传
@@ -180,6 +206,7 @@ def _traced_call(tool: str, fn: Callable[..., Any], **kwargs: Any) -> Any:
     except Exception as exc:  # noqa: BLE001
         success = False
         error = f"{type(exc).__name__}: {exc}"
+        error_class = type(exc).__name__
         logger.warning("[tool:%s] failed: %s", tool, error)
         result = {"success": False, "error": error, "tool": tool}
     latency_ms = (time.perf_counter() - started) * 1000
@@ -202,6 +229,10 @@ def _traced_call(tool: str, fn: Callable[..., Any], **kwargs: Any) -> Any:
         ),
         session_id=session_id,
     )
+    record_tool_event(tool=tool, spec=TOOL_CATALOG[tool], role=INTERNAL_ROLE,
+                      status="success" if success else "failed", decision="granted",
+                      reason=error_class, latency_ms=int(latency_ms),
+                      request_hash=_request_hash(tool, kwargs), session_id=session_id)
     return result
 
 
@@ -433,79 +464,24 @@ async def _generate_learning_materials(topic: str, types: List[str], **kw: Any) 
 # Registry
 # ============================================================
 class ToolRegistry:
+    """The V1 agent tools. Their metadata lives in ``tool_catalog``, not here."""
+
     def __init__(self) -> None:
         self._tools: Dict[str, ToolRegistration] = {}
-        self.register(
-            ToolSchema(
-                name="lookup_knowledge_point",
-                description="查询知识库中某个知识点（按名称）相关的 RAG 文档片段。",
-                parameters={"kp_name": {"type": "string", "description": "知识点名称或 ID"}},
-                required=["kp_name"],
-            ),
-            _lookup_kp,
-        )
-        self.register(
-            ToolSchema(
-                name="query_knowledge_graph",
-                description="查询知识图谱中某知识点周围 N 跳子图，分别返回先修图与语义相似图。",
-                parameters={
-                    "kp_name": {"type": "string", "description": "知识点名称或 ID"},
-                    "hop": {"type": "integer", "default": 2, "minimum": 1, "maximum": 3},
-                },
-                required=["kp_name"],
-            ),
-            _query_kg,
-        )
-        self.register(
-            ToolSchema(
-                name="execute_code",
-                description="在受限沙箱（AST + RestrictedPython + 子进程三级降级）中执行 Python 代码。",
-                parameters={
-                    "language": {"type": "string", "enum": ["python"], "default": "python"},
-                    "code": {"type": "string", "description": "要执行的 Python 源码"},
-                    "timeout": {"type": "integer", "default": 5, "minimum": 1, "maximum": 30},
-                },
-                required=["code"],
-            ),
-            _exec_code,
-        )
-        self.register(
-            ToolSchema(
-                name="search_resources",
-                description="按关键词 + 类型检索已经生成的学习资源（pptx / mermaid / code / document / manim）。",
-                parameters={
-                    "query": {"type": "string"},
-                    "resource_type": {
-                        "type": "string",
-                        "enum": ["pptx", "mermaid", "code", "document", "manim", "tts"],
-                    },
-                    "limit": {"type": "integer", "default": 5, "minimum": 1, "maximum": 50},
-                },
-                required=["query"],
-            ),
-            _search_res,
-        )
-        self.register(
-            ToolSchema(
-                name="generate_learning_materials",
-                description="一次性生成多模态课程资料、PPT、练习题等。当用户要求生成资源或资料时调用。",
-                parameters={
-                    "topic": {"type": "string", "description": "资料的主题"},
-                    "types": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "enum": ["pptx", "mermaid", "code", "document", "manim", "tts", "quiz"]
-                        },
-                        "description": "要生成的资源类型列表"
-                    },
-                    "description": {"type": "string", "description": "补充描述（选填）"},
-                    "pptx_template": {"type": "string", "description": "可选 PPT 模板名（data/pptx_templates 下的文件名）"},
-                },
-                required=["topic", "types"],
-            ),
-            _generate_learning_materials,
-        )
+        handlers = {
+            "lookup_knowledge_point": _lookup_kp,
+            "query_knowledge_graph": _query_kg,
+            "execute_code": _exec_code,
+            "search_resources": _search_res,
+            "generate_learning_materials": _generate_learning_materials,
+        }
+        for spec in source_specs("v1"):
+            # Registering a new tool means adding one catalog entry plus its handler.
+            self.register(
+                ToolSchema(name=spec.name, description=spec.description,
+                           parameters=spec.parameters, required=list(spec.required)),
+                handlers[spec.name],
+            )
 
     def register(self, schema: ToolSchema, handler: Callable) -> None:
         self._tools[schema.name] = ToolRegistration(schema=schema, handler=handler)
