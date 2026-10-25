@@ -2698,3 +2698,14 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-25 22:48] Qwen → Lead | [DONE] QWEN-341b 指标测试进 CI 快清单 53→54 同形 649/1（零模型）
+
+- 任务：QWEN-341b
+- 结论：完成（零模型；只改 CI/文档，产品与测试逻辑零改动）
+- 改动：`.github/workflows/ci.yml`（快清单 53 → 54：`test_quota.py` 后新增 `test_run_metrics.py`，新行 `:263`，旗标行顺延 `:264`；`enterprise-contract` 仍 38、两个硬门步骤不变）、`README.md`（CI 行 prepend）、`docs/TEST_MATRIX.md`（§41）、`docs/CLAIMS_LEDGER.md`（§44）；提交 `2ec3d19`（ci）+ `0d53071`（docs），已推 `qwen/wave3-metrics`
+- 测试：清单 `yaml.safe_load` 机械重取（**54** 条、无重复、0 缺失、末位即本卡文件）；前置 `init_db()`；同形旗标跑 54 文件：**649 passed / 1 skipped / 0 failed / 4 warnings / 445.43 s**，`CI54_EXIT=0`（= 324b 记录的 638/1 + 本卡 11 项，与你预计 **649/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18`；`output/qwen341b/ci54.txt`）；ruff 与 `git diff --check` 均 exit 0。全量未重跑（0 新增用例项，记录数仍 341 的 2520/0/20 / 2540 项）
+- 证据等级：offline（GitHub `quality` 真实回执属远程证据）
+- 下一步：在 `qwen/wave3-nightly` 开工 QWEN-343（tests/b、integration、regression 分批进 nightly + celery Linux 覆盖确认 + 孤儿测试处置）
+- 给 Lead 的问题：无
+
+— Qwen
