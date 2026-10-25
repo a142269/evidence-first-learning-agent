@@ -2709,3 +2709,20 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+### [2026-10-25 23:17] Qwen → Lead | [DONE] QWEN-343 nightly 分批 4 批 + celery Linux 显式步骤 + 孤儿测试正式处置（零模型）
+
+- 任务：QWEN-343
+- 结论：完成（零模型；只改 nightly.yml 与文档，产品与既有测试字节零改动，`ci.yml` 一字未动、fast 门槛不变）
+- nightly 批次（同 job 4 顺序批、同隔离 DB、每批独立日志+耗时+单批失败继续跑）：batch a `tests/a`（**1747 项**收集；coverage 四模块仅此批产出、目标与原单跑一致）+ batch b `tests/b`（42 文件/**344 项**）+ batch integration（9 文件/**97 项**）+ batch misc `tests/regression`+`tests/benchmarks`+根 5 文件（15 文件/**351 项**）；收集合计 2539（全量 2540 项 = 收集 + 1 条 `test_mcp_readonly_protocol.py:11` 运行期 importorskip，221b §28 同口径）；新增 batch-logs artifact；`linux-lockfile` job 原样
+- celery Linux 覆盖：新增独立步骤单跑 `test_celery_worker_process.py -q -rs`——skipif 仅 win32 且缺 pywin32 生效，Linux 恒假必执行、回执直接出 **1 passed**；Windows 本机实测 **1 skipped / 0.15 s**（原因逐字记录）
+- fast CI：quality portable 同形 **445.43 s (7:25)**（341b 记录）；新增批次全在 nightly（60 min timeout，四批本地合计 **1038.21 s**）
+- 本地验证（全新 `output/qwen343/batch.db` 先 `init_db()`，三批同库顺序复刻 CI 口径）：batch b **344 passed / 343.25 s**；batch integration **96 passed / 1 skipped / 606.39 s**（唯一 skip 为 `test_graph_bkt_hover.py:62` 环境条件 `No KG nodes in test DB`，非失败）；batch misc **351 passed / 88.57 s**；合计 **791 passed / 1 skipped / 0 failed**；batch a 本机未重跑（字节与 341 全量两轮一致，记录 **2520/0/20 / 2540 项**，`PYTEST_EXIT=0`）
+- 孤儿测试结论：**保留隔离（不删除、不恢复、不纳入 CI），17 个文件原样**——`integrated-map-src` 仍 0 tracked、无 `.gitmodules`、`CockpitView.vue` 未提交；CI 排除机制有效（`ci.yml:34` 单层 glob）；结论已写入 `frontend/tests/_orphaned/README.md`
+- 提交：`c2f9ec2`（ci）+ `f7529f8`（docs），已推 `qwen/wave3-nightly`（e20230e..f7529f8）
+- 未做与风险：**GitHub nightly 真实回执未跑（remote 未验证）**，可 `workflow_dispatch` 手动触发；Linux 实际时长未知（Windows 数字仅供量级）；分批后 coverage.xml 仅 batch a 产出（目标模块不变、无门槛依赖）；celery Linux "1 passed" 待 CI 回执确认
+- 门：ruff `--select=F821,F823,E9`、`git diff --check`、nightly.yml `yaml.safe_load` 全 exit 0
+- 下一步：按派工停在这里；401 归后续卡
+- 给 Lead 的问题：无
+
+— Qwen
