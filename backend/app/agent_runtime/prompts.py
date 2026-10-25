@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,11 @@ from typing import Any
 PROMPT_VERSION = "learning-package-v2.9"
 
 PROMPTS_DIR = Path(__file__).resolve().parents[3] / "prompts"
+
+# Fallback and override events are logged without any prompt text (QWEN-312:
+# the Lead decision keeps the runtime fallback and pairs it with a CI hard
+# gate on verify_registry(); the warning is the operator-visible breadcrumb).
+LOGGER = logging.getLogger(__name__)
 
 
 class PromptRegistryError(RuntimeError):
@@ -192,15 +198,36 @@ def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _load_file(spec: PromptSpec) -> str | None:
-    """File content when present and hash-verified; otherwise None."""
+# A/B candidates (QWEN-312).  Production never sets these: the dict stays
+# empty, every render comes from the hash-verified file, and behaviour is
+# byte-identical to the registry baseline.  Only the harness fills it, in
+# process, for the lifetime of one comparison.
+_OVERRIDES: dict[str, str] = {}
+
+
+def apply_overrides(overrides: dict[str, str]) -> None:
+    """Install A/B candidate texts; unknown names are a stable error."""
+    unknown = sorted(set(overrides) - set(_SPECS))
+    if unknown:
+        raise PromptRegistryError("prompt_not_registered", ",".join(unknown))
+    _OVERRIDES.clear()
+    _OVERRIDES.update(overrides)
+
+
+def clear_overrides() -> None:
+    """Drop all A/B candidates; the registry returns to its file baseline."""
+    _OVERRIDES.clear()
+
+
+def _load_file(spec: PromptSpec) -> tuple[str | None, str | None]:
+    """File content when present and hash-verified; otherwise (None, reason)."""
     try:
         content = (PROMPTS_DIR / spec.file).read_text(encoding="utf-8")
     except OSError:
-        return None
+        return None, "missing"
     if sha256(content) != spec.hash:
-        return None
-    return content
+        return None, "mismatch"
+    return content, None
 
 
 def render(name: str, **values: Any) -> Prompt:
@@ -208,9 +235,20 @@ def render(name: str, **values: Any) -> Prompt:
     spec = _SPECS.get(name)
     if spec is None:
         raise PromptRegistryError("prompt_not_registered", name)
-    text = _load_file(spec)
+    if name in _OVERRIDES:
+        # A/B harness candidate (QWEN-312); the digest travels with the result
+        # so reports can cite which text ran without ever logging the text.
+        text = _OVERRIDES[name]
+        if values:
+            text = text.format(**values)
+        return Prompt(name=name, version=PROMPT_VERSION, hash=sha256(_OVERRIDES[name]),
+                      source="override", text=text)
+    text, reason = _load_file(spec)
     source = "file"
     if text is None:
+        # Runtime keeps the byte-identical builtin fallback (Lead decision,
+        # QWEN-312); drift is caught by the verify_registry() CI hard gate.
+        LOGGER.warning("Prompt %s fell back to builtin (%s)", name, reason)
         text, source = _BUILTIN[name], "builtin"
     if values:
         text = text.format(**values)
@@ -231,10 +269,6 @@ def verify_registry() -> dict[str, str]:
     """Per-prompt file status for tests and operations: ok/missing/mismatch."""
     status: dict[str, str] = {}
     for spec in _SPECS.values():
-        content = _load_file(spec)
-        if content is None:
-            status[spec.name] = ("mismatch" if (PROMPTS_DIR / spec.file).is_file()
-                                 else "missing")
-        else:
-            status[spec.name] = "ok"
+        _text, reason = _load_file(spec)
+        status[spec.name] = "ok" if reason is None else reason
     return status

@@ -161,6 +161,22 @@ jobs:
           docker compose --env-file .env.enterprise -f docker-compose.yml -f docker-compose.enterprise.yml config > /dev/null
           docker compose --env-file .env.production -f docker-compose.production.yml config > /dev/null
 
+      # QWEN-312 hard gate (Lead decision): runtime keeps the byte-identical
+      # builtin fallback, so a drifted or missing prompt file must fail CI
+      # here instead of landing unnoticed.
+      - name: Prompt registry integrity
+        run: |
+          python - <<'PY'
+          import sys
+          from backend.app.agent_runtime.prompts import verify_registry
+          status = verify_registry()
+          bad = {name: state for name, state in status.items() if state != "ok"}
+          if bad:
+              print("PROMPT_REGISTRY_DRIFT=" + repr(sorted(bad.items())))
+              raise SystemExit(1)
+          print("PROMPT_REGISTRY_OK entries=" + str(len(status)))
+          PY
+
       - name: Pytest (portable V2 contract suite)
         env:
           DATABASE_URL: "sqlite:///./build/ci_tests.db"
