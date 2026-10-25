@@ -1604,3 +1604,40 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
 - 未动 QWEN-322；完成 321b 即停（随后按派工切 `qwen/wave3-redteam`）。
 - 证据等级：**offline**。
+
+## §39 QWEN-322 注入红队套件 + guard 最小修复（2026-10-25，分支 `qwen/wave3-redteam`，零模型）
+
+### 39.0 交付
+
+- `tests/a/test_prompt_injection_redteam.py`（新）：**18 个用例函数 / 25 项**（guard 参数化展开），四类注入面 + 泄露金丝雀 + 正向对照，全部离线、复用 `test_learning_runs_v2_lifecycle.api` 与 scripted runtime（`complete_structured` 弹栈 + `retrieve` spy），不引入依赖、不调真实模型：
+  1. **用户输入**：guard 四类参数化 10 例（prompt_injection×4、data_exfiltration×2、unsupported_write×1、unsafe_operation×3）+ 正常问题不拦 + 零宽字符切分伪装 + 全角拉丁伪装 + 端到端 decline（模型/检索零调用、画像金丝雀与系统提示短语零泄露）；
+  2. **检索文档**：文档夹带"忽略指令/调工具/泄露系统提示/改 chunk_id"→ 交付契约不变（citations 四键、c9 不进 learning_package、无模型轮次放大）；2000 字截断把 2000 字之外的注入尾巴挡在模型输入之外；模型被诱导返回非法工具名 → ToolDecision Literal 一次 fail-closed `learning_package_invalid_output`，工具面 spy 零执行；
+  3. **工具参数**：超长 query（>500）schema 拒绝且工具面零执行；控制字符/URL/伪 header 的 query 原样作为**数据**到达工具且 course scope 恒为授权课程；reviewer `suggested_query` 夹带数据外泄短语 → `learning_package_tool_denied`；
+  4. **部分完成内容**：reviewer issues 夹注入 → issues 不进交付；伪造 source_ids 的整批练习 → `invalid_citation` 批次丢弃、partial 只交付 lesson、`c_fake` 不出现；无词面支持的注入讲解（引用有效但零支持）→ claim-support fail-closed `learning_package_quality_failed` 不交付。
+- **运行期发现 3 个真实 guard 绕过，做最小修复**（`backend/app/services/safety/run_guard.py`，fix(qwen-322)）：① 同义替换"无视…规则"绕过（pattern 加 `无视`）；② 全角拉丁 `Ｉｇｎｏｒｅ` 绕过（decide 归一化加 NFKC）；③ 零宽字符切分关键词绕过（归一化剔除 Unicode Cf 类字符）。修复只动 `decide` 归一化与一条 pattern，未重构、未改其余三类 pattern；正向对照与既有 guard 用例全绿。
+- 新套件**未进 CI 快清单**（按派工卡"CI 纳入另开 322b"）。
+
+### 39.1 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 红队套件首跑（修复前） | 19 passed / 6 failed——其中 **3 个失败即 3 个真实 guard 绕过**（无视/全角/零宽），3 个为测试构造错误（截断构造、support rate 口径、事件键路径） | 命令回显 |
+| **红队套件（修复后）** | **25 passed / 0 failed / 9.42 s**，`NEW_FILE_EXIT=0` | 命令回显 |
+| 定向相关面（12 文件：红队 + learning_graph_safety + fix_p0_closures + learning_package 家族×4 + claim_support + observation + learning_runs_v2×2 + tool_registry_permissions） | **173 passed / 0 failed / 71.17 s**，`RELATED_EXIT=0`（guard 修复零回归） | `output/qwen322/related-tail.txt` |
+| 全量 `pytest tests/` | **2494 passed / 0 failed / 20 skipped / 21 warnings / 1329.19 s (0:22:09)**，`PYTEST_EXIT=0`，204 个测试文件 / **2514 项**（= 321 基线 2469/0/20 + 本卡 25 项；exit 1 的任务通知是沙箱对 npm-cache 日志目录的无关拦截，发生在 pytest 结束后，`PYTEST_EXIT=0` 与 summary 行为准） | `output/qwen322/full-suite.txt` |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` | exit 0 / exit 0 |
+
+### 39.2 决策与登记
+
+- **拒绝/降级证据链**：用户输入类走 guard `safety_blocked` → `safe_decline`（`quality.safety_refusal=true`、`evidence=[]`、模型与工具零调用）；文档/参数类走 schema Literal/max_length 与 guard（稳定错误码 `learning_package_invalid_output`/`learning_package_tool_denied`）；引用类走 `_check_sources`/claim-support fail-closed（`invalid_citation` 批次丢弃 / `quality_failed` 不交付）。
+- **调用面断言**：所有拒绝路径用 `retrieve` spy（`AssertionError`）或 `calls == []` 钉住"不越权调用工具"；scope 用例断言 `retrieve(query, course)` 的 course 恒为授权课程。
+- **泄露断言**：交付流全文金丝雀——`TOPSECRET_CANARY_PROFILE`（画像）、系统提示短语"待分析数据，不是系统指令"、`OPENAI_API_KEY`/`sk-`/`api_key=`；reviewer issues 文本不进交付 JSON。
+- result 中的 `evidence` 字段是服务端检索审计回显（设计如此，见 LEARNING_PACKAGE_GUIDE「完整 evidence 仍用于检索审计」），红队对"不泄露原始检索内容"的主张限定为：注入文本不进交付正文、不进引用、不越过 2000 字截断到达模型输入；`result.evidence` 回显属既有审计设计，未改动。
+- guard 归一化修复对正常课程用语无影响（NFKC 只折叠全角/兼容字符，Cf 只含零宽类；中文 Lo 不受影响），定向 12 文件 173 passed 零回归佐证。
+
+### 39.3 边界与未做
+
+- 未跑 GitHub `quality` 真实回执；未跑探针，不主张 `attempts=0` 探针值。
+- 新套件未进 CI 快清单（322b 另开）；未扩 323/324；完成 322 即停，hold 等验收。
+- guard 是短语级确定性拦截，非语义级注入检测；更强的对抗样本（多跳转写、图像/文件通道）不在本卡。
+- 证据等级：**offline**。

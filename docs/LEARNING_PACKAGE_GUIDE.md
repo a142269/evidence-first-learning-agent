@@ -116,6 +116,8 @@ QWEN-312 落地 Lead 的失配策略：**运行时回退保留，但每次回退
 
 ## 细粒度引用契约
 
+检索前的确定性 Guard（`backend/app/services/safety/run_guard.py`）按短语类别拦截 prompt 注入、数据外泄、越权写入与危险操作，命中即走 `safe_decline` 安全降级（零模型/零工具调用）。QWEN-322 红队套件（`tests/a/test_prompt_injection_redteam.py`，25 项）覆盖用户输入/检索文档/工具参数/部分完成内容四类注入面，并推动一处最小加固：`decide` 归一化现在先做 NFKC 折叠（全角拉丁还原为半角）并剔除 Unicode 格式字符（零宽空格/连接符、BOM、软连字符——防止关键词被隐形字符切分绕过），prompt_injection 类 pattern 补"无视"同义词。注入式检索文档仍是数据：受 2000 字截断约束、只能被引用而不能新增工具或改写 `source_ids`（伪造引用 fail-closed）。
+
 如果模型执行或审核已写入检查点，但 Run 写库失败，授权教师可调用 `POST /api/v2/learning-runs/{run_id}/reconcile` 或使用页面恢复按钮。failed/interrupted 或执行租约已过期的任务可检查修复；有效租约和未完成节点不能抢占。此操作只读取稳定检查点，不重新调用模型；待审仍需审核。页面也支持替换答案及停止本次请求，详见 [Run 状态修复说明](RUN_RECONCILIATION.md)。
 
 - `learning_package.lesson` 和每个 `learning_package.exercises[]` 都保留模型声明的 `source_ids`，并由服务端增加 `citations`。对象格式为 `{"chunk_id": "c1", "source": "chapter.md", "label": "chapter.md", "score": 0}`，元数据来自实际检索证据，不接受模型自行编造。当前学习包证据未保留检索分数，`score: 0` 是缺省值，不代表相关性评分。

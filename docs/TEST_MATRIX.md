@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（203）
+## 2. Python 测试文件矩阵（204）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -115,6 +115,7 @@
 | tests/a/test_profile_extractor.py |  |  |  | ✓ |  |
 | tests/a/test_profile_schema.py |  |  |  | ✓ |  |
 | tests/a/test_prompt_cache.py |  |  |  | ✓ |  |
+| tests/a/test_prompt_injection_redteam.py |  |  |  | ✓ | QWEN-322 注入红队套件（18 个用例函数/25 项：guard 四类参数化 10 + 正向；零宽/全角伪装；decline 零调用；文档注入保持数据+截断；非法工具/超长 query fail-closed；scope 不可覆盖；reviewer 注入；伪造引用 partial 丢弃；claim_support fail-closed；泄露金丝雀；正向对照。运行期发现 3 个 guard 绕过并最小修复 run_guard；未进 fast 清单） |
 | tests/a/test_prompt_regression.py | F |  |  | ✓ | QWEN-312 回归 harness（5 项：聚合完整性门、固定样例结构断言、回退告警无文本泄露×2、override 钩子往返）；QWEN-312b 起进 fast/quality 快清单（48→50） |
 | tests/a/test_prompt_registry.py | F |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub）；QWEN-311b 起进 fast/quality 快清单（47→48） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
@@ -769,3 +770,18 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
+
+## 36. QWEN-322 注入红队套件 + guard 最小修复实测摘要（2026-10-25，分支 `qwen/wave3-redteam`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 红队套件 | `tests/a/test_prompt_injection_redteam.py`（新，18 用例函数 / **25 项**） | 四类注入面：用户输入（guard 四类参数化 10 + 正向 + 零宽/全角伪装 + 端到端 decline 零调用）、检索文档（注入保持数据 + 2000 字截断 + 非法工具 fail-closed）、工具参数（超长 query schema 拒绝 + scope 不可覆盖 + reviewer suggested_query guard）、部分完成内容（reviewer issues 不进交付 + 伪造引用批次丢弃 + claim-support fail-closed）；泄露金丝雀（画像/系统提示/密钥形状）+ 正向对照；全部离线 scripted，`retrieve` spy 钉调用面 |
+| **真实漏洞与最小修复** | `backend/app/services/safety/run_guard.py`（fix） | 首跑 **19 passed / 6 failed**，其中 3 个失败是真实 guard 绕过：①"无视…规则"同义替换（pattern 补 `无视`）；②全角拉丁 `Ｉｇｎｏｒｅ`（归一化加 NFKC）；③零宽字符切分关键词（剔除 Unicode Cf 类）。只动 `decide` 归一化 + 一条 pattern，未重构 |
+| **红队套件（修复后）** | 新文件单跑 | **25 passed / 0 failed / 9.42 s**，`NEW_FILE_EXIT=0` |
+| 定向相关面（12 文件） | 红队 + learning_graph_safety + fix_p0_closures + learning_package 家族×4 + claim_support + observation + learning_runs_v2×2 + tool_registry_permissions | **173 passed / 0 failed / 71.17 s**，`RELATED_EXIT=0`（guard 修复零回归）—— `output/qwen322/related-tail.txt` |
+| **全量** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen322/full.db`（先 `init_db()`）+ `--basetemp output/qwen322/base-full`） | **2494 passed / 0 failed / 20 skipped / 21 warnings / 1329.19 s (0:22:09)**，`PYTEST_EXIT=0`，204 个测试文件 / **2514 项**（= 321 基线 2469/0/20 + 本卡 25 项）—— `output/qwen322/full-suite.txt` |
+| 快清单 | 未改 | 仍 51 文件（321b 口径 **598/1**）；红队套件未纳入（按派工卡另开 322b） |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` | exit 0 / exit 0 |
+| 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；guard 为短语级确定性拦截，非语义级注入检测；`result.evidence` 检索审计回显为既有设计未改动（主张边界见台账 §39.2）。
