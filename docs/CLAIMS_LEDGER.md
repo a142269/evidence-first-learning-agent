@@ -1757,3 +1757,25 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 指标为**进程内口径**（telemetry 全局单例）：多 worker 部署下各进程独立计数，由 Prometheus 抓取侧按实例聚合，本卡不做进程间存储。
 - 未跑真实 Prometheus/Alertmanager 部署验证；`/metrics` 生产暴露未做真实部署演练（生产 Runbook 归 QWEN-403）；未扩 CI 快清单（`test_run_metrics.py` 未纳入，沿用"CI 纳入另卡"先例）。
 - 证据等级：**offline**。
+
+## §44 QWEN-341b 指标测试纳入 CI 快清单（2026-10-25，分支 `qwen/wave3-metrics`，零模型）
+
+### 44.0 交付
+
+- `.github/workflows/ci.yml` 快清单 **53 → 54 个文件**：`tests/a/test_quota.py` 后新增 `tests/a/test_run_metrics.py`（新行 `:263`，旗标行顺延 `:264`）；`enterprise-contract` 仍 38，两个硬门步骤（prompt registry + permission matrix）不变。
+- 只改 CI/文档；产品与测试逻辑零改动（§43 交付的字节不动）。
+
+### 44.1 实测（offline）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`：**54** 条、无重复、0 缺失、末位即本卡文件 | `logs/portable-list.txt`、`logs/portable-files.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen341b/ci.db`） | 命令回显 `init_db ok` |
+| **CI 同形子集（54 文件）** | 同形旗标 `--no-cov --benchmark-disable -q -rs`，`--basetemp output/qwen341b/base`；**649 passed / 1 skipped / 0 failed / 4 warnings / 445.43 s (0:07:25)**，`CI54_EXIT=0`；= 324b 记录的 638/1 + 本卡文件 **11** 项，与 Lead 预计 **649/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18` | `output/qwen341b/ci54.txt` |
+| 全量 | 未重跑（0 新增用例项；清单纳入不改变任何测试字节，与 322b/324b 同口径），记录数仍 341 的 **2520/0/20 / 2540 项** | — |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check`（提交前复核） | exit 0 / exit 0 |
+
+### 44.2 边界与未做
+
+- 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未动 QWEN-343；完成 341b 即停（随后按派工切 `qwen/wave3-nightly`）。
+- 证据等级：**offline**。

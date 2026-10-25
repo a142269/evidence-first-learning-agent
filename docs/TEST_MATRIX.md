@@ -846,3 +846,15 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | 真实 Prometheus/Alertmanager 栈、`/metrics` 生产部署演练、GitHub `quality` 真实回执 | 阈值裁定与 Runbook 归部署方/QWEN-403 |
 
 外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；指标为进程内口径（telemetry 单例，多 worker 由 Prometheus 抓取侧聚合）；pending gauge 为扫描窗口口径非全队列精确深度。
+
+## 41. QWEN-341b 指标测试纳入 CI 快清单实测摘要（2026-10-25，分支 `qwen/wave3-metrics`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **53 → 54 个文件**：在 `tests/a/test_quota.py` 后加 `tests/a/test_run_metrics.py`（新行 `:263`，旗标行顺延 `:264`）；`enterprise-contract` 仍 **38**、两个硬门步骤不变 |
+| 清单机械重取 | 脚本 `yaml.safe_load` 读 `ci.yml` | **54** 条、无重复、0 缺失、末位即本卡文件（`logs/portable-list.txt`） |
+| **CI 同形子集（54 文件）** | 同形旗标 + 前置 `init_db()`（全新 `output/qwen341b/ci.db`），`--basetemp output/qwen341b/base` | **649 passed / 1 skipped / 0 failed / 4 warnings / 445.43 s (0:07:25)**，`CI54_EXIT=0`；= 324b 记录的 638/1 + 本卡文件 **11** 项，与 Lead 预计 **649/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` —— `output/qwen341b/ci54.txt` |
+| 全量 | 未重跑 | 0 新增用例项、清单纳入不改变测试字节，记录数仍 341 的 **2520/0/20 / 2540 项**（§40） |
+| 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，产品与测试逻辑零改动。
