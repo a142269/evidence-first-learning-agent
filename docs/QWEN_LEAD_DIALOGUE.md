@@ -2458,3 +2458,21 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+
+### [2026-10-25 16:08] Qwen → Lead | [DONE] QWEN-321 统一权限矩阵：10 条 V2 路由全声明 + CI 枚举硬门（零模型）
+
+- 任务：QWEN-321
+- 结论：完成（零模型调用；未碰前端/UI；未装新依赖；矩阵测试未进快清单，沿用"CI 纳入另卡"先例可另开 321b）
+- 矩阵结构：`backend/app/api/v2/permission_matrix.py`（新）把 **10 条 V2 路由**（learning-runs 8 + admin 2，含 /enqueue、/cancel、admin/run-usage×2）声明为一组 `RoutePolicy`：method+path × 角色（demo/student/teacher/admin）× 认证（required/optional）× 课程范围 × Run 归属（creator / owner_or_reviewer / reviewer_only / none）× 工具。工具维度**引用 `tool_catalog` 的 v2 permission key（4 个，单一真相不复制）**；未声明路由、幽灵声明、非法字段（未知角色/auth/归属/越目录工具）都算问题
+- 路由覆盖数：**10/10**（OpenAPI schema 枚举实际服务路由与矩阵逐一相等；FastAPI 0.143.3 的 `include_router` 是 lazy `_IncludedRouter`，`app.routes` 不再扁平展开，故枚举用 `app.openapi()` 这一公开投影——已在台账 §37.2 登记）
+- 未声明拒绝证据：CI `quality` job 新硬门步骤 `V2 permission matrix coverage`（`verify_route_policies` 非空即 `PERMISSION_MATRIX_DRIFT` + exit 1，pytest 前）；本地同逻辑验证 **PERMISSION_MATRIX_OK declared=10 v2_routes=10**（`GATE_EXIT=0`）；测试钉住未声明路由（假 `/export` 路由报 `undeclared_route`）、幽灵声明（报 `stale_declaration`）、非法字段与 demo/required 一致性
+- 不改变既有授权行为：矩阵是**声明层**，`resolve_v2_principal`/`authorize_run_owner`/`authorize_reviewer`/工具 deny-by-default 一字未动，"未声明即拒绝"落在 CI 不做默认拒启动；reviewer/admin 面真实拒绝由测试钉住（student→403、匿名→401、teacher→200 正向）
+- 改动：`permission_matrix.py` + `ci.yml`（`3c75173` feat）、`tests/a/test_permission_matrix.py` 9 项（`eb02a7e` test）、文档 5 处（README 全量行、台账 §37、矩阵 §2 计数 203 + §34、指南 321 小节、导览测试行）（`411dad1` docs）；已推 `qwen/wave3-security`（含 ff 合入的 312b `a45f307`）
+- 测试（全部来自真实日志）：新文件单跑 **9 passed / 3.24 s**（`NEW_FILE_EXIT=0`）；定向 11 文件（矩阵 + v2_access + tool_registry_permissions + persistent_auth + auth_restart + learning_runs_v2×2 + run_usage_admin + run_queue + v1_production_access + static_and_ws_safety）**133 passed / 1 skipped / 74.68 s**（`RELATED_EXIT=0`，唯一 skip 仍 `test_auth_restart.py:18` 需一次性 PG）；全量（全新隔离 SQLite + 前置 `init_db()`）**2469 passed / 0 failed / 20 skipped / 22 warnings / 1336.03 s**（`PYTEST_EXIT=0`，203 个测试文件 / 2489 项 = 312 基线 2460/0/20 + 本卡 9；任务通知里的 exit 1 是沙箱对 npm-cache 日志的无关拦截，发生在 pytest 结束后，以 `PYTEST_EXIT=0` 与 summary 行为准）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0
+- 证据等级：offline（未跑 GitHub `quality` 真实回执，两个硬门步骤的 remote 回执由你判读；未跑探针，不主张 attempts=0）
+- 未做与风险：① 运行时 opt-in 检查未接（`verify_route_policies` 可被启动钩子调用，本卡未接，按派工卡优先 CI 枚举）；② 矩阵与运行时的一致性靠测试钉住而非类型强制，未来新增鉴权原语时需同步矩阵（硬门只保证"路由都有声明"，不保证"声明与实现语义一致"——`test_role_course_and_run_dimensions_match_runtime_guards` 钉住了当前语义）；③ `--collect-only` 2488 与执行 2489 的 1 项差异来自运行期动态生成用例，记录一律用执行口径
+- 下一步：hold 等验收，之后按派工开 QWEN-322（注入红队 ≥20 例）
+- 给 Lead 的问题：无
+
+— Qwen
