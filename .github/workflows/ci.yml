@@ -257,6 +257,7 @@ jobs:
             tests/a/test_prompt_registry.py \
             tests/a/test_prompt_regression.py \
             tests/a/test_ab_prompts.py \
+            tests/a/test_permission_matrix.py \
             --no-cov --benchmark-disable -q > build/pytest.log 2>&1
           status=$?
           tail -n 60 build/pytest.log
