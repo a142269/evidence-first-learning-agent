@@ -1326,3 +1326,35 @@ Lead §4（`[2026-10-24 21:45]`）派工逐字：「Run 创建与执行解耦；
 - `expire_batch` 启动清扫与队列重领并存：queue 来源的 expired run 被扫成 `interrupted` 后仍是队列候选，不丢任务。
 - 未动 QWEN-311；完成 301 即停，hold 等验收。
 - 证据等级：**offline**。
+
+## 32. QWEN-301b 队列测试纳入 CI 快清单（2026-10-25，分支 `qwen/wave3-queue`，零模型调用、产品与测试逻辑零改动）
+
+Lead §4（`[2026-10-25 00:38]`）派工逐字：「把 `tests/a/test_run_queue.py` 加入 `ci.yml` 快清单 46→47，预期 **568/1**；更新 README/矩阵；只改 CI/文档；完成后 `[DONE]`。」
+
+### 32.1 改动（1 个 CI 文件 + 3 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `.github/workflows/ci.yml` | `quality` job portable 快清单 **46 → 47 个文件**：在 `tests/a/test_observation_claim_support.py` 后加 `tests/a/test_run_queue.py`（新行 `:219`，旗标行 `--no-cov --benchmark-disable -q` 顺延 `:220`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍在 | `:219` |
+| `README.md` | `:58` CI 行换成本卡 47 文件 **568/1** 记录，301 的 553/1 降为同格「再前」 | `:58` |
+| `docs/TEST_MATRIX.md` | 文件矩阵 `test_run_queue.py` 行补 `F` 标记并更新备注；新增 §29（追加） | `:126`、§29 |
+| `docs/CLAIMS_LEDGER.md` | §31.5「未把队列测试加入快清单」条目由本卡关闭；新增本节 §32（追加） | — |
+
+**未改**：任何 `backend/`、`tests/`、`scripts/` 文件；`PROMPT_VERSION`、产品逻辑、测试逻辑一字未动。
+
+### 32.2 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`：portable **47** 条、无重复、0 缺失、末位即本卡文件 | `output/qwen301b/logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen301b/ci.db`） | — |
+| **CI 同形子集（47 文件）** | **568 passed / 1 skipped / 0 failed / 4 warnings / 307.08 s (0:05:07)**，`CI47_EXIT=0`；= 301 记录的 553/1 + 该文件既有 **15** 项，与 Lead 预计 **568/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` | `output/qwen301b/logs/ci47.txt`、`ci47-exit.txt` |
+| 门 | `git diff --check` | exit 0（仅 CRLF 归一化 warning） |
+| 全量 | **未重跑**：本卡 0 新增用例项、产品零改动，记录数仍为 301 的 **2439/0/20 / 2459 项** | §31.3 |
+
+### 32.3 边界与未做
+
+- 本卡只改 CI/文档，零模型调用、未读 `.env`、未装依赖、未跑探针（不主张 `attempts=0` 探针值）。
+- **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；全量与 PG 面未重跑（本卡零产品/零用例项改动，记录数不变）。
+- 随后开工 QWEN-311（`qwen/wave3-prompt`）。
+- 证据等级：**offline**。

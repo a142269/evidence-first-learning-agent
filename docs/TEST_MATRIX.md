@@ -123,7 +123,7 @@
 | tests/a/test_resource_ownership.py |  |  |  | ✓ |  |
 | tests/a/test_run_lease_migration.py |  | E |  | s |  |
 | tests/a/test_run_leases.py | F | E |  | ✓ |  |
-| tests/a/test_run_queue.py |  |  |  | ✓ | QWEN-301 Run 队列/Worker（15 项：领取/心跳/取消/超时/重领/上限/杀进程恢复/API 兼容；离线 stub+subprocess 探针；未进 fast 清单） |
+| tests/a/test_run_queue.py | F |  |  | ✓ | QWEN-301 Run 队列/Worker（15 项：领取/心跳/取消/超时/重领/上限/杀进程恢复/API 兼容；离线 stub+subprocess 探针）；QWEN-301b 起进 fast/quality 快清单（46→47） |
 | tests/a/test_run_usage_admin.py | F |  |  | ✓ | QWEN-104 新增（管理端只读用量/成本摘要，9 用例）；仅进 portable V2 contract suite，未扩 pg/enterprise 清单 |
 | tests/a/test_seed_extended.py |  |  |  | ✓ |  |
 | tests/a/test_smart_tutoring.py |  |  |  | ✓ |  |
@@ -656,3 +656,17 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动；PG 行锁使序号重试按设计不触发 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖；崩溃恢复为 **at-least-once**（重领重跑），不声称 exactly-once；`MAX_ATTEMPTS=2` 为基线常量待 Lead 裁定；未跑探针故不主张 `attempts=0` 探针值。
+
+## 29. QWEN-301b 队列测试纳入 CI 快清单实测摘要（2026-10-25，分支 `qwen/wave3-queue`，零模型调用、产品与测试逻辑零改动）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **46 → 47 个文件**：在 `tests/a/test_observation_claim_support.py` 后加 `tests/a/test_run_queue.py`（新行 `:219`，旗标行顺延 `:220`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍在 |
+| 清单机械重取 | 脚本用 `yaml.safe_load` 读 `ci.yml` | **47** 条、无重复、0 缺失、末位即本卡文件（`output/qwen301b/logs/portable-list.txt`） |
+| 前置 `init_db()` | exit 0（全新 `output/qwen301b/ci.db`） | — |
+| 门 | `git diff --check` | exit 0（仅 CRLF 归一化 warning） |
+| **CI 同形子集（47 文件）** | `ci.yml:220` 同形旗标 `--no-cov --benchmark-disable -q -rs` + 前置 `init_db()` | **568 passed / 1 skipped / 0 failed / 4 warnings / 307.08 s (0:05:07)**，`CI47_EXIT=0`；= 301 记录的 553/1 + 该文件既有 **15** 项，与 Lead 预计 **568/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` —— `output/qwen301b/logs/ci47.txt`、`ci47-exit.txt` |
+| 全量 | 未重跑 | 本卡 0 新增用例项、产品零改动，全量记录数仍为 301 的 **2439/0/20 / 2459 项**（§28） |
+| 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
