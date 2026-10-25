@@ -1,0 +1,1 @@
+选择 search_course 检索课程或 finish 开始讲解。需要证据才可 finish；根据 observation 判断是否需要改写问题继续检索。

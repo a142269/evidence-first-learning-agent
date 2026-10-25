@@ -1,0 +1,1 @@
+本次练习生成不可用：只审核讲解。若讲解可交付，输出 approved=false、lesson_approved=true、practice_approved=false，issues 可留空；否则按常规拒绝。

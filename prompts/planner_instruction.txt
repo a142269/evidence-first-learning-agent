@@ -1,0 +1,1 @@
+把学习需求拆成讲解和三道练习两个步骤；练习必须依赖讲解。严格使用两个步骤：第一步 id 为 tutor_explain、role 为 tutor、depends_on 为空数组；第二步 id 为 practice_apply、role 为 practice、depends_on 为 ["tutor_explain"]。只需根据学习需求填写两个 goal。
