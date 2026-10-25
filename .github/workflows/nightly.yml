@@ -31,14 +31,70 @@ jobs:
         run: |
           mkdir -p build
           python -c "from backend.app.core.database import init_db; init_db()"
-      - name: Run full offline suite
-        run: pytest -o addopts= tests/ --benchmark-disable --cov=backend.app.agent_runtime --cov=backend.app.services.enterprise_retriever --cov=backend.app.services.v2_learning_tools --cov=backend.app.api.v2 --cov-report=xml:build/coverage.xml -q
+      # QWEN-343: run the offline suite in four sequential batches against the
+      # same isolated DB (one bash step, per-batch logs + durations) so no
+      # single pytest invocation drags the whole job.  Batch failure marks the
+      # job red while later batches still run.  Coverage stays scoped to the
+      # V2 core modules and is produced by batch a, matching the previous
+      # single-run coverage targets.
+      - name: Run offline suite in batches
+        run: |
+          status=0
+          run_batch() {
+            name="$1"; shift
+            start=$(date +%s)
+            pytest -o addopts= --benchmark-disable -q "$@" > "build/nightly-$name.log" 2>&1
+            code=$?
+            end=$(date +%s)
+            echo "::group::[batch $name] exit=$code duration=$((end-start))s"
+            tail -n 15 "build/nightly-$name.log"
+            echo "::endgroup::"
+            if [ "$code" -ne 0 ]; then status=1; fi
+          }
+          # Batch a: core V2 contracts + run layer (incl. tests/a/benchmarks).
+          # Produces the coverage artifact for the V2 core modules.
+          run_batch a tests/a \
+            --cov=backend.app.agent_runtime \
+            --cov=backend.app.services.enterprise_retriever \
+            --cov=backend.app.services.v2_learning_tools \
+            --cov=backend.app.api.v2 \
+            --cov-report=xml:build/coverage.xml
+          # Batch b: B-layer services / algorithms / APIs.
+          run_batch b tests/b
+          # Batch integration: cross-layer end-to-end suites.
+          run_batch integration tests/integration
+          # Batch misc: regression + benchmarks + tests/ root demo-data files.
+          run_batch misc tests/regression tests/benchmarks \
+            tests/test_demo_bkt_variation.py tests/test_demo_business_data.py \
+            tests/test_demo_data_unification.py tests/test_enrich_demo_mistakes.py \
+            tests/test_mistake_list_limit.py
+          echo "nightly batch status=$status"
+          exit $status
+      # QWEN-343: the celery worker contract only conditionally skips on
+      # Windows (kombu filesystem broker needs pywin32 there).  This explicit
+      # single-file run makes the Linux execution visible in the job log: on
+      # this runner the skipif condition is false, so the probe must report
+      # "1 passed" (a "1 skipped" line here means the guard regressed).
+      - name: Celery worker contract runs on Linux
+        run: |
+          pytest tests/a/test_celery_worker_process.py -o addopts= \
+            --benchmark-disable -q -rs > build/nightly-celery.log 2>&1
+          status=$?
+          tail -n 10 build/nightly-celery.log
+          exit $status
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nightly-core-coverage
           path: build/coverage.xml
+          if-no-files-found: ignore
+      - name: Upload batch logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-batch-logs
+          path: build/nightly-*.log
           if-no-files-found: ignore
 
   linux-lockfile:
