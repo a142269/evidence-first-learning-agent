@@ -2651,3 +2651,21 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+### [2026-10-25 22:19] Qwen → Lead | [DONE] QWEN-341 Run 级指标与告警（复用 /metrics 无依赖 exposition + 权限三态 + 告警草案 6 条，零模型）
+
+- 任务：QWEN-341
+- 结论：完成（零模型；零新依赖、零新端点、未碰 UI/前端/CI、未动 343）
+- 指标清单（9 个，全部在 `core/telemetry.py` `_bootstrap_default_metrics` 预注册）：结算 Run `learning_runs_total{mode,status}`、延迟 `learning_run_duration_seconds{mode}`（桶至 300 s）、错误分类 `learning_run_errors_total{code}`（稳定码，不泄异常文本）、工具调用 `learning_tool_calls_total{tool,status}`（六态）、队列 `queue_claimed_total` + `learning_queue_pending_runs`（领取扫描窗口 gauge，上限 limit×3=15）、配额拒绝 `quota_rejected_total{dimension}`、成本 `run_cost_yuan_total{mode}` + `run_cost_unknown_runs_total{mode}`（unknown 记 unknown 不当 0，与 324 同契约）
+- 暴露方式：复用既有 `GET /metrics`（`export_prometheus()`，text exposition）——零新端点零新依赖；新模块 `backend/app/services/run_metrics.py` 记录器全部 fire-and-forget；挂点 6 处单点避免重复计（settled 挂 `apply_settled_state` 末尾由 streaming+worker 共用；错误挂 stream except + worker 三个 except；错误不挂 `_observed` 因与 stream except 会双计）
+- 权限边界：production 复用既有中间件——无 token **401** / 学生 **403** `privileged_role_required` / teacher **200** 三态测试钉住（`tests/a/test_run_metrics.py`，TestClient + production 会话桩）；dev 保持可读
+- 告警草案：`docs/alerts_learning_runs.yml` 6 条 PrometheusRule 形状规则（成功率 <0.9/10m、错误率 >0.2/s、队列积压 >10、配额拒绝 >1/s、unknown 成本占比、成本日耗投影 >50 CNY/天）——**草案未接真实 Alertmanager，阈值待部署方裁定**
+- 测试：新文件单跑 **11 passed / 4.94 s**；定向相关 9 文件 **125 passed / 61.74 s**；全量（第二轮记录口径，全新 `output/qwen341/full2.db` 先 `init_db()`）**2520 passed / 0 failed / 20 skipped / 21 warnings / 1465.79 s**，`PYTEST_EXIT=0`，206 文件 / **2540 项**（= 324 基线 2509/0/20 + 本卡 11 项）；ruff `--select=F821,F823,E9` 与 `git diff --check` 均 exit 0
+- 首跑抖动登记：第一轮全量 2519 passed / **1 failed**（`test_demo_journey` 34.46 s > 30 s 预算，会话期残留后台任务负载；与 301 首跑同先例）——负载下单跑 39.83 s 仍红，**空闲机器单跑 10.66 s passed** 后第二轮全量全绿；两轮日志均保留（`output/qwen341/full_run.log` / `full_run2.log`）
+- 提交：`ae100f7`（feat）+ `443ec0a`（test）+ `e199603`（docs），已推 `qwen/wave3-metrics`（ba2b27f..e199603）
+- 未做与限制：`learning_queue_pending_runs` 为扫描窗口口径非全队列精确深度；指标为进程内口径（多 worker 由 Prometheus 抓取侧聚合，不做进程间存储）；未跑真实 Prometheus/Alertmanager 部署、`/metrics` 生产部署演练（Runbook 归 403）；`test_run_metrics.py` 未进 CI 快清单（沿用"CI 纳入另卡"先例）
+- 证据等级：offline（未跑 GitHub `quality` 真实回执）
+- 下一步：按派工停在这里；343 归后续卡
+- 给 Lead 的问题：无
+
+— Qwen
