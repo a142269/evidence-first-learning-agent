@@ -1515,3 +1515,26 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 未把两个新测试文件加入快清单（沿用先例，可另开 312b）；未跑 GitHub `quality` 回执（硬门步骤的 remote 回执由 Lead 判读）。
 - 未动 QWEN-321；完成 312 即停，hold 等验收。
 - 证据等级：**offline**。
+
+## §36 QWEN-312b Prompt 回归/AB 测试纳入 CI 快清单（2026-10-25，分支 `qwen/wave3-prompt-ab`，零模型）
+
+### 36.0 交付
+
+- `.github/workflows/ci.yml` `quality` 快清单 **48 → 50 个文件**：`tests/a/test_prompt_registry.py` 之后新增 `tests/a/test_prompt_regression.py`、`tests/a/test_ab_prompts.py`（新行 `:237-238`，旗标行顺延 `:239`）；`enterprise-contract` 仍 38，`Prompt registry integrity` 硬门步骤不变。
+- 只改 CI/文档；产品与测试逻辑零改动；关闭 §35.4 登记的“未把两个新测试文件加入快清单”缺口。
+
+### 36.1 实测（offline）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`（锚点 `test_v1_production_access.py` 步骤）：**50** 条、无重复、0 缺失、末三位 = registry + 本卡两文件 | `logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen312b/ci.db`） | 命令回显 `INITDB_EXIT=0` |
+| **CI 同形子集（50 文件）** | **589 passed / 1 skipped / 0 failed / 4 warnings / 282.01 s (0:04:42)**，`CI50_EXIT=0`；= 312 记录的 578/1 + 本卡 11 项，与 Lead 预计 **589/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18` | `output/qwen312b/ci50.txt` |
+| 全量 | 未重跑（0 新增用例项），记录数仍 312 的 **2460/0/20 / 2480 项** | — |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check`（提交前复核） | exit 0 / exit 0 |
+
+### 36.2 边界与未做
+
+- 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
+- 未动 QWEN-321；完成 312b 即停。
+- 证据等级：**offline**。
