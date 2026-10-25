@@ -113,7 +113,7 @@
 | tests/a/test_profile_extractor.py |  |  |  | ✓ |  |
 | tests/a/test_profile_schema.py |  |  |  | ✓ |  |
 | tests/a/test_prompt_cache.py |  |  |  | ✓ |  |
-| tests/a/test_prompt_registry.py |  |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub；未进 fast 清单） |
+| tests/a/test_prompt_registry.py | F |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub）；QWEN-311b 起进 fast/quality 快清单（47→48） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
 | tests/a/test_question_bank_merged.py |  |  |  | ✓ |  |
 | tests/a/test_realdina_service.py |  |  |  | ✓ |  |
@@ -689,3 +689,17 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动 |
 
 外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖；哈希对 CRLF/LF 检出形态不敏感（`read_text` 归一后再取 sha256）；未跑探针故不主张 `attempts=0` 探针值。
+
+## 31. QWEN-311b Prompt 注册表测试纳入 CI 快清单实测摘要（2026-10-25，分支 `qwen/wave3-prompt`，零模型调用、产品与测试逻辑零改动）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **47 → 48 个文件**：在 `tests/a/test_run_queue.py` 后加 `tests/a/test_prompt_registry.py`（新行 `:220`，旗标行顺延 `:221`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍在 |
+| 清单机械重取 | 脚本用 `yaml.safe_load` 读 `ci.yml` | **48** 条、无重复、0 缺失、末位即本卡文件（`output/qwen311b/logs/portable-list.txt`） |
+| 前置 `init_db()` | exit 0（全新 `output/qwen311b/ci.db`） | — |
+| 门 | `git diff --check` | exit 0（仅 CRLF 归一化 warning） |
+| **CI 同形子集（48 文件）** | `ci.yml:221` 同形旗标 `--no-cov --benchmark-disable -q -rs` + 前置 `init_db()` | **578 passed / 1 skipped / 0 failed / 4 warnings / 292.70 s (0:04:52)**，`CI48_EXIT=0`；= 311 记录的 568/1 + 该文件既有 **10** 项，与 Lead 预计 **578/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` —— `output/qwen311b/logs/ci48.txt`、`ci48-exit.txt` |
+| 全量 | 未重跑 | 本卡 0 新增用例项、产品零改动，全量记录数仍为 311 的 **2449/0/20 / 2469 项**（§30） |
+| 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。

@@ -1423,7 +1423,39 @@ Lead §4（`[2026-10-25 00:38]`）派工逐字：「311 在 `qwen/wave3-prompt`�
 ### 33.5 边界与未做
 
 - 迁移只覆盖角色主提示词与共用框架（10 条）；`_TRUNCATION_GUIDANCE` 与 repair 循环文案留在原处（与控制流强耦合，registry 结构可后续纳入）。
-- 回退是"字节相同的内置默认"，运行时行为不因文件问题改变；但哈希失配**不会**阻断运行（属静默回退），运维侧需靠 `verify_registry()`/测试发现——是否要升级为"失配即拒启动"留给 Lead 裁定（倾向 341 观测面处理）。
-- **未把 `test_prompt_registry.py` 加入 `ci.yml` 快清单**（沿用"CI 纳入另卡"先例，如 311b）；未跑 GitHub `quality` 回执与 PG `enterprise-contract`（本卡零 PG 面改动）。
+- 回退是"字节相同的内置默认"，运行时行为不因文件问题改变；但哈希失配**不会**阻断运行（属静默回退），运维侧需靠 `verify_registry()`/测试发现——是否要升级为"失配即拒启动"留给 Lead 裁定（倾向 341 观测面处理）。（**Lead 已裁定**：保留运行时静默回退，但补 warning 与 CI 硬门，见 §35。）
+- **未把 `test_prompt_registry.py` 加入 `ci.yml` 快清单**（沿用"CI 纳入另卡"先例，如 311b）；未跑 GitHub `quality` 回执与 PG `enterprise-contract`（本卡零 PG 面改动）。（本条由 **QWEN-311b** 关闭，见 §34。）
 - 未动 QWEN-312；完成 311 即停，hold 等验收。
+- 证据等级：**offline**。
+
+## 34. QWEN-311b Prompt 注册表测试纳入 CI 快清单（2026-10-25，分支 `qwen/wave3-prompt`，零模型调用、产品与测试逻辑零改动）
+
+Lead §4（`[2026-10-25 14:35]`）派工逐字：「把 `test_prompt_registry.py` 加入 `ci.yml` 快清单 47→48，预期 **578/1**；更新 README/矩阵；零模型、不碰产品；完成后 `[DONE]`。」
+
+### 34.1 改动（1 个 CI 文件 + 3 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `.github/workflows/ci.yml` | `quality` job portable 快清单 **47 → 48 个文件**：在 `tests/a/test_run_queue.py` 后加 `tests/a/test_prompt_registry.py`（新行 `:220`，旗标行 `--no-cov --benchmark-disable -q` 顺延 `:221`）；`enterprise-contract` 仍 **38**、MCP 协议独立步骤仍在 | `:220` |
+| `README.md` | `:58` CI 行换成本卡 48 文件 **578/1** 记录，311 的 568/1 降为同格「再前」 | `:58` |
+| `docs/TEST_MATRIX.md` | 文件矩阵 `test_prompt_registry.py` 行补 `F` 标记并更新备注；新增 §31（追加） | `:116`、§31 |
+| `docs/CLAIMS_LEDGER.md` | §33.5「未把注册表测试加入快清单」条目标注由本卡关闭；新增本节 §34（追加） | — |
+
+**未改**：任何 `backend/`、`tests/`、`scripts/` 文件；`PROMPT_VERSION`、产品逻辑、测试逻辑一字未动。
+
+### 34.2 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`：portable **48** 条、无重复、0 缺失、末位即本卡文件 | `output/qwen311b/logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen311b/ci.db`） | — |
+| **CI 同形子集（48 文件）** | **578 passed / 1 skipped / 0 failed / 4 warnings / 292.70 s (0:04:52)**，`CI48_EXIT=0`；= 311 记录的 568/1 + 该文件既有 **10** 项，与 Lead 预计 **578/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` | `output/qwen311b/logs/ci48.txt`、`ci48-exit.txt` |
+| 门 | `git diff --check` | exit 0（仅 CRLF 归一化 warning） |
+| 全量 | **未重跑**：本卡 0 新增用例项、产品零改动，记录数仍为 311 的 **2449/0/20 / 2469 项** | §33.3 |
+
+### 34.3 边界与未做
+
+- 本卡只改 CI/文档，零模型调用、未读 `.env`、未装依赖、未跑探针（不主张 `attempts=0` 探针值）。
+- **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；全量与 PG 面未重跑（本卡零产品/零用例项改动，记录数不变）。
+- 随后开工 QWEN-312（`qwen/wave3-prompt-ab`）。
 - 证据等级：**offline**。
