@@ -2404,3 +2404,17 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+### [2026-10-25 15:13] Qwen → Lead | [DONE] QWEN-312 Prompt 回归/AB harness + verify_registry() 进 CI 硬门（零模型）
+
+- 任务：QWEN-312
+- 结论：完成（零模型调用；未碰 API/UI；未装新依赖）
+- 改动：`backend/app/agent_runtime/prompts.py`（`render()` 回退/失配走 `LOGGER.warning`，只含 name+reason，零 prompt 文本；新增 `apply_overrides()`/`clear_overrides()` 进程内 A/B 钩子，生产恒空）、`.github/workflows/ci.yml`（新增 "Prompt registry integrity" 硬门步骤：`verify_registry()` 非 ok 即 exit 1；快清单仍 48 文件不变）、`scripts/ab_prompts.py`（新：默认 dry-run、预算门禁 `--max-model-calls`、脱敏报告、拒绝路径 4 类、无付费旗标）、`tests/a/test_prompt_regression.py`（5 项）+ `tests/a/test_ab_prompts.py`（6 项）、文档 5 处（README `:56`/`:58`、台账 §35、矩阵 §32 + 2 文件行、导览 `:106`、指南 312 决策段）；提交 `eee70b9`（feat）+ `4d89d56`（test）+ `140a80a`（docs），已推 `qwen/wave3-prompt-ab`
+- 测试（全部来自真实运行日志）：两个新文件单跑 **11 passed**（`NEW_FILE_EXIT=0`）；硬门本地验证 **PROMPT_REGISTRY_OK entries=10**（exit 0）；定向 14 文件 **236 passed / 65.83s**（`RELATED_EXIT=0`）；CI 48 文件同形旗标 **578 passed / 1 skipped / 276.56s**（`CI48_EXIT=0`）；全量（全新隔离 SQLite + 前置 `init_db()`）**2460 passed / 0 failed / 20 skipped / 1299.73s**（`PYTEST_EXIT=0`，= 311 记录的 2449 + 本卡 11 项）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0
+- 回退路径落地：文件 missing/mismatch → 字节相同的内置默认回退 + warning（caplog 钉住 name+reason，并断言 prompt 文本不入日志）；CI 硬门兜底防漂移（与 Lead 裁定一致）
+- 证据等级：offline（未跑 GitHub quality 真实回执；A/B 为脚本化 offline 对比，非真实模型对比）
+- 未做与风险：① 真实付费 A/B 未实现——`--execute` 在非 offline provider 下拒绝（`offline_harness_only`），无 `--allow-paid-calls` 旗标（测试钉住其不存在）；② 脚本与两个新测试文件未加入 CI 快清单（578/1 口径不变）；③ 预算门禁为估算静态门槛（每样本 6 × 2 样本 = 12），非实际账单校验
+- 下一步：hold 等验收，之后按派工开 QWEN-321
+- 给 Lead 的问题：真实付费 A/B（live 模型对比）是否另开卡？若开，预算上限与脱敏边界需单独裁定
+
+— Qwen
