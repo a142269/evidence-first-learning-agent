@@ -2756,3 +2756,17 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+### [2026-10-25 23:28] Qwen → Lead | [DONE] QWEN-401/402/403 Wave 4 发布材料（NOTICE 草案 + Release 底稿 + Runbook 演练，零模型）
+
+- 任务：QWEN-401（许可/素材闭环）+ QWEN-402（Release 材料）+ QWEN-403（生产 Runbook）；**404 未做**（按 §3-110 归独立复核者）
+- 改动文件（4 新，全在 docs/，产品与 CI 零改动）：`docs/DIST_NOTICE_DRAFT.md`（NOTICE 文案底稿 + 三处发行物落位建议 + 9 条待法务项）、`docs/RELEASE_LICENSE_REVIEW.md`（媒体清单逐族复核 + GPL/LGPL 审查包 + integrated-map 来源结论 + 人工产出清单）、`docs/RELEASE_DRAFT.md`（v1.0.0-rc1 建议 + CHANGELOG 草案 + 7 镜头录制清单 + DEMO_5_MINUTES 校正表 C1-C5 + 8 项截图清单）、`docs/PRODUCTION_RUNBOOK.md`（TLS/域名/备份/迁移窗口/监控模板 + 本机演练记录 + 未验证清单）；提交 `7c7e671`（401）+ `0dcb0fc`（402）+ `5e585a8`（403），已推 `qwen/wave4-release`
+- 法务待审项（全部标注"待人工审查"，无"已合规/已签署"字样）：LGPL 4 包（psycopg/psycopg-binary/psycopg-pool/edge-tts）被 PyInstaller 收集后的义务履行方式；GPLv3 FFmpeg 二进制（imageio-ffmpeg 落盘，是否随包未核实）随包/换构建/用户自备三选一；素材族 provenance 全 UNKNOWN（pixel-campus 51/avatars 16/logo/icon/Android 26/AI 架构图 3 等，今日 `git ls-files` 复核与 2026-10-18 盘点一致）；integrated-map bundle 无源码不得对外分发；KaTeX 字体衍生条款；assist2009 数据集条款；在线服务（讯飞/Edge-TTS/OpenAI 端点）输出再分发边界
+- integrated-map 结论（按 §3-109 落地）：`git ls-files frontend/integrated-map-src`=0、无 .gitmodules、CockpitView.vue 未提交 → **无源码可恢复；保留 `_orphaned/` 17 个测试（不删除/不恢复/不进 CI）**；本卡未删任何测试、未改任何 CI；结论已写入 RELEASE_LICENSE_REVIEW §3 与 RELEASE_DRAFT §6
+- 人工产出清单：NOTICE 定稿与签署、docs/ASSETS_PROVENANCE.md、GPL/LGPL 裁定（FFmpeg 三选一）、integrated-map bundle 处置裁定、视频 7 镜头录制与配音剪辑、README 8 张截图（现有 product-*.png 已过期需重截）、域名/TLS/备份策略确认
+- 本机演练（Runbook §8 真实回执）：D1 healthz TestClient **200** `{'status': 'ok', ...}`；D2-D4 迁移闭环——全新 `output/qwen403/drill.db` `alembic upgrade head`（12 revision 至 `20261023_0012`，**34 表**、user_memories/memory_events 在）→ `downgrade base`（exit 0，**4 表**、两表消失）→ 再 `upgrade head`（exit 0，34 表回归），`DRILL_ROUNDTRIP_OK`
+- 未验证项：**公网/TLS/域名/容器部署/PG 备份恢复/Prometheus 真实抓取全部未验证**（本机无 Docker daemon；compose `config` 渲染也未跑）；备份脚本未在本机执行；404 独立复核未执行（P0，在完成前 release 不得称通过）
+- 门：`git diff --check` 与 ruff `--select=F821,F823,E9` 均 exit 0（本卡零代码改动）；零模型调用、未读 `.env`
+- 下一步：按派工停在这里；404 待 Lead 指定独立复核者
+- 给 Lead 的问题：无
+
+— Qwen
