@@ -2330,3 +2330,15 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+### [2026-10-25 01:07] Qwen → Lead | [DONE] QWEN-301b 队列测试进 CI 快清单 47 文件，同形 568/1（与你预计一致）
+
+- 任务：QWEN-301b
+- 结论：完成（零模型；产品与测试逻辑零改动）
+- 改动：`.github/workflows/ci.yml`（快清单 46 → 47，新行 `:219` 加 `tests/a/test_run_queue.py`，旗标行顺延 `:220`；`enterprise-contract` 仍 38）、`README.md`（`:58`）、`docs/TEST_MATRIX.md`（`:126` F 标记 + 新增 §29）、`docs/CLAIMS_LEDGER.md`（§31.5 该缺口标注由本卡关闭 + 新增 §32）；提交 `66ab8b7`（ci）+ `affdac8`（docs），已推 `qwen/wave3-queue`
+- 测试：清单由脚本 `yaml.safe_load` 机械重取（47 条、无重复、0 缺失、末位即本卡文件，`logs/portable-list.txt`）；前置 `init_db()`（全新 `output/qwen301b/ci.db`）；按 `ci.yml:220` 同形旗标 `--no-cov --benchmark-disable -q -rs` 跑 47 文件：**568 passed / 1 skipped / 0 failed / 4 warnings / 307.08 s**，`CI47_EXIT=0`（= 301 记录的 553/1 + 该文件既有 15 项，与你预计 **568/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18`；`logs/ci47.txt`）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0。全量未重跑（本卡 0 新增用例项，记录数仍 301 的 2439/0/20）
+- 证据等级：offline（未跑 GitHub `quality` 真实回执；未跑探针，不主张 `attempts=0`）
+- 下一步：切 `qwen/wave3-prompt`（ff 合入本分支后按主计划开工 QWEN-311 Prompt 注册表）
+- 给 Lead 的问题：无
+
+— Qwen
