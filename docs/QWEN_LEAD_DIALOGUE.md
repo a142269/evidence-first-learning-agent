@@ -2579,3 +2579,21 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+
+### [2026-10-25 18:39] Qwen → Lead | [DONE] QWEN-324 配额与速率限制（429 稳定语义，opt-in 启用；两轮迭代如实登记）
+
+- 任务：QWEN-324
+- 结论：完成（零模型调用；未碰前端/UI；未装依赖；零迁移）
+- 限额维度：`backend/app/services/quota.py`（新）三维滑动窗口——① 请求数每用户/分钟（创建时计数）；② token 每用户×课程/小时（`run_lifecycle.finish()` 结算时从 `result.budget` 的 actual_input+output_tokens 累计，provider 未返回的不存在、不补 0）；③ 可计量费用每用户/天 CNY（只有 `cost.status=="estimated"` 且金额有限才累计；**unknown 记 unknown run——不当 0 也不当免费，窗口含 unknown 时费用维度暂缓判定**，eval_cost_guard 兜底互补）。基线常量：60/min、500k/h、5.0 CNY/天；`QUOTA_REQUESTS_PER_MINUTE`/`QUOTA_TOKENS_PER_HOUR`/`QUOTA_COST_CNY_PER_DAY` env 可覆盖（`limits()` 每次检查重读）
+- 429 证据：`_enforce_quota` 挂 `/stream` 与 `/enqueue`（principal 解析后、run 落库前），超限稳定 **429 `detail="quota_exceeded"` + `Retry-After`**；测试钉住 stream 429→窗口重置恢复 200、enqueue 同围栏、跨用户隔离、读面/resume/continue 不受 429 影响
+- 窗口重置：滑动语义（条目过期即弹出），注入 clock 钉住确定性重置；计数可查：`quota.snapshot()` 只读视图（全局/按用户/按用户×课程），无新外部端点
+- **启用范围两轮迭代（如实登记）**：① 首版默认 true → 离线 demo 面 429 误伤，全量 **28 failed**；② 二版改"auth-required 面默认开"→ 仍误伤：`test_learning_runs_v2_lifecycle` 的 api fixture **本身就设 `V2_AUTH_REQUIRED=true`**，全量 **29 failed** 同模式；③ **最终 opt-in**（与 321 运行时检查同一精神）：`QUOTA_ENABLED=true` 显式开启才生效，默认所有面行为零改变。两轮误伤的 28/29 failed 均已在台账 §41.2 如实登记，最终口径以第三轮全量为准
+- 改动：`36b17f5`（feat，quota.py 242 行 + learning_runs/run_lifecycle 检查点结算挂点）+ `e595ad8`（test，test_quota.py 15 项）+ `c4df8f6`（docs：台账 §41、矩阵 §2 计数 205 + §38、指南 324 小节、README 全量行、导览测试行），已推 `qwen/wave3-quota`（含 ff 合入的 322b `493f0c9`）
+- 测试（全部来自真实日志）：新文件单跑 **15 passed / 3.51 s**（`NEW_FILE_EXIT=0`）；定向 8 文件 **109 passed / 44.15 s**（`RELATED_EXIT=0`）；最终版 4 文件定向（含 lifecycle 认证面 fixture 全文件）**51 passed / 25.86 s**（`FIX_EXIT=0`）；全量第三轮（全新隔离 SQLite full3.db + 前置 `init_db()`）**2509 passed / 0 failed / 20 skipped / 22 warnings / 1339.90 s**（`PYTEST_EXIT=0`，205 个测试文件 / 2529 项 = 322 基线 2494/0/20 + 本卡 15；任务通知 exit 1 仍为沙箱 npm-cache 日志拦截怪癖）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0
+- 证据等级：offline（未跑 GitHub `quality` 真实回执；未跑探针，不主张 attempts=0）
+- 未做与风险：① `test_quota.py` 未进 CI 快清单（先例另开 324b）；② 窗口为进程内口径——多 worker/多实例部署不共享计数，跨进程一致性归 341 观测面/403 部署面；③ 启用 opt-in 意味着**部署方需显式设 `QUOTA_ENABLED=true`**（建议生产开启）；④ demo 模式配额键取自请求体，不是安全边界；⑤ 未扩 341 Prometheus 指标
+- 下一步：hold 等验收，之后按派工链开 QWEN-341（指标/告警）
+- 给 Lead 的问题：无
+
+— Qwen
