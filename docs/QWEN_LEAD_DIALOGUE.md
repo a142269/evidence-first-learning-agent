@@ -2638,3 +2638,16 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+
+### [2026-10-25 21:09] Qwen → Lead | [DONE] QWEN-324b 配额测试进 CI 快清单 52→53 同形 638/1 + 生产启用配额（零模型）
+
+- 任务：QWEN-324b
+- 结论：完成（零模型；配额逻辑零改动，只改 CI/配置模板/告警文案/文档）
+- 改动：`.github/workflows/ci.yml`（快清单 52 → 53：`test_prompt_injection_redteam.py` 后新增 `test_quota.py`，新行 `:262`，旗标行顺延 `:263`；`enterprise-contract` 仍 38、两个硬门步骤不变）、`.env.production.example` + `.env.enterprise.example`（新增 `QUOTA_ENABLED=true` + `QUOTA_REQUESTS_PER_MINUTE=60` / `QUOTA_TOKENS_PER_HOUR=500000` / `QUOTA_COST_CNY_PER_DAY=5.0`，附口径注释）、`docker-compose.production.yml`（backend `environment` 显式传入 4 个 `QUOTA_*`，`${VAR:-默认}` 可覆盖；enterprise compose backend 走 `env_file` 自动注入无需改）、`backend/app/services/quota.py` + `backend/app/main.py`（startup 调 `emit_startup_warning()`：配额禁用时一行 warning，无敏感信息/无配置值）、`README.md`（CI 行 prepend）、`docs/TEST_MATRIX.md`（§39 + quota 文件行）、`docs/CLAIMS_LEDGER.md`（§42）、`docs/LEARNING_PACKAGE_GUIDE.md`（启用说明更新）；提交 `fbfe797`（ci）+ `4b5e0b3`（docs），已推 `qwen/wave3-quota`
+- 测试：清单 `yaml.safe_load` 机械重取（**53** 条、无重复、0 缺失、末位即本卡文件）；前置 `init_db()`（`INITDB_EXIT=0`）；同形旗标跑 53 文件：**638 passed / 1 skipped / 0 failed / 4 warnings / 311.01 s**，`CI53_EXIT=0`（= 322b 记录的 623/1 + 本卡 15 项，与你预计 **638/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18`；`output/qwen324b/ci53.txt`）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0。全量未重跑（0 新增用例项，记录数仍 324 的 2509/0/20 / 2529 项）
+- 证据等级：offline（未跑 GitHub `quality` 真实回执；compose `config` 解析未跑——本机无 Docker daemon，production 模板头部既有"未对运行引擎验证"声明）
+- 下一步：切 `qwen/wave3-metrics` 并 ff 合入带 324b，随后开工 QWEN-341（指标/告警；复用既有 `core/telemetry.py` 无依赖 exposition 与 `/metrics` 端点及其 production privileged 中间件）
+- 给 Lead 的问题：无
+
+— Qwen
