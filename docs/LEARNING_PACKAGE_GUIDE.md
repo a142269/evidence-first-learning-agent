@@ -104,6 +104,8 @@ Planner / Tutor（含检索决策）/ Practice / Reviewer 的主提示词与共�
 
 加载路径是"文件优先、内置回退"：文件存在且 sha256 与注册表一致才使用文件内容；文件缺失或被改动（哈希失配）时回退到与文件字节相同的内置默认，`render` 的返回值带 `source`（file/builtin）与 `version` 标识；未注册的 name 抛稳定错误 `prompt_not_registered`。QWEN-311 只是迁移、所有提示词文本字节不变，故 **未 bump `PROMPT_VERSION`**；后续修改任一提示词必须同步更新文件、内置默认、注册表哈希与 changelog，并按既有规则评估是否 bump。
 
+QWEN-312 落地 Lead 的失配策略：**运行时回退保留，但每次回退记一条 warning 日志（只有 name 与 missing/mismatch 原因，绝不含提示词文本），`verify_registry()` 进入 CI `quality` job 作为硬门（任何 missing/mismatch 即失败）**；同卡交付回归 harness（`tests/a/test_prompt_regression.py`：聚合完整性 + 固定样例结构断言）与 A/B harness（`scripts/ab_prompts.py`：默认 dry-run、预算门禁、脱敏报告；`--execute` 仅 offline 脚本化对比，候选文本经 `prompts.apply_overrides` 进程内注入，生产恒为空）。
+
 本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.9`（v2.9：重规划向 Planner 追加固定失效指令，属提示词变更；上一版 v2.8 是 QWEN-102 云端采集与本批契约评测所用版本）。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
 
 ## 细粒度引用契约

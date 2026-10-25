@@ -1459,3 +1459,59 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「把 `test_prompt_registry.py
 - **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；全量与 PG 面未重跑（本卡零产品/零用例项改动，记录数不变）。
 - 随后开工 QWEN-312（`qwen/wave3-prompt-ab`）。
 - 证据等级：**offline**。
+
+## 35. QWEN-312 Prompt 回归/AB harness：固定样例断言 + dry-run 脚本 + `verify_registry()` CI 硬门 + 回退告警（2026-10-25，分支 `qwen/wave3-prompt-ab`，零模型调用、零付费调用）
+
+Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样例行为断言（prompt 版本/哈希、关键输出结构/引用约束）；A/B 脚本：**默认 dry-run**、预算门禁、脱敏报告；不得默认发起付费调用；把 `verify_registry()` 纳入 CI 硬门；回退/失配写 warning 审计（不含 prompt 文本）；不碰 API/UI；完成后 `[DONE]`，之后 321。」同条消息裁定哈希失配策略：「保留运行时静默回退，但 CI 必须硬拦」+「回退/失配写 warning（不打印 prompt 文本）」。
+
+### 35.0 一页方案（实现前定稿的架构选择）
+
+- **回退告警**：`prompts.render` 在文件缺失/哈希失配回退内置默认时 `LOGGER.warning("Prompt %s fell back to builtin (%s)", name, reason)`——只有 name 与 `missing|mismatch` 原因，**零 prompt 文本**；`_load_file` 改为返回 `(text|None, reason|None)`，`verify_registry()` 复用同一口径（状态值不变：ok/missing/mismatch，既有测试兼容）。
+- **CI 硬门**：`quality` job 在 pytest 步骤前新增 **Prompt registry integrity** 步骤——内联 python 调 `verify_registry()`，任何非 ok 状态打印 `PROMPT_REGISTRY_DRIFT` 并 exit 1；正常打印 `PROMPT_REGISTRY_OK entries=10`。运行时回退保留（可用性优先，Lead 裁定），漂移由该门拦截。
+- **回归 harness**（`tests/a/test_prompt_regression.py`，5 项）：聚合完整性门（全部 ok + 版本恒 v2.9 + source==file + 生产态 `_OVERRIDES` 为空）；固定样例端到端结构断言（计划两步契约/lesson source_ids ⊆ 证据/citations 四键 score=0/三道题/review 分项/claim_support 通过/revisions=0/model_calls=6）；回退告警两用例（caplog 钉 name+reason 且断言 prompt/模型文本不泄露）；A/B override 钩子往返。
+- **A/B 钩子**：`prompts.apply_overrides/clear_overrides`——生产恒空、仅 harness 进程内填充；override 渲染 `source="override"`、digest=候选文本 sha256（进报告、文本不进）；未知 name 抛 `prompt_not_registered`。
+- **A/B 脚本**（`scripts/ab_prompts.py`，209 行）：默认 **dry-run**（零模型运行，产出计划/完整性/变体摘要/预算估算）；`--execute` 在 **offline 环境**下用脚本化 runtime 跑固定样例对比 A（registry 基线）与 B（`--candidate` manifest 的候选文本）；预算门禁=估算（2 样本 × 6 调用）不得超过 `--max-model-calls`（默 12）+ 执行后实测复核；非 offline 环境的 `--execute` 一律拒绝（`offline_harness_only`）——**真实付费对比不在本卡范围**（无 `--allow-paid-calls` 旗标可走通，见 35.5）；报告写到 `output/ab-prompts/`（gitignored），只含 name/version/digest/sample id/结构级结果，**不含 prompt 文本、模型文本、检索内容**。
+- **脱敏验证**：报告构造即不含文本 + 测试用内容金丝雀（候选文本/脚本化讲解文本等 4 个片段）断言全文 JSON 不出现。
+
+### 35.1 改动（2 个产品文件 + 1 个 CI 文件 + 1 个新脚本 + 2 个新测试文件 + 6 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `backend/app/agent_runtime/prompts.py`（215 → 242 行） | `LOGGER` + 回退 warning（name+reason，无文本）；`_load_file` 返回 reason；`_OVERRIDES` + `apply_overrides`/`clear_overrides`（A/B 钩子）；`verify_registry()` 复用 reason 口径 | `:30`、`:201-234`、`:205-219`、`:268-274` |
+| `scripts/ab_prompts.py`（新，209 行） | 上述 A/B harness；importlib 可加载；exit 0/2/1 稳定语义 | — |
+| `.github/workflows/ci.yml` | `quality` job 新增 **Prompt registry integrity** 硬门步骤（pytest 前）；快清单仍 **48** 文件不动 | `:164-178` |
+| `tests/a/test_prompt_regression.py`（新，**5 项**） | 见 35.0 回归 harness | — |
+| `tests/a/test_ab_prompts.py`（新，**6 项**） | dry-run 默认+脱敏、offline execute 对比（传输层 patch 成 AssertionError 钉零外联）、预算门禁拒绝、`--allow-paid-calls` 旗标不存在、非 offline 拒绝、未知候选名稳定拒绝 | — |
+| `docs/CLAIMS_LEDGER.md` | 本节 §35（追加） | — |
+| `docs/TEST_MATRIX.md` | 文件矩阵 +2 行 + §32（追加）；§2 计数 200→202 | — |
+| `docs/LEARNING_PACKAGE_GUIDE.md` | 提示词注册表小节补 312 决策（warning + CI 硬门 + AB harness） | — |
+| `README.md` | `:56` 全量行、`:58` CI 行（快清单未动、计数不变，注明 312 字节上复跑 + 硬门步骤） | `:56`、`:58` |
+| `docs/00-评委30秒导览.md` | 测试用例行更新 | `:106` |
+| `docs/QWEN_LEAD_DIALOGUE.md` | §4 末尾追加 `[DONE]`；§0/§2/§3 未动 | — |
+
+**未改**：`PROMPT_VERSION`（仍 v2.9，无提示词文本变更）、API 路由/UI/前端、迁移、快清单文件数、`enterprise-contract`。
+
+### 35.2 测试覆盖（11 项新增，全部离线；定向合计 236 passed）
+
+新增 11 项 = 回归 5 + AB 6（35.0/35.1 已列）。定向 14 文件 **236 passed / 65.83 s**（含 registry 10 + learning_package 家族 + observation/claim_support/collection/evaluator/ablation/lifecycle）。
+
+### 35.3 实测（offline，零计费模型调用；日志均含 `*_EXIT=`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 本卡新文件单跑 | **11 passed / 0 failed**，`NEW_FILE_EXIT=0`（11 = 回归 5 + AB 6；同批 registry 10 项同跑 21 passed） | `output/qwen312/logs/new-file.txt` |
+| 硬门本地验证 | `PROMPT_REGISTRY_OK entries=10`，exit 0（与 CI 步骤同逻辑） | 命令回显 |
+| 定向相关面（14 文件） | **236 passed / 0 failed / 65.83 s**，`RELATED_EXIT=0` | `output/qwen312/logs/related.txt` |
+| **CI 同形子集（48 文件，清单未改）** | **578 passed / 1 skipped / 0 failed / 4 warnings / 276.56 s**，`CI48_EXIT=0`；`test_prompt_regression.py`/`test_ab_prompts.py` 未纳入快清单（沿用“CI 纳入另卡”先例；硬门步骤属 quality job 但不在快清单 pytest 内） | `output/qwen312/logs/ci48.txt` |
+| 全量 `pytest tests/` | **2460 passed / 0 failed / 20 skipped / 20 warnings / 1299.73 s (0:21:39)**，`PYTEST_EXIT=0`，202 个测试文件 / **2480 项**（= 311b 基线 2449/0/20 + 本卡 11 项） | `output/qwen312/full-suite.txt`、`full-suite-exit.txt` |
+| 门 | ruff + `git diff --check` → **RUFF_EXIT=0；DIFFCHECK_EXIT=0** | `output/qwen312/logs/ruff.txt` |
+
+### 35.4 边界与未做
+
+- **真实付费 A/B 未实现**（本卡零付费）：`--execute` 只支持 offline 脚本化对比，非 offline 环境一律拒绝；若 Lead 需要 live 对比，另开卡接入真实 provider 的 harness 运行通道。
+- 候选清单是 `{name: text}` JSON；候选文本不走文件哈希门（候选本来就是新文本），其 digest 进报告供追溯。
+- 硬门步骤只在 `quality` job；`enterprise-contract`（PG）清单未加（本卡零 PG 面改动）。
+- 回归 harness 的固定样例与 `test_learning_package` 的 scripted 流程同源，未重复覆盖 reviewer 返工/部分交付分支（那些由既有用例钉住）。
+- 未把两个新测试文件加入快清单（沿用先例，可另开 312b）；未跑 GitHub `quality` 回执（硬门步骤的 remote 回执由 Lead 判读）。
+- 未动 QWEN-321；完成 312 即停，hold 等验收。
+- 证据等级：**offline**。

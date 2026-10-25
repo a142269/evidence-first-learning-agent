@@ -17,13 +17,14 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（200）
+## 2. Python 测试文件矩阵（202）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
 | 文件 | F | E | M | N | 备注（依赖 / 为何不进 CI / 已知状态） |
 |---|---|---|---|---|---|
 | tests/a/benchmarks/test_chat_bench.py |  |  |  | ✓ |  |
+| tests/a/test_ab_prompts.py |  |  |  | ✓ | QWEN-312 A/B harness 脚本契约（6 项：dry-run 默认+脱敏、offline execute 对比、预算门禁、无付费旗标、非 offline 拒绝、未知候选拒绝；importlib 加载脚本；未进 fast 清单） |
 | tests/a/test_ablation_collect.py | F |  |  | ✓ |  |
 | tests/a/test_ablation_dataset.py | F |  |  | ✓ |  |
 | tests/a/test_ablation_report.py | F |  |  | ✓ |  |
@@ -113,6 +114,7 @@
 | tests/a/test_profile_extractor.py |  |  |  | ✓ |  |
 | tests/a/test_profile_schema.py |  |  |  | ✓ |  |
 | tests/a/test_prompt_cache.py |  |  |  | ✓ |  |
+| tests/a/test_prompt_regression.py |  |  |  | ✓ | QWEN-312 回归 harness（5 项：聚合完整性门、固定样例结构断言、回退告警无文本泄露×2、override 钩子往返；未进 fast 清单） |
 | tests/a/test_prompt_registry.py | F |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub）；QWEN-311b 起进 fast/quality 快清单（47→48） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
 | tests/a/test_question_bank_merged.py |  |  |  | ✓ |  |
@@ -703,3 +705,23 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
+
+## 32. QWEN-312 Prompt 回归/AB harness 实测摘要（2026-10-25，分支 `qwen/wave3-prompt-ab`，零模型调用、零付费调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 回退告警 | `prompts.render`（Lead 裁定落地①） | 文件缺失/哈希失配回退时 `LOGGER.warning("Prompt %s fell back to builtin (%s)")`——只有 name + `missing/mismatch`；caplog 用例钉住 name+reason 并断言 prompt/模型文本零泄露 |
+| **CI 硬门**（Lead 裁定落地②） | `.github/workflows/ci.yml` `quality` job 新步骤 `Prompt registry integrity`（`:164-178`，pytest 前） | 内联 `verify_registry()`：非 ok 打印 `PROMPT_REGISTRY_DRIFT` 并 exit 1；本地同逻辑验证 **`PROMPT_REGISTRY_OK entries=10`** exit 0；运行时静默回退按裁定保留 |
+| 回归 harness | `tests/a/test_prompt_regression.py`（新，5 项） | 聚合完整性门（全 ok + v2.9 + source==file + 生产无 override）；固定样例结构断言（两步计划契约/引用四键 score=0/三道题/review 分项/claim_support/model_calls=6）；override 钩子往返 |
+| A/B 钩子 | `prompts.apply_overrides/clear_overrides` | 生产恒空、harness 进程内填充；override 渲染 `source="override"` + digest=候选文本 sha256；未知 name 抛 `prompt_not_registered` |
+| A/B 脚本 | `scripts/ab_prompts.py`（新，209 行） | 默认 **dry-run**（零模型）；`--execute` 仅 offline（脚本化 runtime 对比 A=registry / B=candidate manifest）；预算门禁=估算 12 ≤ `--max-model-calls`（默 12）+ 执行后实测复核；报告 `output/ab-prompts/`（gitignored）只含 name/version/digest/sample id/结构级结果 |
+| 脱敏 | 内容金丝雀断言 | 候选 prompt 文本、脚本化讲解文本等 4 片段在报告 JSON 全文不出现 |
+| 新文件单跑 | 回归 5 + AB 6 | **11 passed / 0 failed**，`NEW_FILE_EXIT=0` |
+| 定向相关面（14 文件） | registry + learning_package 家族 + observation/claim_support/collection/evaluator/ablation/lifecycle | **236 passed / 0 failed / 65.83 s**，`RELATED_EXIT=0` |
+| **CI 同形子集（48 文件，清单未改）** | `ci.yml` 同形旗标 + 前置 `init_db()` | **578 passed / 1 skipped / 0 failed / 4 warnings / 276.56 s**，`CI48_EXIT=0`；新测试文件未纳入快清单（硬门步骤属 quality job 但不在快清单 pytest 内） |
+| **全量** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen312/full.db`（先 `init_db()`）+ `--basetemp output/qwen312/base-full`） | **2460 passed / 0 failed / 20 skipped / 20 warnings / 1299.73 s (0:21:39)**，`PYTEST_EXIT=0`，202 个测试文件 / **2480 项** |
+| PROMPT_VERSION | 值 | 未 bump：仍 `learning-package-v2.9`（无提示词文本变更） |
+| 门 | ruff + `git diff --check` | **RUFF_EXIT=0（All checks passed）；DIFFCHECK_EXIT=0** |
+| 未跑 | GitHub `quality` 真实回执（含硬门步骤的 remote 回执）、PG `enterprise-contract` | 本卡零 PG 面改动 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖；**真实付费 A/B 未实现**（`--execute` 仅 offline，非 offline 拒绝 `offline_harness_only`）；未跑探针故不主张 `attempts=0` 探针值。
