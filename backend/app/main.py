@@ -168,6 +168,9 @@ async def _warmup() -> None:
 
     validate_deployment()
     configure_observability()
+    from backend.app.services.quota import emit_startup_warning
+
+    emit_startup_warning()
     init_db()
     await initialize_checkpointer()
     # Retire only expired V2 leases; never auto-replay models or tools at startup.

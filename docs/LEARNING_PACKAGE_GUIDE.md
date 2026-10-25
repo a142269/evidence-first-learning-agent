@@ -116,7 +116,7 @@ QWEN-312 落地 Lead 的失配策略：**运行时回退保留，但每次回退
 
 ## 配额与速率限制（QWEN-324）
 
-`backend/app/services/quota.py` 为 `/stream` 与 `/enqueue` 的**新 Run 创建**提供三道滑动窗口：每用户每分钟请求数（默认 60）、每用户×课程每小时 token（默认 500000，结算时从 `result.budget` 累计）、每用户每天可计量费用 CNY（默认 5.0，只有 `cost.status=="estimated"` 的有限金额累计）。超限返回稳定 **429 `quota_exceeded`** 带 `Retry-After`；只挡创建——`/resume`、`/continue`、读面与管理面不受限，未超限用户行为零改变。基线常量可经 `QUOTA_*` 环境变量覆盖；**启用为 opt-in**（与权限矩阵运行时检查同一精神）：`QUOTA_ENABLED=true` 显式开启才生效，默认所有面行为零改变。窗口按条目过期连续滑动；provider 未返回的费用记为 unknown run——**unknown 不当 0 也不当免费**：窗口含 unknown 时费用维度暂缓判定（运行侧另有 eval_cost_guard 预留门禁兜底）。存储为进程内滑动窗口（线程安全、零迁移），多进程部署下为每进程口径，跨进程一致性归 341 观测面；`quota.snapshot()` 提供只读占用视图。demo（未认证）模式的配额键取自请求体，不构成安全边界。
+`backend/app/services/quota.py` 为 `/stream` 与 `/enqueue` 的**新 Run 创建**提供三道滑动窗口：每用户每分钟请求数（默认 60）、每用户×课程每小时 token（默认 500000，结算时从 `result.budget` 累计）、每用户每天可计量费用 CNY（默认 5.0，只有 `cost.status=="estimated"` 的有限金额累计）。超限返回稳定 **429 `quota_exceeded`** 带 `Retry-After`；只挡创建——`/resume`、`/continue`、读面与管理面不受限，未超限用户行为零改变。基线常量可经 `QUOTA_*` 环境变量覆盖；**启用为 opt-in**（与权限矩阵运行时检查同一精神）：`QUOTA_ENABLED=true` 显式开启才生效，默认所有面行为零改变；QWEN-324b 起 `.env.production.example`/`.env.enterprise.example` 与 production compose 默认启用，配额禁用时启动日志打一行 warning（无敏感信息）。窗口按条目过期连续滑动；provider 未返回的费用记为 unknown run——**unknown 不当 0 也不当免费**：窗口含 unknown 时费用维度暂缓判定（运行侧另有 eval_cost_guard 预留门禁兜底）。存储为进程内滑动窗口（线程安全、零迁移），多进程部署下为每进程口径，跨进程一致性归 341 观测面；`quota.snapshot()` 提供只读占用视图。demo（未认证）模式的配额键取自请求体，不构成安全边界。
 
 ## 细粒度引用契约
 

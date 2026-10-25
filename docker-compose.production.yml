@@ -107,6 +107,10 @@ services:
       LANGGRAPH_STRICT_MSGPACK: "true"
       A3_CORS_ORIGINS: "${A3_CORS_ORIGINS:?set https A3_CORS_ORIGINS}"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006/v1/traces
+      QUOTA_ENABLED: "${QUOTA_ENABLED:-true}"
+      QUOTA_REQUESTS_PER_MINUTE: "${QUOTA_REQUESTS_PER_MINUTE:-60}"
+      QUOTA_TOKENS_PER_HOUR: "${QUOTA_TOKENS_PER_HOUR:-500000}"
+      QUOTA_COST_CNY_PER_DAY: "${QUOTA_COST_CNY_PER_DAY:-5.0}"
     volumes:
       - ./data:/app/data
       - ./knowledge_base:/app/knowledge_base

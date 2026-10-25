@@ -119,7 +119,7 @@
 | tests/a/test_prompt_regression.py | F |  |  | ✓ | QWEN-312 回归 harness（5 项：聚合完整性门、固定样例结构断言、回退告警无文本泄露×2、override 钩子往返）；QWEN-312b 起进 fast/quality 快清单（48→50） |
 | tests/a/test_prompt_registry.py | F |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub）；QWEN-311b 起进 fast/quality 快清单（47→48） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
-| tests/a/test_quota.py |  |  |  | ✓ | QWEN-324 配额与速率限制（15 项：请求数超限+窗口重置、token 超/课程隔离/用户隔离、费用 estimated 超限、unknown 不当 0、snapshot 可查、disabled、**默认仅 auth-required 面启用**、env 覆盖、record_from_budget、429+Retry-After、enqueue 围栏、路由用户隔离、读不受限；未进 fast 清单） |
+| tests/a/test_quota.py | F |  |  | ✓ | QWEN-324 配额与速率限制（15 项：请求数超限+窗口重置、token 超/课程隔离/用户隔离、费用 estimated 超限、unknown 不当 0、snapshot 可查、disabled、**默认仅 auth-required 面启用**、env 覆盖、record_from_budget、429+Retry-After、enqueue 围栏、路由用户隔离、读不受限；QWEN-324b 起进 fast/quality 快清单（52→53）） |
 | tests/a/test_question_bank_merged.py |  |  |  | ✓ |  |
 | tests/a/test_realdina_service.py |  |  |  | ✓ |  |
 | tests/a/test_reflection.py |  |  |  | ✓ |  |
@@ -815,3 +815,17 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动 |
 
 外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；窗口为进程内口径（多进程一致性归 341）；`QUOTA_ENABLED` 需部署方显式开启（生产建议开启）。
+
+## 39. QWEN-324b 配额测试纳入 CI 快清单 + 生产启用实测摘要（2026-10-25，分支 `qwen/wave3-quota`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **52 → 53 个文件**：在 `tests/a/test_prompt_injection_redteam.py` 后加 `tests/a/test_quota.py`（新行 `:262`，旗标行顺延 `:263`）；`enterprise-contract` 仍 **38**、两个硬门步骤不变 |
+| 生产启用 | `.env.production.example`/`.env.enterprise.example` + `docker-compose.production.yml` | 两模板加 `QUOTA_ENABLED=true` + 三项限额（60/min、500000/h、5.0 CNY/天）；production compose backend 显式传 4 个 `QUOTA_*`；enterprise 经 `env_file` 自动注入 |
+| 禁用告警 | `quota.emit_startup_warning()`（main.py startup 调用） | 未启用时一行 warning（无敏感信息/无配置值） |
+| 清单机械重取 | 脚本 `yaml.safe_load` 读 `ci.yml` | **53** 条、无重复、0 缺失、末位即本卡文件（`logs/portable-list.txt`） |
+| **CI 同形子集（53 文件）** | 同形旗标 + 前置 `init_db()`（全新 `output/qwen324b/ci.db`） | **638 passed / 1 skipped / 0 failed / 4 warnings / 311.01 s (0:05:11)**，`CI53_EXIT=0`；= 322b 记录的 623/1 + 本卡文件 **15** 项，与 Lead 预计 **638/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18` —— `output/qwen324b/ci53.txt` |
+| 全量 | 未重跑 | 0 新增用例项、配额逻辑零改动，记录数仍 324 的 **2509/0/20 / 2529 项**（§38） |
+| 未跑 | compose `config` 解析（本机无 Docker daemon）、GitHub `quality` 真实回执 | 模板头部既有"未对运行引擎验证"声明 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/配置模板/告警文案/文档，未跑探针故不主张 `attempts=0` 探针值。

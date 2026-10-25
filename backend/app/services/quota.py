@@ -24,11 +24,14 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
+import logging
 import math
 import os
 import threading
 import time
 from typing import Any, Callable
+
+LOGGER = logging.getLogger(__name__)
 
 REQUEST_WINDOW_SECONDS = 60
 TOKEN_WINDOW_SECONDS = 3600
@@ -240,3 +243,13 @@ def record_from_budget(user_id: str, course_id: str, budget: dict[str, Any] | No
 
 def snapshot(user_id: str | None = None, course_id: str | None = None) -> dict[str, Any]:
     return _STORE.snapshot(user_id=user_id, course_id=course_id)
+
+
+def emit_startup_warning() -> None:
+    """One line at startup when fencing is off — no secrets, no config values."""
+    if not enabled():
+        LOGGER.warning(
+            "Quota fencing is disabled: per-user request/token/cost limits are "
+            "inactive. Set QUOTA_ENABLED=true to enable (recommended for "
+            "production deployments)."
+        )

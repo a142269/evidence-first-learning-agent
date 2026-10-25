@@ -1705,3 +1705,28 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 未跑 GitHub `quality` 真实回执；未跑探针，不主张 `attempts=0` 探针值。
 - `test_quota.py` 未进 CI 快清单（沿用先例，可另开 324b）；未扩 341；完成 324 即停，hold 等验收。
 - 证据等级：**offline**。
+
+## §42 QWEN-324b 配额测试进 CI + 生产启用（2026-10-25，分支 `qwen/wave3-quota`，零模型）
+
+### 42.0 交付
+
+- `.github/workflows/ci.yml` 快清单 **52 → 53 个文件**：`tests/a/test_prompt_injection_redteam.py` 后新增 `tests/a/test_quota.py`（新行 `:262`，旗标行顺延 `:263`）；`enterprise-contract` 仍 38，两个硬门步骤不变。
+- **生产启用配额**：`.env.production.example` 与 `.env.enterprise.example` 新增 `QUOTA_ENABLED=true` + 三项限额（60/min、500000/h、5.0 CNY/天，附口径注释）；`docker-compose.production.yml` backend `environment` 显式传入 4 个 `QUOTA_*`（`${VAR:-默认}` 可覆盖）；enterprise compose backend 走 `env_file: .env.enterprise`，模板变量自动注入（无需改 compose）。
+- **禁用告警**：`quota.emit_startup_warning()`（`backend/app/main.py` startup 钩子调用）——配额未启用时打一行 `LOGGER.warning`（只说明功能未启用与开启方法，无敏感信息、无配置值）。
+- 只改配置/告警文案/测试纳入/文档；配额逻辑零改动。
+
+### 42.1 实测（offline）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`：**53** 条、无重复、0 缺失、末位即本卡文件 | `logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen324b/ci.db`） | 命令回显 `INITDB_EXIT=0` |
+| **CI 同形子集（53 文件）** | **638 passed / 1 skipped / 0 failed / 4 warnings / 311.01 s (0:05:11)**，`CI53_EXIT=0`；= 322b 记录的 623/1 + 本卡 15 项，与 Lead 预计 **638/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18` | `output/qwen324b/ci53.txt` |
+| 全量 | 未重跑（0 新增用例项；告警/配置为启动面改动，warning 在 import quota + startup 时触发，53 文件同形跑与全量基线 2509/0/20 逻辑未变），记录数仍 324 的 **2509/0/20 / 2529 项** | — |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check`（提交前复核） | exit 0 / exit 0 |
+
+### 42.2 边界与未做
+
+- compose `config` 解析验证未跑（本机无 Docker daemon；production 模板头部已有"未对运行引擎验证"的既有声明）；enterprise 侧 env_file 注入行为由 compose 语义保证，未跑容器验证。
+- 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未动 QWEN-341；完成 324b 即停（随后按派工切 `qwen/wave3-metrics`）。
+- 证据等级：**offline**。
