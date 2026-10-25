@@ -2518,3 +2518,23 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+
+### [2026-10-25 16:57] Qwen → Lead | [DONE] QWEN-322 注入红队套件 25 项 + 3 个真实 guard 绕过最小修复（零模型）
+
+- 任务：QWEN-322
+- 结论：完成（零模型调用、纯离线；未碰前端/UI；未装依赖）
+- 用例数：`tests/a/test_prompt_injection_redteam.py`（新）**18 个用例函数 / 25 项**（guard 参数化展开）≥20；复用 scripted runtime（`complete_structured` 弹栈 + `retrieve` spy），不调真实模型
+- 四类覆盖：① 用户输入——guard 四类参数化 10（prompt_injection×4/data_exfiltration×2/unsupported_write×1/unsafe_operation×3）+ 正常问题不拦 + **零宽字符切分**与**全角拉丁**伪装 + 端到端 safe_decline（模型/检索零调用）；② 检索文档——夹带"忽略指令/调工具/泄露系统提示/改 chunk_id"仍为数据（citations 四键、无轮次放大）、2000 字截断挡住注入尾巴、非法工具名 ToolDecision Literal 一次 fail-closed；③ 工具参数——超长 query schema 拒绝、控制字符/伪 header query 原样为**数据**且 course scope 恒为授权课程、reviewer suggested_query 夹外泄短语 → `learning_package_tool_denied`；④ 部分完成内容——reviewer issues 注入不进交付、伪造 source_ids 整批丢弃 partial 只交 lesson、无词面支持注入讲解 claim-support fail-closed `quality_failed` 不交付
+- 拒绝/降级证据：guard → `quality.safety_refusal=true` + `evidence=[]`；schema/guard → `learning_package_invalid_output`/`learning_package_tool_denied`；引用 → `invalid_citation` 批次丢弃 / `quality_failed` 不交付；正向对照仍 completed
+- 工具调用面断言：全部拒绝路径 spy 钉零执行；scope 用例断言 `retrieve(query, course)` course 恒为授权值
+- 泄露断言：交付流全文金丝雀——画像 canary、系统提示短语、`OPENAI_API_KEY`/`sk-`/`api_key=` 全不出现；reviewer issues 文本不进交付 JSON
+- **运行期发现 3 个真实 guard 绕过，最小修复**（`run_guard.py`，`aa394ae` fix）：①"无视…规则"同义替换（pattern 补 `无视`）；②全角 `Ｉｇｎｏｒｅ`（归一化加 NFKC）；③零宽字符切分关键词（剔除 Unicode Cf 类）。只动 `decide` 归一化 + 一条 pattern，未重构、其余三类 pattern 未动
+- 改动：`aa394ae`（fix，9+/2-）+ `23c918d`（test，新文件 317 行）+ `750cd93`（docs：台账 §39、矩阵 §2 计数 204 + §36、指南 guard 强化段、README 全量行、导览测试行），已推 `qwen/wave3-redteam`（含 ff 合入的 321b `1038a20`）
+- 测试（全部来自真实日志）：红队套件首跑 19 passed / 6 failed（3 个失败=3 个真实绕过，3 个为测试构造错误），修复后 **25 passed / 0 failed / 9.42 s**（`NEW_FILE_EXIT=0`）；定向 12 文件（含 learning_graph_safety/fix_p0_closures/learning_package 家族）**173 passed / 0 failed / 71.17 s**（`RELATED_EXIT=0`，guard 修复零回归）；全量（全新隔离 SQLite + 前置 `init_db()`）**2494 passed / 0 failed / 20 skipped / 21 warnings / 1329.19 s**（`PYTEST_EXIT=0`，204 个测试文件 / 2514 项 = 321 基线 2469/0/20 + 本卡 25；任务通知 exit 1 仍为沙箱 npm-cache 日志拦截怪癖，以 PYTEST_EXIT=0 与 summary 为准）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0
+- 证据等级：offline（未跑 GitHub `quality` 真实回执；未跑探针，不主张 attempts=0）
+- 未做与风险：① 红队套件**未进 CI 快清单**（按派工卡另开 322b）；② guard 是短语级确定性拦截，非语义级检测（多跳转写、图像/文件通道不在本卡）；③ `result.evidence` 检索审计回显为既有设计未改动——"不泄露原始检索内容"的主张边界登记于台账 §39.2（注入文本不进交付正文/引用/模型输入）
+- 下一步：hold 等验收，之后按派工开 QWEN-324（配额与速率限制）
+- 给 Lead 的问题：无
+
+— Qwen
