@@ -1730,3 +1730,30 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - compose `config` 解析验证未跑（本机无 Docker daemon；production 模板头部已有"未对运行引擎验证"的既有声明）；enterprise 侧 env_file 注入行为由 compose 语义保证，未跑容器验证。
 - 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未动 QWEN-341；完成 324b 即停（随后按派工切 `qwen/wave3-metrics`）。
 - 证据等级：**offline**。
+
+## §43 QWEN-341 Run 级指标与告警（2026-10-25，分支 `qwen/wave3-metrics`，零模型）
+
+### 43.0 交付
+
+- **指标模块** `backend/app/services/run_metrics.py`（新）：仅依赖既有 `backend/app/core/telemetry.py`（无 prometheus_client 强依赖的无依赖 exposition），9 个指标——7 counter（`learning_runs_total{mode,status}`、`learning_run_errors_total{code}`、`learning_tool_calls_total{tool,status}`、`queue_claimed_total`、`quota_rejected_total{dimension}`、`run_cost_yuan_total{mode}`、`run_cost_unknown_runs_total{mode}`）+ 1 histogram（`learning_run_duration_seconds{mode}`，桶至 300 s 覆盖 180 s 包超时）+ 1 gauge（`learning_queue_pending_runs`）；全部在 `_bootstrap_default_metrics` 预注册（无事件也出现在 `/metrics`，dashboard 不因 missing series 报错）。记录器全部 fire-and-forget（异常吞掉不进交付路径）；**unknown 成本记 unknown run 计数、不当 0 也不当免费**（与 324 同契约）。
+- **挂点 6 处单点**（避免重复计数）：① `run_lifecycle.apply_settled_state` 末尾 `record_settled`（streaming 与 worker 共用同一交付契约，`awaiting_approval` 早退不算 settled）；② `run_lifecycle.stream_result` except 分支 `record_error(code)`；③ `run_worker.work_once` 三个 except（`run_timeout` / `exc.code` / `run_execution_failed`）各 `record_error`；④ `learning_runs.LearningRuntime.call_tool` 返回 `ToolResult` 后 `record_tool_call(name, status)`（六态原样）；⑤ `run_queue.claim_next_run` 成功领取处 `record_queue_claim()` + 同一扫描的 pending 计数 `set_queue_pending`（扫描窗口上限 `limit*3=15`，gauge help 已注明）；⑥ `quota.check_run_creation` 拒绝时 `record_quota_rejection(dimension)`（requests/tokens/cost 三维共用一处钩子）。设计取舍：错误记录不挂 `learning_package._observed`（该处与 stream except 会双重计数，以两个执行路径的最终 except 为单一真相）。
+- **暴露方式**：复用既有 `GET /metrics`（`core/telemetry.export_prometheus()`，`text/plain; version=0.0.4`）——零新端点、零新依赖。**权限边界**：production 下复用既有中间件（main.py `_require_auth_for_api`）——无 token **401** `authorization_required`、学生 **403** `privileged_role_required`、teacher/admin **200**；development 保持可读；三态由测试钉住（TestClient + monkeypatch production 会话桩，另有既有 `test_static_and_ws_safety.py` 中间件层同断言）。
+- **告警规则草案** `docs/alerts_learning_runs.yml`（新）：PrometheusRule 形状 6 条——成功率 <0.9（10 m）、错误率 >0.2/s、队列积压 gauge >10、配额拒绝 >1/s、unknown 成本占比异常（unknown runs > 3× settled）、成本日耗投影 >50 CNY；**草案未接真实 Alertmanager/Prometheus 栈，阈值待部署方裁定**。
+- 只改产品指标记录/告警草案/文档/测试；不碰 UI、不碰配额与队列逻辑本体、零新依赖、零模型调用。
+
+### 43.1 实测（offline）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新文件单跑 | `tests/a/test_run_metrics.py`（11 项）**11 passed / 0 failed / 4.94 s** | 本轮终端回显 |
+| 定向相关面 | 9 文件（run_metrics + quota + learning_runs_v2 ×2 + reconciliation + run_queue + run_leases + run_usage_admin + static_and_ws_safety）**125 passed / 0 failed / 61.74 s** | 本轮终端回显 |
+| **全量（第二轮，记录口径）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen341/full2.db`（先 `init_db()`）+ 全新 `--basetemp output/qwen341/base-full2`）**2520 passed / 0 failed / 20 skipped / 21 warnings / 1465.79 s (0:24:25)**，`PYTEST_EXIT=0`，206 个测试文件 / **2540 项**（= 324 基线 2509/0/20 + 本卡 11 项） | `output/qwen341/full_run2.log` |
+| 首跑抖动登记 | 第一轮全量 **2519 passed / 1 failed / 20 skipped / 1439.37 s**，唯一失败 `test_demo_journey`（34.46 s > 30 s 预算）——会话期残留后台任务负载所致（与 301 首跑同先例的墙钟贴边抖动）；负载下单跑复验 39.83 s 仍红，**空闲机器单跑复验 10.66 s passed** 后第二轮全量全绿；两轮日志均保留未删 | `output/qwen341/full_run.log` |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check`（提交前复核） | exit 0 / exit 0 |
+
+### 43.2 边界与未做
+
+- `learning_queue_pending_runs` 是**领取扫描窗口口径**（单次 claim 扫描 ≤15 条内 queue-origin queued 计数），不是全队列精确深度；队列积压告警阈值需按该口径解读。
+- 指标为**进程内口径**（telemetry 全局单例）：多 worker 部署下各进程独立计数，由 Prometheus 抓取侧按实例聚合，本卡不做进程间存储。
+- 未跑真实 Prometheus/Alertmanager 部署验证；`/metrics` 生产暴露未做真实部署演练（生产 Runbook 归 QWEN-403）；未扩 CI 快清单（`test_run_metrics.py` 未纳入，沿用"CI 纳入另卡"先例）。
+- 证据等级：**offline**。

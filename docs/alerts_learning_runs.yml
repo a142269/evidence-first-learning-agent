@@ -1,0 +1,71 @@
+# QWEN-341 · Learning-run alert rule DRAFT (PrometheusRule-shaped YAML).
+#
+# Status: draft only — no Alertmanager / Prometheus stack is deployed or wired
+# by this file.  Copy these rules into a real Prometheus release's rule set
+# after the deployment owner confirms thresholds.  Metric sources are the
+# QWEN-341 run metrics exported at the privileged /metrics endpoint
+# (backend/app/services/run_metrics.py, exposition via core/telemetry.py).
+#
+# Notes:
+#   * Success rate uses settled runs (completed / partially_completed) over
+#     all settled runs plus classified failures; awaiting_approval and
+#     cancelled runs are not settled failures.
+#   * Cost: run_cost_yuan_total only accrues finite "estimated" amounts.
+#     run_cost_unknown_runs_total rising means cost blindness, alert on it
+#     before trusting the cost burn rule.
+groups:
+  - name: learning-runs
+    rules:
+      - alert: LearningRunSuccessRateLow
+        expr: |
+          sum(rate(learning_runs_total{status=~"completed|partially_completed"}[5m]))
+            /
+          clamp_min(
+            sum(rate(learning_runs_total[5m]))
+              + sum(rate(learning_run_errors_total[5m])), 1e-9) < 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Learning run success rate below 90% for 10m"
+
+      - alert: LearningRunErrorRateHigh
+        expr: sum(rate(learning_run_errors_total[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Learning run failures exceed 0.2/s (12 per minute) for 5m"
+
+      - alert: LearningQueueBacklog
+        expr: learning_queue_pending_runs > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 10 queued learning runs pending (scan-window gauge)"
+
+      - alert: QuotaRejectionsSpike
+        expr: sum(rate(quota_rejected_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Quota refusals exceed 1/s — check per-dimension label (requests/tokens/cost)"
+
+      - alert: RunCostUnknownShareHigh
+        expr: |
+          sum(increase(run_cost_unknown_runs_total[30m]))
+            > 3 * clamp_min(sum(increase(learning_runs_total[30m])), 1)
+        labels:
+          severity: info
+        annotations:
+          summary: "Most recent runs report unknown cost — provider usage data missing"
+
+      - alert: RunCostBurnAnomaly
+        expr: sum(rate(run_cost_yuan_total[1h])) * 86400 > 50
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Measured run cost projected above 50 CNY/day"
