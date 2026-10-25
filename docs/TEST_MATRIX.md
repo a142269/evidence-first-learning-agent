@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（202）
+## 2. Python 测试文件矩阵（203）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -108,6 +108,7 @@
 | tests/a/test_path_course_scope.py |  |  |  | ✓ |  |
 | tests/a/test_pedagogical_bridge.py |  |  |  | ✓ |  |
 | tests/a/test_pedagogical_safety.py |  |  |  | ✓ |  |
+| tests/a/test_permission_matrix.py | F |  |  | ✓ | QWEN-321 V2 权限矩阵（9 项：10 条路由全覆盖/计数钉 10/未声明失败/幽灵声明失败/非法字段失败/工具维度引用 tool_catalog 单一真相/角色-课程-Run 维度断言/admin 面 403×2+401+teacher 正向；未进 fast 清单） |
 | tests/a/test_persistent_auth.py | F | E |  | ✓ |  |
 | tests/a/test_postgres_api_recovery.py |  | E |  | s |  |
 | tests/a/test_pptx_builder.py |  |  |  | ✓ |  |
@@ -739,3 +740,19 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
+
+## 34. QWEN-321 统一权限矩阵实测摘要（2026-10-25，分支 `qwen/wave3-security`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 矩阵模块 | `backend/app/api/v2/permission_matrix.py`（新） | 10 条 `RoutePolicy`（learning-runs 8 + admin 2）× 角色/认证/课程范围/Run 归属/工具；工具维度引用 `tool_catalog` 的 v2 permission key（4 个，单一真相不复制）；`actual_v2_routes` 从 **OpenAPI schema** 枚举实际服务路由（FastAPI 0.143.3 lazy `_IncludedRouter` 下 `app.routes` 不再扁平展开）；`verify_route_policies` 校验未声明/幽灵声明/非法字段（未知角色、auth、归属、越目录工具） |
+| **CI 硬门** | `quality` job 新步骤 `V2 permission matrix coverage`（pytest 前） | `verify_route_policies` 非空即打印 `PERMISSION_MATRIX_DRIFT` 并 exit 1；本地同逻辑 **PERMISSION_MATRIX_OK declared=10 v2_routes=10**，`GATE_EXIT=0` |
+| 运行时行为 | 声明层，既有鉴权一字未动 | `learning_runs.py`/`run_usage_admin.py`/`access.py`/`run_lifecycle.py` 零改动；"未声明即拒绝"落在 CI，不做默认拒绝启动 |
+| 新文件单跑 | `tests/a/test_permission_matrix.py`（9 项） | **9 passed / 0 failed / 3.24 s**，`NEW_FILE_EXIT=0` |
+| 定向相关面（11 文件） | 矩阵 + v2_access + tool_registry_permissions + persistent_auth + auth_restart + learning_runs_v2×2 + run_usage_admin + run_queue + v1_production_access + static_and_ws_safety | **133 passed / 1 skipped / 0 failed / 74.68 s**，`RELATED_EXIT=0`（唯一 skip 仍 `test_auth_restart.py:18` 需一次性 PG）—— `output/qwen321/related-tail.txt` |
+| **全量** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen321/full.db`（先 `init_db()`）+ `--basetemp output/qwen321/base-full`） | **2469 passed / 0 failed / 20 skipped / 22 warnings / 1336.03 s (0:22:16)**，`PYTEST_EXIT=0`，203 个测试文件 / **2489 项**（= 312 基线 2460/0/20 + 本卡 9 项；exit 1 的任务通知是沙箱对 npm-cache 日志的无关拦截，发生在 pytest 结束后，以 `PYTEST_EXIT=0` 与 summary 行为准）—— `output/qwen321/full-suite.txt` |
+| 快清单 | 未改 | 仍 50 文件（312b 口径 **589/1**）；矩阵测试未纳入（沿用"CI 纳入另卡"先例，可另开 321b）；硬门步骤本身每次 `quality` 必跑 |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` | exit 0 / exit 0 |
+| 未跑 | GitHub `quality` 真实回执（含两个硬门步骤的 remote 回执）、PG `enterprise-contract` | 本卡零 PG 面改动 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；`--collect-only` 口径 2488 与执行 2489 的 1 项差异来自运行期动态生成用例，本记录一律用**执行口径**（passed + skipped）与历史各卡对齐。

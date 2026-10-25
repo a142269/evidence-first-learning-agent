@@ -108,6 +108,12 @@ QWEN-312 落地 Lead 的失配策略：**运行时回退保留，但每次回退
 
 本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.9`（v2.9：重规划向 Planner 追加固定失效指令，属提示词变更；上一版 v2.8 是 QWEN-102 云端采集与本批契约评测所用版本）。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
 
+## V2 权限矩阵（QWEN-321）
+
+`backend/app/api/v2/permission_matrix.py` 把全部 10 条 V2 路由（learning-runs 8 + admin 2）声明在一处：每条 `RoutePolicy` 记 method+path、允许角色（demo/student/teacher/admin）、认证要求（required/optional）、课程范围、Run 归属（creator / owner_or_reviewer / reviewer_only / none）与执行面可触达的工具 permission key（直接引用 `tool_catalog` 的 v2 工具键，不另造第二份工具真相）。
+
+这是**声明层而非新执行路径**：运行时鉴权（`resolve_v2_principal` / `authorize_run_owner` / `authorize_reviewer` / 工具 deny-by-default）行为不变，已声明路由保持既有语义。`verify_route_policies(app)` 从 OpenAPI schema 枚举实际服务的 V2 路由与矩阵对比——**未声明路由、幽灵声明、非法字段（未知角色/auth/归属/越目录工具）都算问题**；该检查在 CI `quality` job 作为硬门步骤 `V2 permission matrix coverage`（非空即失败），防止新路由未经权限评审就上线。不改变任何既有授权行为：只有"未声明"才会被 CI 拒绝。
+
 ## 细粒度引用契约
 
 如果模型执行或审核已写入检查点，但 Run 写库失败，授权教师可调用 `POST /api/v2/learning-runs/{run_id}/reconcile` 或使用页面恢复按钮。failed/interrupted 或执行租约已过期的任务可检查修复；有效租约和未完成节点不能抢占。此操作只读取稳定检查点，不重新调用模型；待审仍需审核。页面也支持替换答案及停止本次请求，详见 [Run 状态修复说明](RUN_RECONCILIATION.md)。

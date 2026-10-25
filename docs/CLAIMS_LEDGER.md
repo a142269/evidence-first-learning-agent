@@ -1538,3 +1538,46 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
 - 未动 QWEN-321；完成 312b 即停。
 - 证据等级：**offline**。
+
+## §37 QWEN-321 统一权限矩阵：路由×角色×课程×Run×工具（2026-10-25，分支 `qwen/wave3-security`，零模型）
+
+### 37.0 交付与结构
+
+- `backend/app/api/v2/permission_matrix.py`（新）：10 条 V2 路由的声明式 `RoutePolicy`；`actual_v2_routes(app)` 从 **OpenAPI schema** 枚举实际服务的 V2 路由（FastAPI 0.143.3 的 `include_router` 是 lazy `_IncludedRouter` 包装，`app.routes` 不再扁平展开，openapi 是公开稳定的投影）；`verify_route_policies(app, policies=ROUTE_POLICIES)` 对比双方并校验字段合法性。
+- 覆盖全部 V2 路由（10 条 = learning-runs 8 + admin 2，含 QWEN-301 的 `/enqueue`、`/cancel` 与 QWEN-104 的 admin/run-usage 两条）：
+
+| 路由 | 角色 | 认证 | 课程范围 | Run 归属 | 工具 |
+|---|---|---|---|---|---|
+| POST /stream、POST /enqueue | demo/student/teacher/admin | optional | ✓ | creator | v2 全部 4 键（图执行面） |
+| GET /{run_id}、POST /cancel、/continue、GET /events | student/teacher/admin | required | ✓ | owner_or_reviewer | — |
+| POST /resume、POST /reconcile | teacher/admin | required | ✓ | reviewer_only | — |
+| GET /admin/run-usage、GET /admin/run-usage/{run_id} | teacher/admin | required | ✗（全局只读投影） | none | — |
+
+- 工具维度**复用 `tool_catalog` 单一真相**：`V2_TOOL_KEYS` 由 `source_specs("v2")` 派生（planner 3 + tutor 1 = 4 个 permission key），矩阵只引用不复制；越目录工具即校验失败。
+- **声明层不强制运行时**：既有鉴权（`resolve_v2_principal` / `authorize_run_owner` / `authorize_reviewer` / 工具 deny-by-default）一字未改，已声明路由行为不变；"未声明即拒绝"落在 CI。
+- `.github/workflows/ci.yml` `quality` job 新增硬门步骤 `V2 permission matrix coverage`（pytest 前）：`verify_route_policies` 非空即打印 `PERMISSION_MATRIX_DRIFT` 并 exit 1。
+- `tests/a/test_permission_matrix.py`（新，9 项）。
+
+### 37.1 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 硬门本地验证 | **PERMISSION_MATRIX_OK declared=10 v2_routes=10**，`GATE_EXIT=0`（与 CI 步骤同逻辑） | 命令回显 |
+| 新文件单跑 | **9 passed / 0 failed / 3.24 s**，`NEW_FILE_EXIT=0` | 命令回显 |
+| 定向相关面（11 文件：矩阵 + v2_access + tool_registry_permissions + persistent_auth + auth_restart + learning_runs_v2×2 + run_usage_admin + run_queue + v1_production_access + static_and_ws_safety） | **133 passed / 1 skipped / 74.68 s**，`RELATED_EXIT=0`（唯一 skip 仍 `test_auth_restart.py:18` 需一次性 PG） | `output/qwen321/related-tail.txt` |
+| 全量 `pytest tests/` | **2469 passed / 0 failed / 20 skipped / 22 warnings / 1336.03 s (0:22:16)**，`PYTEST_EXIT=0`，203 个测试文件 / **2489 项**（= 312 基线 2460/0/20 + 本卡 9 项；exit 1 的任务通知是沙箱对 npm-cache 日志目录的无关拦截，发生在 pytest 结束后，`PYTEST_EXIT=0` 与 summary 行为准） | `output/qwen321/full-suite.txt` |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` | exit 0 / exit 0 |
+
+### 37.2 决策与登记
+
+- **枚举口径用 OpenAPI schema 而非 `app.routes`**：本机 fastapi 0.143.3 / starlette 1.8.0 将 `include_router` 变成 lazy `_IncludedRouter`，`app.routes`/`router.routes` 都只见 2 个包装对象；`app.openapi()` 是公开 API 且逐条还原 10 条 V2 路由（调试输出留档于命令历史）。若未来 FastAPI 变更 openapi 生成行为，硬门与 3 个枚举用例会显式红，不会静默漂移。
+- **未声明即失败落在 CI，不做默认拒绝启动**：按派工卡优先 CI 枚举检查；运行时未加任何拦截（如需 opt-in 运行时检查，`verify_route_policies` 可被应用启动钩子调用，本卡未接）。
+- 既有鉴权行为零改变：矩阵与运行时的一致性由测试钉住（reviewer/admin 面真实 403/401 + teacher 正向、维度断言）；`learning_runs.py`、`run_usage_admin.py`、`access.py`、`run_lifecycle.py` 一字未动。
+- 矩阵测试未进 CI 快清单（沿用"CI 纳入另卡"先例，可另开 321b）；硬门步骤本身每次 quality job 必跑。
+- demo 角色只允许出现在 `auth="optional"` 的创建路由；`mode=learning_package` 仍要求 authenticated（矩阵 note 说明，运行时既有逻辑）。
+
+### 37.3 边界与未做
+
+- 未跑 GitHub `quality` 真实回执（两个硬门步骤的 remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
+- 未动 QWEN-322（注入红队）；完成 321 即停，hold 等验收。
+- 证据等级：**offline**。
