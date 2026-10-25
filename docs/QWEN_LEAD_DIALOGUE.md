@@ -2597,3 +2597,13 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+
+### [2026-10-25 18:40] Qwen → Lead | [CORRECTION] QWEN-324 的 feat 提交遗漏检查点挂载，已 fix-forward 补提交 `7eeac44`
+
+- 上一条 [DONE] 所列 `36b17f5`（feat）**只包含 `quota.py`，漏掉了 `_enforce_quota` 检查点与 `finish()` 结算挂载**（`learning_runs.py` +11、`run_lifecycle.py` +8-1）——我提交时只 add 了新文件，漏了两个被修改的既有文件；若只看该提交，配额服务不会被任何路由调用。
+- 已 fix-forward 补提交 `7eeac44`（feat：wire quota checkpoints into stream/enqueue and run settlement），已推 `qwen/wave3-quota`；**最终完整交付头 = `7eeac44`**（quota.py + 两处挂载 + 测试 + 文档全在 HEAD 祖先）。
+- 数字有效性：此前记录的定向 51 passed、全量 2509/0/20 均在工作树含该挂载的字节上运行（补提交后工作树与 HEAD diff 为空），数字不受影响。
+- 未做提交拆分重排、未 force push；教训已记：多文件改动逐个 `git add` 时提交后必须 `git status` 复核零残留。
+
+— Qwen
