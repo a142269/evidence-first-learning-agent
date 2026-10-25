@@ -2342,3 +2342,21 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+### [2026-10-25 14:16] Qwen → Lead | [DONE] QWEN-311 Prompt 注册表：prompts/ + 版本/哈希追溯 + 文件优先/内置回退（字节不变、未 bump PROMPT_VERSION）
+
+- 任务：QWEN-311（分支 `qwen/wave3-prompt`，已 ff 合入 301b 的 CI 变更并开工）
+- 结论：完成（零模型；未合并 main；hold 等验收）
+- 一页方案（详见台账 §33.0）：仓库根 `prompts/` 每条一个 UTF-8 文件；`backend/app/agent_runtime/prompts.py` 注册表为每条记录 name/file/sha256/owner/description/changelog；`render()` 文件优先、sha256 校验、缺失/失配回退**字节相同的内置默认**，返回值带 version/hash/source；未注册 name 抛稳定错误 `prompt_not_registered`；`list_prompts()`/`verify_registry()` 做追溯与巡检。零新依赖（仅标准库 hashlib/pathlib/dataclasses）。
+- 迁移范围（10 条，字节不变）：`system_frame`（`_ask` 共用框架，`{role}/{prompt_version}/{instruction}` 槽位）、`planner_instruction`、`planner_replan_suffix`（`{round}/{reason}`）、`replan_reason_tool_failed`、`replan_reason_evidence_stalled`（取代 `_REPLAN_REASONS`）、`decide_instruction`（Tutor 检索决策）、`tutor_instruction`、`practice_instruction`、`reviewer_instruction`、`reviewer_partial_suffix`。`_TRUNCATION_GUIDANCE` 与 repair 循环文案不属角色主提示词，留原处。
+- 改动：`prompts.py`（新，215 行）、`learning_package.py`（PROMPT_VERSION 改 re-export、`_REPLAN_REASONS` 删除、5 处调用点改走 `render()`）、`prompts/*.txt`×10、`tests/a/test_prompt_registry.py`（新，10 项）、文档 §33/§30/`LEARNING_PACKAGE_GUIDE`（提示词注册表小节）/`V2_TEN_MODULE_IMPLEMENTATION`（§8 定义位置）/`README`/`00-评委30秒导览`；API/UI/前端/CI/迁移零改动。
+- 字节不变证明：测试内嵌 pre-311 字面量逐字比对每条 prompt，并用 pre-311 f-string + pydantic Schema JSON 重组完整 system 消息、与 stub 捕获的 `_ask` 实际发送内容逐字节相等；另有「无散落」断言（6 个核心片段不再出现在 learning_package.py 源码）。
+- PROMPT_VERSION：**未 bump**（仍 `learning-package-v2.9`）；定义移至 `prompts.py:22`、learning_package re-export——`test_learning_package_replan` 的版本防漂移用例不受影响（定向复跑已验证）。
+- 测试（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`，零计费）：新文件单跑 **10 passed / 0.88 s**；定向相关面 11 文件（learning_package 家族 + replan/partial/retry_guidance/structured_output/claim_support/observation/collection/evaluator/ablation）**206 passed / 69.02 s**；CI 47 文件同形 **568 passed / 1 skipped / 308.22 s**（清单未动，本卡文件未纳入——沿用 CI 纳入另卡先例）；全量 **2449 passed / 0 failed / 20 skipped / 1302.27 s**（200 文件 / 2469 项 = 2439+10），`PYTEST_EXIT=0`；门 ruff + `git diff --check` 全 exit 0。日志 `output/qwen311/`。
+- 如实登记：首版注册表把 sha256 记成原始文件字节摘要（Windows CRLF 检出），与 `_load_file` 的换行归一口径不一致，`system_frame` 恒判失配静默走回退（行为不变但校验失效）；已改为**归一化口径**（注册表哈希与校验都按 `read_text` 文本，CRLF/LF 检出形态不敏感），scratch 诊断脚本留档 `output/qwen311/diag_builtin.py`。
+- 证据等级：offline（零计费模型调用、未读 `.env`、未装依赖、未跑探针不主张 `attempts=0`；未跑 GitHub `quality` 回执与 PG `enterprise-contract`——本卡零 PG 面改动）。
+- 未做/风险：① 回退是静默的（哈希失配不阻断运行，靠 `verify_registry()`/测试发现）——是否要"失配即拒启动"请你裁定（我倾向归 341 观测面）；② repair 循环三分支文案与 `_TRUNCATION_GUIDANCE` 未迁移（与控制流强耦合，registry 结构可后续无痛纳入）；③ 新测试文件未进 CI 快清单（可另开 311b）。
+- 下一步：hold 等验收；未动 312。
+- 给 Lead 的问题：哈希失配时"静默回退"还是"拒启动"请裁定；312 开工前是否有额外约束。
+
+— Qwen
