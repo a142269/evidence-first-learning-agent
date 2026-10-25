@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+import unicodedata
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,7 @@ class LearningRunGuard:
         (
             "prompt_injection",
             (
-                r"忽略.{0,30}(?:规则|指令|提示)",
+                r"(?:忽略|无视).{0,30}(?:规则|指令|提示)",
                 r"ignore\s+(?:all\s+)?(?:previous|prior).{0,40}(?:instruction|rule|prompt)",
                 r"(?:不要|无需).{0,20}(?:引用|遵守).{0,30}(?:编造|虚构)",
                 r"(?:系统提示词|system\s*prompt|隐藏指令)",
@@ -62,7 +63,13 @@ class LearningRunGuard:
     )
 
     def decide(self, message: str) -> GuardDecision:
-        normalized = " ".join(str(message).lower().split())
+        # QWEN-322 red-team hardening: NFKC folds fullwidth disguises back to
+        # ASCII, dropping Unicode format characters (zero-width space/joiner,
+        # BOM, soft hyphen) re-joins keywords that were split to dodge the
+        # patterns.  Ordinary course language is unaffected.
+        folded = unicodedata.normalize("NFKC", str(message).lower())
+        folded = "".join(ch for ch in folded if unicodedata.category(ch) != "Cf")
+        normalized = " ".join(folded.split())
         for category, patterns in self._PATTERNS:
             if any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in patterns):
                 return GuardDecision(blocked=True, category=category)
