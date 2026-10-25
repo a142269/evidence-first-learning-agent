@@ -108,7 +108,7 @@
 | tests/a/test_path_course_scope.py |  |  |  | ✓ |  |
 | tests/a/test_pedagogical_bridge.py |  |  |  | ✓ |  |
 | tests/a/test_pedagogical_safety.py |  |  |  | ✓ |  |
-| tests/a/test_permission_matrix.py | F |  |  | ✓ | QWEN-321 V2 权限矩阵（9 项：10 条路由全覆盖/计数钉 10/未声明失败/幽灵声明失败/非法字段失败/工具维度引用 tool_catalog 单一真相/角色-课程-Run 维度断言/admin 面 403×2+401+teacher 正向；未进 fast 清单） |
+| tests/a/test_permission_matrix.py | F |  |  | ✓ | QWEN-321 V2 权限矩阵（9 项：10 条路由全覆盖/计数钉 10/未声明失败/幽灵声明失败/非法字段失败/工具维度引用 tool_catalog 单一真相/角色-课程-Run 维度断言/admin 面 403×2+401+teacher 正向）；QWEN-321b 起进 fast/quality 快清单（50→51） |
 | tests/a/test_persistent_auth.py | F | E |  | ✓ |  |
 | tests/a/test_postgres_api_recovery.py |  | E |  | s |  |
 | tests/a/test_pptx_builder.py |  |  |  | ✓ |  |
@@ -756,3 +756,16 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执（含两个硬门步骤的 remote 回执）、PG `enterprise-contract` | 本卡零 PG 面改动 |
 
 外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；`--collect-only` 口径 2488 与执行 2489 的 1 项差异来自运行期动态生成用例，本记录一律用**执行口径**（passed + skipped）与历史各卡对齐。
+
+## 35. QWEN-321b 权限矩阵测试纳入 CI 快清单实测摘要（2026-10-25，分支 `qwen/wave3-security`，零模型调用、产品与测试逻辑零改动）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **50 → 51 个文件**：在 `tests/a/test_ab_prompts.py` 后加 `tests/a/test_permission_matrix.py`（新行 `:260`，旗标行顺延 `:261`）；`enterprise-contract` 仍 **38**、两个硬门步骤（prompt registry + permission matrix）仍在 |
+| 清单机械重取 | 脚本用 `yaml.safe_load` 读 `ci.yml`（锚点 `test_v1_production_access.py` 步骤） | **51** 条、无重复、0 缺失、末位即本卡文件（`logs/portable-list.txt`） |
+| 前置 `init_db()` | exit 0（全新 `output/qwen321b/ci.db`） | `INITDB_EXIT=0` |
+| **CI 同形子集（51 文件）** | 同形旗标 `--no-cov --benchmark-disable -q -rs` + `--basetemp output/qwen321b/base` | **598 passed / 1 skipped / 0 failed / 4 warnings / 281.74 s (0:04:41)**，`CI51_EXIT=0`；= 312b 记录的 589/1 + 本卡文件 **9** 项，与 Lead 预计 **598/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` —— `output/qwen321b/ci51.txt` |
+| 全量 | 未重跑 | 本卡 0 新增用例项、产品零改动，全量记录数仍为 321 的 **2469/0/20 / 2489 项**（§34） |
+| 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。

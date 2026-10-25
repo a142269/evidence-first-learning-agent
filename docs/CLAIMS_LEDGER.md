@@ -1581,3 +1581,26 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 未跑 GitHub `quality` 真实回执（两个硬门步骤的 remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
 - 未动 QWEN-322（注入红队）；完成 321 即停，hold 等验收。
 - 证据等级：**offline**。
+
+## §38 QWEN-321b 权限矩阵测试纳入 CI 快清单（2026-10-25，分支 `qwen/wave3-security`，零模型）
+
+### 38.0 交付
+
+- `.github/workflows/ci.yml` `quality` 快清单 **50 → 51 个文件**：`tests/a/test_ab_prompts.py` 之后新增 `tests/a/test_permission_matrix.py`（新行 `:260`，旗标行顺延 `:261`）；`enterprise-contract` 仍 38，prompt registry 与 permission matrix 两个硬门步骤不变。
+- 只改 CI/文档；产品与测试逻辑零改动；关闭 §37.3 登记的"矩阵测试未进快清单"缺口。
+
+### 38.1 实测（offline）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`（锚点 `test_v1_production_access.py` 步骤）：**51** 条、无重复、0 缺失、末位即本卡文件 | `logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen321b/ci.db`） | 命令回显 `INITDB_EXIT=0` |
+| **CI 同形子集（51 文件）** | **598 passed / 1 skipped / 0 failed / 4 warnings / 281.74 s (0:04:41)**，`CI51_EXIT=0`；= 312b 记录的 589/1 + 本卡 9 项，与 Lead 预计 **598/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18` | `output/qwen321b/ci51.txt` |
+| 全量 | 未重跑（0 新增用例项），记录数仍 321 的 **2469/0/20 / 2489 项** | — |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check`（提交前复核） | exit 0 / exit 0 |
+
+### 38.2 边界与未做
+
+- 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
+- 未动 QWEN-322；完成 321b 即停（随后按派工切 `qwen/wave3-redteam`）。
+- 证据等级：**offline**。
