@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1/2 完成，进入 **Wave 3 收尾**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。324b/341 已合并：全量 **2520/0/20**、CI 快清单 **53 文件 / 638/1**；9 个指标 + `/metrics` 权限边界 + 告警草案已上。下一小卡 **341b（指标测试进 CI 54）**，随后 **343 测试分层/nightly**。
-- **Qwen 已完成**：Wave 0/1/2 + 301 + 311/311b/312/312b + 321/321b + 322/322b + 324/324b + 341；全量 **2520/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave3-metrics` 做 **341b**（CI 53→54、预期 649/1）；随后在 `qwen/wave3-nightly` 做 **343**（测试分层/nightly）。
+- **项目阶段**：**Wave 1/2/3 完成，进入 Wave 4**。用户批准顺序：… → 321/322/324 → 341/343 → **401/402/403 → 404**。341b/343 已合并：全量 **2520/0/20**、CI 快清单 **54 文件 / 649/1**；nightly 已分 4 批、celery Linux 显式步骤、孤儿测试正式保留隔离（remote nightly 未验证）。下一阶段 **401 许可/素材、402 Release、403 Runbook**；**404 需独立复核者**。
+- **Qwen 已完成**：Wave 0/1/2/3 全部主线与补充卡；全量 **2520/0/20**。
+- **Qwen 当前任务**：在 `qwen/wave4-release`（Lead 预建）依次做 **401/402/403**（纯文档/清单/草案，零模型，不伪造法务/视频/公网证据）；404 由用户安排独立复核者。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 324b/341（26 定向测试、2520/0/20）；接受指标/告警草案；派 341b/343；预建 nightly 分支。
-- **阻塞**：无。
-- **下一次检查**：2026-10-25 23:30 之后（观察 341b/343）。
+- **Lead 当前动作**：验收并合并 341b/343（54/649、nightly 批次、孤儿处置）；派 Wave 4 文档卡；说明 404 需独立复核。
+- **阻塞**：404 需独立人/Agent；401 法务结论需人工签署；402 视频/截图需人工录制。
+- **下一次检查**：2026-10-26 01:00 之后（观察 401/402/403）。
 
 ## 1. 协作协议
 
@@ -88,8 +88,12 @@
 | QWEN-324 | 配额与速率限制 | **完成（已合并）** | Qwen | `36b17f5`+`e595ad8`+`7eeac44`+`5c2c508`：滑动窗口请求/token/费用、429 + Retry-After、opt-in、费用 unknown 不当 0；Lead 复跑 49 passed/14.93s；全量 2509/0/20 |
 | QWEN-324b | 配额进 CI + 生产启用 | **完成（已合并）** | Qwen | `fbfe797`+`4b5e0b3`+`ba2b27f`：CI 52→53 **638/1**；生产/企业 env 加 `QUOTA_ENABLED=true` + 限额；禁用 warning |
 | QWEN-341 | 指标与告警 | **完成（已合并）** | Qwen | `ae100f7`+`443ec0a`+`e199603`+`8c25e1b`：9 指标、`/metrics` 三态权限、告警草案 6 条；Lead 复跑 26 passed/8.75s；全量 2520/0/20 |
-| QWEN-341b | 指标测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-metrics`：CI 53→54，预期 **649/1**；零模型 |
-| QWEN-343 | 测试分层/nightly | 未开始 | — | `qwen/wave3-nightly`（Lead 预建）：tests/b+integration+regression 进 nightly、fast CI <20min、Linux nightly celery、孤儿前端测试结论 |
+| QWEN-341b | 指标测试进 CI | **完成（已合并）** | Qwen | `2ec3d19`+`0d53071`+`e20230e`：CI 53→54，同形 **649/1**；产品零改动 |
+| QWEN-343 | 测试分层/nightly | **完成（已合并）** | Qwen | `c2f9ec2`+`f7529f8`+`763b723`：nightly 4 批、celery Linux 显式步骤、孤儿 17 测试正式保留隔离；remote nightly 未验证；fast CI 7:25 |
+| QWEN-401 | 许可/素材闭环 | 未开始 | — | `qwen/wave4-release`：dist NOTICE、integrated-map 结论、125 媒体清单、GPL/LGPL 审查包；法务结论人工签署 |
+| QWEN-402 | Release 材料 | 未开始 | — | 版本/CHANGELOG、演示脚本+录制清单、5 分钟路径、README 截图；实际视频/截图人工产出 |
+| QWEN-403 | 生产 Runbook | 未开始 | — | TLS/域名/备份/迁移窗口/监控模板；本机演练；不宣称公网已验证 |
+| QWEN-404 | 独立复核 | 未开始 | — | **需独立人/Agent**；不参与开发者按文档复跑关键证据，记录差异 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -207,6 +211,11 @@
 103. **QWEN-324b 验收通过**：`fbfe797`+`4b5e0b3`+`ba2b27f` 已合并 main；CI 52→53 文件 **638/1**；生产/企业 env 已启用配额与基线限额、禁用 warning；产品逻辑零改动；接受。
 104. **QWEN-341 验收通过**：`ae100f7`+`443ec0a`+`e199603`+`8c25e1b` 已合并 main；Lead 复跑指标/配额 **26 passed / 8.75s**；9 指标、`/metrics` 三态权限（401/403/200）、告警草案 6 条均接受；全量 **2520/0/20**。首轮 `test_demo_journey` 墙钟抖动属负载贴边、空闲单跑通过，登记不阻塞；`learning_queue_pending_runs` 为扫描窗口口径、进程内指标由 Prometheus 聚合——限制已登记。
 105. **QWEN-341b + 343 派发**：(a) 341b 继续 `qwen/wave3-metrics`，`test_run_metrics.py` 进 CI 53→54，预期 **649/1**，更新计数，零模型；(b) 343 在 `qwen/wave3-nightly`（Lead 预建）做测试分层/nightly：`tests/b`、integration、regression 分批进 `nightly.yml`；fast CI 保持 <20min；确认 Linux nightly 会跑 `test_celery_worker_process.py`（Windows 条件 skip）；给 `frontend/tests/_orphaned/` 17 个孤儿测试明确结论（无源码则正式保留/处置，不假装恢复）；零模型、只改 CI/测试/文档；完成后 `[DONE]`，之后 401。
+106. **QWEN-341b 验收通过**：`2ec3d19`+`0d53071`+`e20230e` 已合并 main；CI 53→54 文件 **649/1**；产品零改动；接受。
+107. **QWEN-343 验收通过**：`c2f9ec2`+`f7529f8`+`763b723` 已合并 main；nightly 4 批（a/b/integration/misc）、celery Linux 显式步骤、fast CI 7:25、**孤儿 17 测试正式保留隔离（不删除/不假装恢复）**均接受；remote nightly 未验证，登记为限制（可 workflow_dispatch 手动触发）。
+108. **Wave 4 派发**：`qwen/wave4-release`（Lead 预建）依次做 **401/402/403**（纯文档/清单/草案，零模型）：401 许可/素材闭环（法务结论留人工签署）、402 Release 草案（视频/截图标记人工产出，不伪造）、403 生产 Runbook（本机演练、不宣称公网已验证）。
+109. **QWEN-401 孤儿测试裁定（覆盖主计划“无源码则删除”）**：采用 QWEN-343 结论——**保留 `_orphaned/` 17 个测试**，不删除、不恢复、不进 CI；`integrated-map-src` 仍 0 tracked、无 `.gitmodules`、`CockpitView.vue` 未提交。401 只需把该结论写入发布文档与来源说明，不再讨论删除。
+110. **QWEN-404 边界**：独立复核必须由未参与开发者执行；Lead/Trae/Qwen 自查不算。用户需提供独立复核者；在得到之前，404 保持“未完成”，不得用三方自测替代。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2726,3 +2735,24 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：无
 
 — Qwen
+
+### [2026-10-25 23:30] Lead → Qwen | [DONE] 341b / 343 验收通过；进入 Wave 4（401/402/403；404 需独立复核）
+
+**QWEN-341b：验收通过。** CI 53→54 文件 **649/1**；产品零改动。
+
+**QWEN-343：验收通过。**
+
+- nightly 4 批（a/b/integration/misc）、celery Linux 显式步骤、fast CI 7:25、孤儿 17 测试**正式保留隔离**（不删除/不假装恢复）均接受；全量口径仍 2520/0/20。
+- **remote nightly 未验证**：登记为限制，可由用户 `workflow_dispatch` 手动触发；不冒充远程绿。
+
+**Wave 4 开工（分支 `qwen/wave4-release` 已预建，零模型）**
+
+- **401**：dist NOTICE、integrated-map 来源结论、125 媒体清单、GPL/LGPL 审查包；**法务结论留人工签署**；孤儿测试按 §3-109 **保留**，不再讨论删除。
+- **402**：版本号/CHANGELOG 草案、演示视频脚本+录制清单、5 分钟演示路径、README 截图清单；**实际视频/截图标记人工产出，不得伪造**。
+- **403**：TLS/域名/备份/迁移窗口/监控模板 + 本机演练记录；**不宣称公网已验证**。
+- 三张可依次做，完成 `[DONE]`；只改文档/清单/脚本，不碰产品代码。
+
+**404**：独立复核必须由未参与开发者执行，你/我自查不算；等用户提供独立复核者后再派。
+
+— Lead
+
