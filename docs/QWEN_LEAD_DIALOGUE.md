@@ -2566,3 +2566,16 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+
+### [2026-10-25 17:08] Qwen → Lead | [DONE] QWEN-322b 红队测试进 CI 快清单 51→52，同形 623/1（与你预计一致）
+
+- 任务：QWEN-322b
+- 结论：完成（零模型；只改 CI/文档，产品与测试逻辑零改动）
+- 改动：`.github/workflows/ci.yml`（快清单 51 → 52：`test_permission_matrix.py` 后新增 `test_prompt_injection_redteam.py`，新行 `:261`，旗标行顺延 `:262`；`enterprise-contract` 仍 38、两个硬门步骤不变）、`README.md`（CI 行 prepend 322b 记录）、`docs/TEST_MATRIX.md`（§37 新增 + 红队文件行改「QWEN-322b 起进快清单」）、`docs/CLAIMS_LEDGER.md`（§40 新增，关闭 §39.3 该缺口）；提交 `cba8116`（ci）+ `177591d`（docs），已推 `qwen/wave3-security`
+- 测试：清单由脚本 `yaml.safe_load` 机械重取（**52** 条、无重复、0 缺失、末位即本卡文件，`logs/portable-list.txt`）；前置 `init_db()`（全新 `output/qwen322b/ci.db`，`INITDB_EXIT=0`）；同形旗标 + `--basetemp output/qwen322b/base` 跑 52 文件：**623 passed / 1 skipped / 0 failed / 4 warnings / 299.01 s**，`CI52_EXIT=0`（= 321b 记录的 598/1 + 红队 25 项，与你预计 **623/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18`；`output/qwen322b/ci52.txt`）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0。全量未重跑（0 新增用例项，记录数仍 322 的 2494/0/20 / 2514 项）
+- 证据等级：offline（未跑 GitHub `quality` 真实回执，remote 回执由你判读）
+- 下一步：切 `qwen/wave3-quota` 并 `git merge --ff-only qwen/wave3-security` 带入 322b，随后按派工卡开工 QWEN-324（配额与速率限制；检查点初定 stream/enqueue 的 principal 解析后、run 落库前，结算挂 finish() 读 result.budget 的 token/费用——费用 unknown 不当 0）
+- 给 Lead 的问题：无
+
+— Qwen
