@@ -284,8 +284,25 @@ def _bootstrap_default_metrics(reg: TelemetryRegistry) -> None:
         "Cognitive diagnosis stage latency",
     )
 
+    # QWEN-341: run-level delivery metrics (see services/run_metrics.py)
+    reg.counter("learning_runs_total", "Settled learning runs by mode and status")
+    reg.counter("learning_run_errors_total", "Failed learning runs by stable error code")
+    reg.counter("learning_tool_calls_total", "V2 learning tool calls by tool and status")
+    reg.counter("queue_claimed_total", "Queue claims won by workers")
+    reg.counter("quota_rejected_total", "Run creations refused by quota, by dimension")
+    reg.counter("run_cost_yuan_total", "Accumulated measured run cost in CNY")
+    reg.counter("run_cost_unknown_runs_total",
+                "Settled runs whose cost the provider never reported")
+    reg.histogram(
+        "learning_run_duration_seconds",
+        "End-to-end learning run latency",
+        buckets=(0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0, 300.0),
+    )
+
     reg.gauge("session_active_count", "Active chat sessions")
     reg.gauge("artifact_registry_size", "Currently registered artifacts")
+    reg.gauge("learning_queue_pending_runs",
+              "Queue-origin queued runs seen in the latest claim scan")
     # B 补充：累计成本（元）— Gauge 便于实时查询当前总花费
     reg.gauge("llm_cost_yuan", "Accumulated LLM cost in CNY")
 

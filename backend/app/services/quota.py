@@ -31,6 +31,8 @@ import threading
 import time
 from typing import Any, Callable
 
+from backend.app.services import run_metrics
+
 LOGGER = logging.getLogger(__name__)
 
 REQUEST_WINDOW_SECONDS = 60
@@ -207,7 +209,11 @@ _STORE = QuotaStore()
 def check_run_creation(user_id: str, course_id: str) -> QuotaDecision:
     if not enabled():
         return QuotaDecision(True, verdict={"disabled": True})
-    return _STORE.check_run_creation(user_id, course_id)
+    decision = _STORE.check_run_creation(user_id, course_id)
+    if not decision.allowed:
+        # QWEN-341: refusal metric per dimension (requests/tokens/cost).
+        run_metrics.record_quota_rejection(decision.dimension)
+    return decision
 
 
 def record_run_usage(user_id: str, course_id: str, *,

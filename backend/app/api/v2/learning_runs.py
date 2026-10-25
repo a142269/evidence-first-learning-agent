@@ -24,7 +24,7 @@ from backend.app.api.v2.run_lifecycle import (
     authorized_run, event, public_record, stream_result,
 )
 from backend.app.core.observability import learning_run_span
-from backend.app.services import quota
+from backend.app.services import quota, run_metrics
 
 router = APIRouter(prefix="/api/v2/learning-runs", tags=["learning-runs-v2"])
 
@@ -125,9 +125,13 @@ class LearningRuntime:
                         arguments: dict[str, Any]):
         from backend.app.services.v2_learning_tools import ToolContext, V2LearningTools
 
-        return await V2LearningTools(self.retrieve, session_factory=run_lifecycle.SessionLocal).call(
+        result = await V2LearningTools(
+            self.retrieve, session_factory=run_lifecycle.SessionLocal).call(
             ToolContext(run_id=state["run_id"], user_id=state["user_id"],
                         course_id=state["course_id"], role=role), name, arguments)
+        # QWEN-341: one tool-call metric per invocation outcome.
+        run_metrics.record_tool_call(name, result.status)
+        return result
 
     @staticmethod
     def _profile_context(user_id: str) -> str:

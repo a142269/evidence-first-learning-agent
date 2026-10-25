@@ -24,7 +24,7 @@ from backend.app.api.v2.access import (
 )
 from backend.app.core.database import SessionLocal
 from backend.app.core.models import AgentRunRecord
-from backend.app.services import quota
+from backend.app.services import quota, run_metrics
 
 LOGGER = logging.getLogger(__name__)
 WORKFLOW_VERSION = "learning-workflows-v2.3"
@@ -170,6 +170,9 @@ def apply_settled_state(record: RunRecord, state: dict[str, Any],
         record.result["budget"] = state["budget"]
         if state.get("learning_package"):
             record.result["tool_stop_reason"] = state.get("tool_stop_reason", "model_finished")
+    # QWEN-341: one settled-run metric per delivery (streaming + worker share
+    # this contract); awaiting_approval returns above and is not settled yet.
+    run_metrics.record_settled(record)
 
 
 async def stream_result(
@@ -274,6 +277,7 @@ async def stream_result(
         # Exception messages may contain connection strings, prompts or tokens.
         LOGGER.error("Run %s failed (%s)", record.run_id, type(exc).__name__)
         record.status, record.result = "failed", {"error": code}
+        run_metrics.record_error(code)
         with suppress(run_audit.RunPersistenceError, run_audit.RunStateConflict):
             await finish(record)
         yield event("run.failed", {"run_id": record.run_id, "error": code})

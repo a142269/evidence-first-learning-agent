@@ -28,6 +28,7 @@ from sqlalchemy.exc import IntegrityError
 
 from backend.app.agent_runtime import run_audit, run_leases
 from backend.app.core.models import AgentCheckpointRecord, AgentRunRecord
+from backend.app.services import run_metrics
 
 # Baseline constants; final values are up to the Lead.
 MAX_ATTEMPTS = 2
@@ -101,6 +102,11 @@ def claim_next_run(worker_id: str = "", *, limit: int = 5) -> dict[str, Any] | N
         rows = session.execute(select(AgentRunRecord).where(
             AgentRunRecord.status.in_(QUEUE_STATUSES),
         ).order_by(AgentRunRecord.created_at, AgentRunRecord.id).limit(limit * 3)).all()
+        # QWEN-341: pending-depth gauge from the same scan (scan-window cap).
+        run_metrics.set_queue_pending(sum(
+            1 for (row,) in rows
+            if row.status == "queued" and (row.metadata_data or {}).get("queue", {}).get("enqueued_at")
+        ))
         for (row,) in rows:
             # Only runs created through the queue endpoint are claimable; a
             # legacy interrupted run keeps its /continue + reconcile semantics.
@@ -141,6 +147,7 @@ def claim_next_run(worker_id: str = "", *, limit: int = 5) -> dict[str, Any] | N
                 ))
                 claimed = {"run_id": row.id, "execution_id": execution_id,
                            "attempts": attempts}
+                run_metrics.record_queue_claim()
                 return
 
     _safe_write_retrying(write)

@@ -23,6 +23,7 @@ from backend.app.agent_runtime import run_audit, run_leases, run_queue
 from backend.app.agent_runtime.learning_package import PackageFailure
 from backend.app.api.v2 import run_lifecycle
 from backend.app.core.models import AgentCheckpointRecord, AgentRunRecord
+from backend.app.services import run_metrics
 
 LOGGER = logging.getLogger(__name__)
 ANSWER_TIMEOUT_SECONDS = 60
@@ -164,6 +165,7 @@ def work_once(worker_id: str = "", *, graph_lookup: Callable[[str], Any] | None 
         state, retrieval_ms = asyncio.run(
             _execute_claimed(record, execution_id, graph, timeout))
     except asyncio.TimeoutError:
+        run_metrics.record_error("run_timeout")
         return _finish_guarded(record, execution_id, status="failed",
                                result={"error": "run_timeout"})
     except run_audit.RunStateConflict:
@@ -172,9 +174,11 @@ def work_once(worker_id: str = "", *, graph_lookup: Callable[[str], Any] | None 
         return "persistence_unavailable"
     except PackageFailure as exc:
         # Exception text is never persisted; only the stable code is.
+        run_metrics.record_error(exc.code)
         return _finish_guarded(record, execution_id, status="failed", result={"error": exc.code})
     except Exception as exc:
         LOGGER.error("Run %s failed (%s)", run_id, type(exc).__name__)
+        run_metrics.record_error("run_execution_failed")
         return _finish_guarded(record, execution_id, status="failed",
                                result={"error": "run_execution_failed"})
     try:
