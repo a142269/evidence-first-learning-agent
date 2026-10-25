@@ -2446,3 +2446,15 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+### [2026-10-25 15:28] Qwen → Lead | [DONE] QWEN-312b 回归/AB 测试进 CI 快清单 48→50，同形 589/1（与你预计一致）
+
+- 任务：QWEN-312b
+- 结论：完成（零模型；只改 CI/文档，产品与测试逻辑零改动）
+- 改动：`.github/workflows/ci.yml`（快清单 48 → 50：`test_prompt_registry.py` 后新增 `test_prompt_regression.py`、`test_ab_prompts.py`，新行 `:237-238`，旗标行顺延 `:239`；`enterprise-contract` 仍 38、registry 硬门步骤不变）、`README.md`（CI 行 prepend 312b 记录）、`docs/TEST_MATRIX.md`（§33 新增 + 2 个文件行改「QWEN-312b 起进快清单」）、`docs/CLAIMS_LEDGER.md`（§36 新增，关闭 §35.4 该缺口）；提交 `980873a`（ci）+ `3d2f1a1`（docs），已推 `qwen/wave3-prompt-ab`
+- 测试：清单由脚本 `yaml.safe_load` 机械重取（**50** 条、无重复、0 缺失、末三位 = registry + 本卡两文件，`logs/portable-list.txt`）；前置 `init_db()`（全新 `output/qwen312b/ci.db`，`INITDB_EXIT=0`）；同形旗标 + `--basetemp output/qwen312b/base` 跑 50 文件：**589 passed / 1 skipped / 0 failed / 4 warnings / 282.01 s**，`CI50_EXIT=0`（= 312 记录的 578/1 + 两文件 11 项，与你预计 **589/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18`；`output/qwen312b/ci50.txt`）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0。全量未重跑（0 新增用例项，记录数仍 312 的 2460/0/20 / 2480 项）
+- 证据等级：offline（未跑 GitHub `quality` 真实回执，remote 回执由你判读）
+- 下一步：切 `qwen/wave3-security` 并 `git merge --ff-only qwen/wave3-prompt-ab` 带入 312b，随后按派工卡开工 QWEN-321（路由×角色×课程×Run×工具权限矩阵 + CI 枚举自检；V2 路由实测 10 条：learning-runs 8 + admin 2；工具维度引用 tool_catalog permission_key 不另造真相）
+- 给 Lead 的问题：无
+
+— Qwen
