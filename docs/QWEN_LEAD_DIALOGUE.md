@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。231b/301 已合并：全量 **2439/0/20**、CI 快清单 **46 文件 / 553/1**。下一小卡 **301b（队列测试进 CI 47）**，随后 **311 Prompt 注册表**。
-- **Qwen 已完成**：Wave 0/1 + 201/202/211/221/231 + 301；全量 **2439/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave3-queue` 做 **301b**（CI 46→47、预期 568/1）；随后在 `qwen/wave3-prompt` 做 **311**（Prompt 注册表）。
+- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。311 已合并：全量 **2449/0/20**、CI 快清单 **47 文件 / 568/1**。下一小卡 **311b（Prompt 测试进 CI 48）**，随后 **312 Prompt 回归/AB**。
+- **Qwen 已完成**：Wave 0/1/2 + 301 + 311；全量 **2449/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave3-prompt` 做 **311b**（CI 47→48、预期 578/1）；随后在 `qwen/wave3-prompt-ab` 做 **312**（回归/AB harness）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 231b/301（45 定向测试、2439/0/20）；裁定 `MAX_ATTEMPTS=2` 与队列专属码；派 301b/311。
+- **Lead 当前动作**：验收并合并 311（10+ 测试、2449/0/20）；裁定哈希失配策略；派 311b/312；预建 prompt-ab 分支。
 - **阻塞**：无。
-- **下一次检查**：2026-10-25 01:00 之后（观察 301b/311）。
+- **下一次检查**：2026-10-25 15:30 之后（观察 311b/312）。
 
 ## 1. 协作协议
 
@@ -76,8 +76,10 @@
 | QWEN-231 | Observation/claim-support 进主链 | **完成（已合并）** | Qwen | `481fe9a`+`ff550b8`+`7be9a3d`：Observation schema、规则版 claim-support 门禁、失败 fail-closed、10+4 测试；Lead 复跑 58 passed/11.13s；全量 2424/0/20；CI 543/1 |
 | QWEN-231b | Observation 测试进 CI | **完成（已合并）** | Qwen | `3952c76`+`58db0e6`+`a024e0d`：`ci.yml` 45→46，CI 同形 **553 passed / 1 skipped**；产品零改动 |
 | QWEN-301 | Run 队列/Worker | **完成（已合并）** | Qwen | `8867031`+`60b5576`+`77605da`：`agent_runs.status=queued` 复用、原子领取、心跳/取消/超时、崩溃重领、`/enqueue`+`/cancel`；15 测试；Lead 复跑 45 passed/16.19s；全量 2439/0/20 |
-| QWEN-301b | 队列测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-queue`：`ci.yml` 46→47，预期 **568/1**；零模型 |
-| QWEN-311 | Prompt 注册表 | 未开始 | — | `qwen/wave3-prompt`（Lead 预建）：`prompts/` + registry（name/version/hash/changelog）+ 核心迁移 + 回退；零模型 |
+| QWEN-301b | 队列测试进 CI | **完成（已合并）** | Qwen | `66ab8b7`+`affdac8`+`9969588`：`ci.yml` 46→47，同形 **568/1**；产品零改动 |
+| QWEN-311 | Prompt 注册表 | **完成（已合并）** | Qwen | `d7e9ba9`+`628fdfe`+`b3c0007`+`3e153d0`：`prompts/` 10 条 + registry（hash/version/changelog）、字节不变迁移、文件优先/内置回退；Lead 复跑 26 passed/6.07s；全量 2449/0/20 |
+| QWEN-311b | Prompt 测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-prompt`：`ci.yml` 47→48，预期 **578/1**；零模型 |
+| QWEN-312 | Prompt 回归/AB harness | 未开始 | — | `qwen/wave3-prompt-ab`（Lead 预建）：固定样例行为断言、A/B 脚本预算门禁/dry-run、脱敏报告；回归进 CI；默认 dry-run |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -177,6 +179,9 @@
 85. **QWEN-231b 验收通过**：`3952c76`+`58db0e6`+`a024e0d` 已合并 main；CI 45→46 文件 **553/1**；产品零改动；接受。
 86. **QWEN-301 验收通过**：`8867031`+`60b5576`+`77605da` 已合并 main；Lead 复跑 `test_run_queue.py`+`test_run_leases.py`+`test_lifecycle` **45 passed / 16.19s**；复用 `agent_runs.status=queued`（零迁移）、原子领取、心跳/取消/超时、崩溃重领（at-least-once）、`/enqueue`+`/cancel` API；全量 **2439/0/20**。**裁定**：`MAX_ATTEMPTS=2` 与 `run_queue_attempts_exhausted` 接受（队列专属稳定码）；不声称 exactly-once 正确；未分页扫描作为已知基线限制，归 341/343 观测/运维面。
 87. **QWEN-301b + 311 派发**：(a) 301b 继续 `qwen/wave3-queue`，`test_run_queue.py` 进 CI 46→47，预期 **568/1**，更新计数，零模型；(b) 311 在 `qwen/wave3-prompt`（Lead 预建）做 Prompt 注册表：`prompts/` + registry（name/version/hash/changelog/owner）、核心 prompt 迁移、加载回退、无硬编码散落；测试版本可追溯；零模型、不碰 API/UI；完成后 `[DONE]`，之后 312。
+88. **QWEN-311 验收通过**：`d7e9ba9`+`628fdfe`+`b3c0007`+`3e153d0` 已合并 main；Lead 复跑注册表/版本测试 **26 passed / 6.07s**；10 条 Prompt 字节不变迁移、name/version/hash/changelog/owner、文件优先+内置回退、`verify_registry()` 均接受；全量 **2449/0/20**；`PROMPT_VERSION` 保持 v2.9（字节未变，正确）。
+89. **哈希失配策略裁定**：运行时**保留静默回退**（内置默认字节相同，优先可用性），但必须在 **312** 补两件：① 回退/失配写一条 warning 审计（不打印 prompt 文本）；② `verify_registry()` 进 CI 作为硬门（失配即失败）。不做“失配即拒启动”的强模式，除非未来有独立配置面；当前靠 CI + 启动健康检查发现篡改。
+90. **QWEN-311b + 312 派发**：(a) 311b 继续 `qwen/wave3-prompt`，`test_prompt_registry.py` 进 CI 47→48，预期 **578/1**，更新计数，零模型；(b) 312 在 `qwen/wave3-prompt-ab`（Lead 预建）做回归/AB harness：固定样例行为断言、A/B 脚本预算门禁 + **默认 dry-run**、脱敏报告、回归测试进 CI；把 `verify_registry()` 纳入 CI 硬门；零模型/默认不发起付费调用；不碰 API/UI；完成后 `[DONE]`，之后 321。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2360,3 +2365,30 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：哈希失配时"静默回退"还是"拒启动"请裁定；312 开工前是否有额外约束。
 
 — Qwen
+
+### [2026-10-25 14:35] Lead → Qwen | [DONE] QWEN-311 验收通过；派 311b 与 QWEN-312
+
+**QWEN-311：验收通过，已合并 main。**
+
+- 我复跑 `test_prompt_registry.py` + `test_learning_package_replan.py`：**26 passed / 6.07s**；全量 **2449/0/20** 接受。
+- 10 条 Prompt 字节不变迁移、name/version/hash/changelog/owner、文件优先 + 内置默认回退、`verify_registry()` 均接受；`PROMPT_VERSION` 保持 v2.9 正确（文本未变）。
+- 你自查发现“注册表哈希用原始字节、加载按文本归一”导致 `system_frame` 恒回退，并改为归一口径、留诊断脚本——处理正确。
+
+**哈希失配策略：保留运行时静默回退，但 CI 必须硬拦**
+
+- 运行时回退保留（内置默认字节相同，可用性优先）；不做“失配即拒启动”的强模式。
+- 但必须补：① 回退/失配写 warning（不打印 prompt 文本）；② `verify_registry()` 进 CI 作为硬门，失配即失败。这两件放进 **312**。
+
+**QWEN-311b（继续 `qwen/wave3-prompt`，零模型）**
+
+- 把 `test_prompt_registry.py` 加入 `ci.yml` 快清单 47→48，预期 **578/1**；更新 README/矩阵；零模型、不碰产品；完成后 `[DONE]`。
+
+**QWEN-312（311b 后，分支 `qwen/wave3-prompt-ab` 已预建，零模型）**
+
+- 回归 harness：固定样例行为断言（prompt 版本/哈希、关键输出结构/引用约束）；
+- A/B 脚本：**默认 dry-run**、预算门禁、脱敏报告；不得默认发起付费调用；
+- 把 `verify_registry()` 纳入 CI 硬门；回退/失配写 warning 审计（不含 prompt 文本）；
+- 不碰 API/UI；完成后 `[DONE]`，之后 321。
+
+— Lead
+
