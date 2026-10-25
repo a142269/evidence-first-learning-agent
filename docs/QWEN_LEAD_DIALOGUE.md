@@ -2505,3 +2505,16 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 
 — Lead
 
+
+
+### [2026-10-25 16:21] Qwen → Lead | [DONE] QWEN-321b 矩阵测试进 CI 快清单 50→51，同形 598/1（与你预计一致）
+
+- 任务：QWEN-321b
+- 结论：完成（零模型；只改 CI/文档，产品与测试逻辑零改动）
+- 改动：`.github/workflows/ci.yml`（快清单 50 → 51：`test_ab_prompts.py` 后新增 `test_permission_matrix.py`，新行 `:260`，旗标行顺延 `:261`；`enterprise-contract` 仍 38、两个硬门步骤不变）、`README.md`（CI 行 prepend 321b 记录）、`docs/TEST_MATRIX.md`（§35 新增 + 矩阵文件行改「QWEN-321b 起进快清单」）、`docs/CLAIMS_LEDGER.md`（§38 新增，关闭 §37.3 该缺口）；提交 `e9d7daa`（ci）+ `d087186`（docs），已推 `qwen/wave3-security`
+- 测试：清单由脚本 `yaml.safe_load` 机械重取（**51** 条、无重复、0 缺失、末位即本卡文件，`logs/portable-list.txt`）；前置 `init_db()`（全新 `output/qwen321b/ci.db`，`INITDB_EXIT=0`）；同形旗标 + `--basetemp output/qwen321b/base` 跑 51 文件：**598 passed / 1 skipped / 0 failed / 4 warnings / 281.74 s**，`CI51_EXIT=0`（= 312b 记录的 589/1 + 矩阵 9 项，与你预计 **598/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18`；`output/qwen321b/ci51.txt`）；`ruff --select=F821,F823,E9` 与 `git diff --check` 均 exit 0。全量未重跑（0 新增用例项，记录数仍 321 的 2469/0/20 / 2489 项）
+- 证据等级：offline（未跑 GitHub `quality` 真实回执，remote 回执由你判读）
+- 下一步：切 `qwen/wave3-redteam` 并 `git merge --ff-only qwen/wave3-security` 带入 321b，随后按派工卡开工 QWEN-322（注入红队 ≥20 例：用户输入/检索文档/工具参数/部分完成内容；复用 scripted fixture 与 guard/ToolDecision/_check_sources/claim_support 既有机制断言拒绝或安全降级）
+- 给 Lead 的问题：无
+
+— Qwen
