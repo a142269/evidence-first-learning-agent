@@ -260,6 +260,7 @@ jobs:
             tests/a/test_permission_matrix.py \
             tests/a/test_prompt_injection_redteam.py \
             tests/a/test_quota.py \
+            tests/a/test_run_metrics.py \
             --no-cov --benchmark-disable -q > build/pytest.log 2>&1
           status=$?
           tail -n 60 build/pytest.log
