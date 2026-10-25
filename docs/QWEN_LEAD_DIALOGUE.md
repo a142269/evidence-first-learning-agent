@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。321b/322 已合并：全量 **2494/0/20**、CI 快清单 **51 文件 / 598/1**；红队 25 项已出。下一小卡 **322b（红队进 CI 52）**，随后 **324 配额/限流**。
-- **Qwen 已完成**：Wave 0/1/2 + 301 + 311/311b/312/312b + 321/321b + 322；全量 **2494/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave3-security` 做 **322b**（CI 51→52、预期 623/1）；随后在 `qwen/wave3-quota` 做 **324**（配额/限流）。
+- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。322b/324 已合并：全量 **2509/0/20**、CI 快清单 **52 文件 / 623/1**；配额 429 已实现但 opt-in。下一小卡 **324b（配额进 CI + 生产开启）**，随后 **341 指标/告警**。
+- **Qwen 已完成**：Wave 0/1/2 + 301 + 311/311b/312/312b + 321/321b + 322/322b + 324；全量 **2509/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave3-quota` 做 **324b**（CI 52→53、生产启用配额、禁用 warning）；随后在 `qwen/wave3-metrics` 做 **341**（指标/告警）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 321b/322（红队 29 定向测试、2494/0/20）；接受 3 个 guard 最小修复；派 322b/324；预建 quota 分支。
+- **Lead 当前动作**：验收并合并 322b/324（49 定向测试、2509/0/20）；接受 opt-in 但要求生产启用；派 324b/341；预建 metrics 分支。
 - **阻塞**：无。
-- **下一次检查**：2026-10-25 18:30 之后（观察 322b/324）。
+- **下一次检查**：2026-10-25 22:00 之后（观察 324b/341）。
 
 ## 1. 协作协议
 
@@ -84,8 +84,10 @@
 | QWEN-321 | 权限矩阵统一 | **完成（已合并）** | Qwen | `3c75173`+`eb02a7e`+`411dad1`+`fca3bbf`：10 条 V2 路由全声明、路由×角色×课程×Run×工具、CI 枚举硬门；Lead 复跑 26 passed/15.19s；全量 2469/0/20 |
 | QWEN-321b | 权限矩阵测试进 CI | **完成（已合并）** | Qwen | `e9d7daa`+`d087186`+`1038a20`：`ci.yml` 50→51，同形 **598/1**；产品零改动 |
 | QWEN-322 | 注入红队套件 | **完成（已合并）** | Qwen | `aa394ae`+`23c918d`+`750cd93`+`d7cdb6a`：25 项红队（四类面）、3 个真实 guard 绕过最小修复（NFKC/Cf/无视）；Lead 复跑 29 passed/4.52s；全量 2494/0/20 |
-| QWEN-322b | 红队测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-security`：CI 51→52，预期 **623/1**；零模型 |
-| QWEN-324 | 配额与速率限制 | 未开始 | — | `qwen/wave3-quota`（Lead 预建）：每用户/课程 token/费用/请求限额、429 语义、配置化、指标；零模型 |
+| QWEN-322b | 红队测试进 CI | **完成（已合并）** | Qwen | `cba8116`+`177591d`+`493f0c9`：`ci.yml` 51→52，同形 **623/1**；产品零改动 |
+| QWEN-324 | 配额与速率限制 | **完成（已合并）** | Qwen | `36b17f5`+`e595ad8`+`7eeac44`+`5c2c508`：滑动窗口请求/token/费用、429 + Retry-After、opt-in、费用 unknown 不当 0；Lead 复跑 49 passed/14.93s；全量 2509/0/20 |
+| QWEN-324b | 配额进 CI + 生产启用 | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-quota`：CI 52→53（预期 638/1）；`.env.production.example`/enterprise 加 `QUOTA_ENABLED=true` + 限额；禁用 warning；零模型 |
+| QWEN-341 | 指标与告警 | 未开始 | — | `qwen/wave3-metrics`（Lead 预建）：Run/工具/队列/成本指标、Prometheus/告警草案、`/metrics` 测试；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -197,6 +199,9 @@
 97. **QWEN-321b 验收通过**：`e9d7daa`+`d087186`+`1038a20` 已合并 main；CI 50→51 文件 **598/1**；产品零改动；接受。
 98. **QWEN-322 验收通过**：`aa394ae`+`23c918d`+`750cd93`+`d7cdb6a` 已合并 main；Lead 复跑红队+guard **29 passed / 4.52s**；25 项四类红队、3 个真实 guard 绕过最小修复（NFKC 全角、Cf 零宽、`无视` 同义）均接受；全量 **2494/0/20**。已知边界：短语级确定性拦截（非语义）、`result.evidence` 审计回显既有设计——登记，不在本卡扩。
 99. **QWEN-322b + 324 派发**：(a) 322b 继续 `qwen/wave3-security`，把 `test_prompt_injection_redteam.py` 加入 CI 51→52，预期 **623/1**，更新计数，零模型；(b) 324 在 `qwen/wave3-quota`（Lead 预建）做配额/限流：每用户/课程 token/费用/请求限额、429 语义、配置化、指标；测试 429/超限/正常放行；不发起付费模型调用；不碰 UI；完成后 `[DONE]`，之后 341。
+100. **QWEN-322b 验收通过**：`cba8116`+`177591d`+`493f0c9` 已合并 main；CI 51→52 文件 **623/1**；产品零改动；接受。
+101. **QWEN-324 验收通过**：`36b17f5`+`e595ad8`+`7eeac44`+`5c2c508` 已合并 main；Lead 复跑配额/生命周期/队列 **49 passed / 14.93s**；三维滑动窗口、429+Retry-After、费用 unknown 不当 0、窗口重置与用户/课程隔离均接受；全量 **2509/0/20**。**opt-in 接受但必须生产启用**：324b 在 `.env.production.example`/enterprise 写 `QUOTA_ENABLED=true` 与限额，并在禁用时启动 warning；进程内计数跨 worker 不一致归 341/403。
+102. **QWEN-324b + 341 派发**：(a) 324b 继续 `qwen/wave3-quota`，`test_quota.py` 进 CI 52→53，预期 **638/1**；生产 env 启用配额 + 默认限额 + 禁用 warning；更新计数；零模型；(b) 341 在 `qwen/wave3-metrics`（Lead 预建）做指标/告警：Run 成功率/延迟/错误/工具/队列/成本指标，Prometheus 指标与告警规则草案，`/metrics` 权限边界与测试；不要求真实监控栈；零模型；完成后 `[DONE]`，之后 343。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2607,3 +2612,29 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 未做提交拆分重排、未 force push；教训已记：多文件改动逐个 `git add` 时提交后必须 `git status` 复核零残留。
 
 — Qwen
+
+### [2026-10-25 20:10] Lead → Qwen | [DONE] 322b / 324 验收通过；派 324b 与 QWEN-341
+
+**QWEN-322b：验收通过。** CI 51→52 文件 **623/1**；产品零改动。
+
+**QWEN-324：验收通过。**
+
+- 我复跑配额/生命周期/队列：**49 passed / 14.93s**；全量 **2509/0/20** 接受。
+- 三维滑动窗口、429 + `Retry-After`、费用 unknown 不当 0、窗口重置与用户/课程隔离均接受。
+- 你主动用 `[CORRECTION]` + `7eeac44` fix-forward 补齐漏挂载，处理正确；最终头以 `7eeac44` 为准。
+- **opt-in 接受，但必须生产启用**：324b 在 `.env.production.example`/enterprise 写 `QUOTA_ENABLED=true` 与基线限额，并在禁用时启动 warning；进程内计数跨 worker 不一致归 341/403。
+
+**QWEN-324b（继续 `qwen/wave3-quota`，零模型）**
+
+- `test_quota.py` 进 CI 52→53，预期 **638/1**；更新计数；
+- `.env.production.example` / `.env.enterprise.example` 增加 `QUOTA_ENABLED=true` 与 `QUOTA_REQUESTS_PER_MINUTE`/`QUOTA_TOKENS_PER_HOUR`/`QUOTA_COST_CNY_PER_DAY`；
+- 配额禁用时启动 warning（不含敏感信息）；
+- 只改配置/文档/测试，不碰配额逻辑；完成后 `[DONE]`。
+
+**QWEN-341（324b 后，分支 `qwen/wave3-metrics` 已预建，零模型）**
+
+- Run 成功率/延迟/错误/工具/队列/成本指标；Prometheus 指标与告警规则草案；`/metrics` 权限边界与测试；
+- 不要求真实监控栈；不碰 UI；完成后 `[DONE]`，之后 343。
+
+— Lead
+
