@@ -177,6 +177,27 @@ jobs:
           print("PROMPT_REGISTRY_OK entries=" + str(len(status)))
           PY
 
+      # QWEN-321 hard gate: every /api/v2 route must be declared in the
+      # permission matrix (route x role x course x run x tool).  An undeclared
+      # route fails CI instead of shipping with unreviewed access; declared
+      # routes keep their existing runtime behaviour untouched.
+      - name: V2 permission matrix coverage
+        env:
+          DATABASE_URL: "sqlite:///./build/ci_matrix.db"
+          A3_OFFLINE_DEMO: "true"
+        run: |
+          python - <<'PY'
+          import sys
+          from backend.app.main import app
+          from backend.app.api.v2.permission_matrix import verify_route_policies, ROUTE_POLICIES, actual_v2_routes
+          problems = verify_route_policies(app)
+          if problems:
+              print("PERMISSION_MATRIX_DRIFT=" + repr(problems))
+              raise SystemExit(1)
+          print("PERMISSION_MATRIX_OK declared=" + str(len(ROUTE_POLICIES))
+                + " v2_routes=" + str(len(actual_v2_routes(app))))
+          PY
+
       - name: Pytest (portable V2 contract suite)
         env:
           DATABASE_URL: "sqlite:///./build/ci_tests.db"
