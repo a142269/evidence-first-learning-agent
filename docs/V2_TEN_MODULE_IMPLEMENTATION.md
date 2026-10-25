@@ -55,7 +55,7 @@ V2 主线为 `POST /api/v2/learning-runs/stream`。服务端从 Bearer Session �
 
 ## 8. 提示词工程（Prompting）
 
-- **职责及输入输出**：各角色的 system prompt 明确输入为待分析数据、只返回 JSON Schema，不输出隐藏思维过程；`PROMPT_VERSION=learning-package-v2.9`（`backend/app/agent_runtime/learning_package.py:25`，2026-10-24 复核；v2.8→v2.9 因 QWEN-211 重规划追加固定提示词，行号 `:20`→`:23` 因该文件新增常量与状态字段而后移；QWEN-231 新增 observation / claim-support 两行 import 后为 `:25`）随代码保存，工作流版本 `WORKFLOW_VERSION=learning-workflows-v2.3`（`backend/app/api/v2/run_lifecycle.py:29`）与之分开；结构化请求同时启用服务商 JSON 输出模式。
+- **职责及输入输出**：各角色的 system prompt 明确输入为待分析数据、只返回 JSON Schema，不输出隐藏思维过程；`PROMPT_VERSION=learning-package-v2.9`（自 QWEN-311 起定义于 `backend/app/agent_runtime/prompts.py:22`、`learning_package` re-export；2026-10-25 复核；v2.8→v2.9 因 QWEN-211 重规划追加固定提示词；QWEN-231 后 `learning_package.py:25`、QWEN-311 迁移后定义移入 prompts.py 而版本值不变——迁移字节不变故未 bump）随代码保存，角色主提示词自 QWEN-311 起由 `prompts/` 注册表加载（文件 sha256 校验、缺失/失配回退内置默认），工作流版本 `WORKFLOW_VERSION=learning-workflows-v2.3`（`backend/app/api/v2/run_lifecycle.py:29`）与之分开；结构化请求同时启用服务商 JSON 输出模式。
 - **顺序与代码**：[角色提示词及 Pydantic 契约](../backend/app/agent_runtime/learning_package.py) 动态加入问题、有限记忆、画像、计划和证据。输出先长度限制，再 JSON 解析及字段/依赖/来源校验；不能只靠提示词约束权限。
 - **持久化与故障**：模型版本、请求上限和 Run state 可追溯；提示词版本当前作为代码常量，尚无独立发布/回滚数据库。无效结构立即失败，不能把自由文本猜成计划。
 - **证据与边界**：[学习包契约测试](../tests/a/test_learning_package.py)。未实现跨模型 A/B 提示词实验或自动 prompt 优化。

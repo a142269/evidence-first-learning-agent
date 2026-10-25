@@ -1358,3 +1358,72 @@ Lead §4（`[2026-10-25 00:38]`）派工逐字：「把 `tests/a/test_run_queue.
 - **未跑 GitHub `quality` 真实回执**（remote 证据，由 Lead 判读）；全量与 PG 面未重跑（本卡零产品/零用例项改动，记录数不变）。
 - 随后开工 QWEN-311（`qwen/wave3-prompt`）。
 - 证据等级：**offline**。
+
+## 33. QWEN-311 Prompt 注册表：`prompts/` + 版本/哈希追溯 + 文件优先/内置回退（2026-10-25，分支 `qwen/wave3-prompt`，零模型调用、提示词字节不变、未 bump PROMPT_VERSION）
+
+Lead §4（`[2026-10-25 00:38]`）派工逐字：「311 在 `qwen/wave3-prompt`（Lead 预建）做 Prompt 注册表：`prompts/` + registry（name/version/hash/changelog/owner）、核心 prompt 迁移、加载回退、无硬编码散落；测试版本可追溯；零模型、不碰 API/UI；完成后 `[DONE]`，之后 312。」
+
+### 33.0 一页方案（实现前定稿的架构选择）
+
+- **载体**：仓库根新建 `prompts/`（每条 prompt 一个 UTF-8 `.txt`），注册表放 `backend/app/agent_runtime/prompts.py`（与 leases/audit 同层，不引入新依赖，仅用标准库 `hashlib`/`pathlib`/`dataclasses`）。
+- **条目元数据**：name、file、**sha256**（对 `read_text` 换行归一后的 UTF-8 文本计算——与 `_load_file` 的校验口径一致，CRLF/LF 检出形态不敏感）、owner（`learning-package-runtime`）、description（中文一句话）、changelog（首条即「v2.9: QWEN-311 从 learning_package 提取，字节不变」）。
+- **迁移范围**（Planner / Tutor / Practice / Reviewer 的主提示词 + 共用框架 + 条件后缀，共 **10 条**）：`system_frame`（`_ask` 的共用 system 框架，`{role}/{prompt_version}/{instruction}` 槽位）、`planner_instruction`、`planner_replan_suffix`（`{round}/{reason}` 槽位）、`replan_reason_tool_failed`、`replan_reason_evidence_stalled`（取代 `_REPLAN_REASONS` 常量）、`decide_instruction`（Tutor 检索决策）、`tutor_instruction`、`practice_instruction`、`reviewer_instruction`、`reviewer_partial_suffix`。
+- **不做**：`_TRUNCATION_GUIDANCE` 与 repair 循环三分支文案不属"角色主提示词"，与控制流强耦合，留原处（registry 结构可后续无痛纳入）。
+- **加载语义**：`render(name, **values)` = 文件存在且 sha256 一致 → 用文件；否则回退**内置默认**（与文件字节相同，作为模块常量集中在注册表一处——"无散落"指不再分散在多个函数里）；返回值带 `version`/`hash`/`source`（file|builtin）/`text`；未注册 name → `PromptRegistryError("prompt_not_registered")`（稳定错误码，不回退、不泄露文件系统细节）。
+- **版本**：`PROMPT_VERSION` 定义移至 prompts.py、`learning_package` re-export——版本防漂移用例（`test_learning_package_replan.py:304`）不受影响；迁移字节不变故 **未 bump**。
+- **字节不变的证明方式**：测试内嵌 pre-311 字面量逐字比对每条 prompt，并用 pre-311 的 f-string 字面量 + pydantic Schema JSON 重组出完整 system 消息，与 stub runtime 捕获的 `_ask` 实际发送内容逐字节相等。
+
+### 33.1 改动（2 个产品文件 + 1 个新模块 + 10 个 prompt 文件 + 1 个新测试文件 + 6 个文档文件）
+
+| 文件 | 改动 | 锚点 |
+|---|---|---|
+| `backend/app/agent_runtime/prompts.py`（新，215 行） | 注册表 + `Prompt`/`PromptSpec` + `render`/`list_prompts`/`verify_registry`/`sha256` + `PROMPT_VERSION` + `_BUILTIN` 内置默认 | `:22`（PROMPT_VERSION）、`:_SPECS`（10 条目）、`:_BUILTIN` |
+| `backend/app/agent_runtime/learning_package.py` | `PROMPT_VERSION` 改为 re-export；删除 `_REPLAN_REASONS`；`_ask` system 框架、planner（含重规划后缀/原因）、decide、tutor、practice、review（含部分审核后缀）共 5 处调用点改走 `render()`；`ROLE_CONTRACTS`、`_TRUNCATION_GUIDANCE` 与 repair 文案不动 | `:21`、`:346-349`、`:472-478`、`:497`、`:594`、`:605`、`:627-629` |
+| `prompts/*.txt`（新，10 个文件） | 上述 10 条 prompt 的文件本体（字节 = pre-311 运行时字符串） | 仓库根 `prompts/` |
+| `tests/a/test_prompt_registry.py`（新，**10 项**） | 见 33.2 | — |
+| `docs/CLAIMS_LEDGER.md` | 本节 §33（追加） | — |
+| `docs/TEST_MATRIX.md` | 文件矩阵新增一行 + §30（追加）；§2 计数 199→200 | — |
+| `docs/LEARNING_PACKAGE_GUIDE.md` | 新增「提示词注册表（QWEN-311）」小节 | `:101-105` |
+| `docs/V2_TEN_MODULE_IMPLEMENTATION.md` | §8 `PROMPT_VERSION` 定义位置更新（`prompts.py:22`、re-export、未 bump 说明） | `:58` |
+| `README.md` | `:56` 全量行、`:58` CI 行（快清单未动、计数不变，注明 311 字节上复跑） | `:56`、`:58` |
+| `docs/00-评委30秒导览.md` | 测试用例行更新 | `:106` |
+| `docs/QWEN_LEAD_DIALOGUE.md` | §4 末尾追加 `[DONE]`；§0/§2/§3 未动 | — |
+
+**未改**：API 路由/UI/前端/CI/迁移/容器；`_TRUNCATION_GUIDANCE`、repair 循环文案、`ROLE_CONTRACTS` 原样保留。
+
+### 33.2 测试覆盖（10 项，全部离线）
+
+| 用例 | 覆盖点 |
+|---|---|
+| `test_registry_lists_name_version_hash_owner_changelog` | 版本可追溯：每条目四元数据齐全、版本恒 `learning-package-v2.9` |
+| `test_every_entry_hash_matches_builtin_and_file` | 哈希校验：sha256(builtin)==登记哈希==文件归一文本（防文件/内置漂移） |
+| `test_role_prompts_keep_pre_311_bytes` | **字节不变**：8 条内嵌 pre-311 字面量逐字比对（含重规划后缀的槽位渲染） |
+| `test_render_result_carries_version_hash_and_source` | 加载结果带 version/hash/source，hash==sha256(text) |
+| `test_missing_file_falls_back_to_builtin` | 缺失回退：`PROMPTS_DIR` 指向空目录 → source=builtin、文本仍为 pre-311 字节 |
+| `test_hash_mismatch_falls_back_to_builtin` | 哈希失配回退：篡改文件 → source=builtin、行为不变 |
+| `test_missing_and_mismatch_show_up_in_verify_registry` | `verify_registry()` 区分 missing/mismatch |
+| `test_unknown_prompt_is_a_stable_error` | 未知 name → `prompt_not_registered` 稳定错误 |
+| `test_no_role_prompt_literals_left_in_learning_package` | 无散落：6 个核心片段不再出现在 learning_package.py 源码 |
+| `test_ask_system_prompt_bytes_are_unchanged_against_pre_311_literal` | 端到端字节钉住：stub 捕获的 system 消息 == pre-311 f-string 字面量 + Schema JSON 重组 |
+
+### 33.3 实测（offline，零计费模型调用；日志均含 `*_EXIT=`）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新文件单跑 | **10 passed / 0 failed / 0.88 s**，`NEW_FILE_EXIT=0` | `output/qwen311/logs/new-file.txt` |
+| 定向相关面（11 文件） | **206 passed / 0 failed / 69.02 s**，`RELATED_EXIT=0` | `output/qwen311/logs/related.txt` |
+| **CI 同形子集（47 文件，清单未改）** | **568 passed / 1 skipped / 0 failed / 4 warnings / 308.22 s**，`CI47_EXIT=0` | `output/qwen311/logs/ci47.txt` |
+| 全量 `pytest tests/` | **2449 passed / 0 failed / 20 skipped / 23 warnings / 1302.27 s (0:21:42)**，`PYTEST_EXIT=0`，200 个测试文件 / **2469 项**（= 301b 基线 2439/0/20 + 本卡 10 项） | `output/qwen311/full-suite.txt`、`full-suite-exit.txt` |
+| 门 | ruff + `git diff --check` → **RUFF_EXIT=0；DIFFCHECK_EXIT=0** | `output/qwen311/logs/ruff.txt` |
+
+### 33.4 开发中的一次真实排错（如实登记）
+
+首版注册表把 sha256 记成了**原始文件字节**的摘要（Windows 检出为 CRLF），而 `_load_file` 校验的是 `read_text` 换行归一后的文本——两者对多行 prompt 不一致，`system_frame` 恒判失配、静默走内置回退（行为不变但校验失效）。修正为**归一化口径**：注册表哈希与校验都用 `read_text` 文本计算，检出形态不敏感；scratch 诊断脚本 `output/qwen311/diag_builtin.py` 留档。
+
+### 33.5 边界与未做
+
+- 迁移只覆盖角色主提示词与共用框架（10 条）；`_TRUNCATION_GUIDANCE` 与 repair 循环文案留在原处（与控制流强耦合，registry 结构可后续纳入）。
+- 回退是"字节相同的内置默认"，运行时行为不因文件问题改变；但哈希失配**不会**阻断运行（属静默回退），运维侧需靠 `verify_registry()`/测试发现——是否要升级为"失配即拒启动"留给 Lead 裁定（倾向 341 观测面处理）。
+- **未把 `test_prompt_registry.py` 加入 `ci.yml` 快清单**（沿用"CI 纳入另卡"先例，如 311b）；未跑 GitHub `quality` 回执与 PG `enterprise-contract`（本卡零 PG 面改动）。
+- 未动 QWEN-312；完成 311 即停，hold 等验收。
+- 证据等级：**offline**。

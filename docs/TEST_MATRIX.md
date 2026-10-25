@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（199）
+## 2. Python 测试文件矩阵（200）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -113,6 +113,7 @@
 | tests/a/test_profile_extractor.py |  |  |  | ✓ |  |
 | tests/a/test_profile_schema.py |  |  |  | ✓ |  |
 | tests/a/test_prompt_cache.py |  |  |  | ✓ |  |
+| tests/a/test_prompt_registry.py |  |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub；未进 fast 清单） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
 | tests/a/test_question_bank_merged.py |  |  |  | ✓ |  |
 | tests/a/test_realdina_service.py |  |  |  | ✓ |  |
@@ -670,3 +671,21 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
+
+## 30. QWEN-311 Prompt 注册表实测摘要（2026-10-25，分支 `qwen/wave3-prompt`，零模型调用、提示词字节不变、未 bump PROMPT_VERSION）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 注册表 | `backend/app/agent_runtime/prompts.py`（新，215 行） | 每条目：name / file / sha256（对换行归一后的 UTF-8 文本，与 `_load_file` 的校验口径一致）/ owner / description / changelog；`PROMPT_VERSION` 定义移至该文件、`learning_package` re-export（版本防漂移用例不受影响）；`list_prompts()` 可追溯、`verify_registry()` 给 ok/missing/mismatch |
+| prompts/ 目录 | 仓库根 `prompts/`，**10 个 .txt** | system_frame + planner_instruction + planner_replan_suffix + 2 个 replan_reason + decide_instruction（Tutor）+ tutor_instruction + practice_instruction + reviewer_instruction + reviewer_partial_suffix |
+| 迁移范围 | Planner / Tutor（decide+lesson）/ Practice / Reviewer 的主提示词 + 共用 system 框架 + 条件后缀 | **字节不变**：测试内嵌 pre-311 字面量逐字比对（含 `_ask` 组装出的完整 system 消息与 Schema JSON）；`_REPLAN_REASONS` 常量删除；`_TRUNCATION_GUIDANCE` 与 repair 循环文案不属角色主提示词，留原处 |
+| 回退 | `_load_file` 失败（缺失/哈希失配）→ 内置默认（与文件字节相同） | 加载结果带 `source`（file/builtin）与 `version`；未知 name → `PromptRegistryError("prompt_not_registered")` 稳定错误 |
+| 新文件单跑 | `tests/a/test_prompt_registry.py` | **10 passed / 0 failed / 0.88 s**，`NEW_FILE_EXIT=0` |
+| 定向相关面（11 文件：registry + learning_package 家族 + replan/partial/retry_guidance/structured_output/claim_support/observation/collection/evaluator/ablation） | 离线 stub + 隔离 SQLite | **206 passed / 0 failed / 69.02 s**，`RELATED_EXIT=0` |
+| **CI 同形子集（47 文件，清单未改）** | `ci.yml` 同形旗标 + 前置 `init_db()` | **568 passed / 1 skipped / 0 failed / 4 warnings / 308.22 s**，`CI47_EXIT=0`（快清单不含 learning_package 家族，记录数与 301b 一致）；新测试文件未纳入（沿用“CI 纳入另卡”先例） |
+| **全量** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen311/full.db`（先 `init_db()`）+ `--basetemp output/qwen311/base-full`） | **2449 passed / 0 failed / 20 skipped / 23 warnings / 1302.27 s (0:21:42)**，`PYTEST_EXIT=0`，200 个测试文件 / **2469 项** |
+| PROMPT_VERSION | 值 | **未 bump**：仍 `learning-package-v2.9`——迁移字节不变；定义移至 `prompts.py:22`，文档已同步 |
+| 门 | ruff + `git diff --check` | **RUFF_EXIT=0（All checks passed）；DIFFCHECK_EXIT=0** |
+| 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖；哈希对 CRLF/LF 检出形态不敏感（`read_text` 归一后再取 sha256）；未跑探针故不主张 `attempts=0` 探针值。

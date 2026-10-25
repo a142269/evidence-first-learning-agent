@@ -98,6 +98,12 @@ run.completed 中包含 learning_package（计划、讲解、练习、审核结�
 
 崩溃恢复语义是 **at-least-once**：Worker 进程死亡后其租约过期，任何 Worker 的领取扫描都会重领并重新执行（`MAX_ATTEMPTS=2`，超限判 `failed("run_queue_attempts_exhausted")`）；死亡执行的新写入被轮换后的 execution 租约隔离。**不声称 exactly-once**。`/stream` 同步端点保留原语义不变；`/resume`、`/continue`、`/reconcile` 对队列来源的 Run 同样适用、行为不变。
 
+## 提示词注册表（QWEN-311）
+
+Planner / Tutor（含检索决策）/ Practice / Reviewer 的主提示词与共用 system 框架不再写死在函数里：仓库根 `prompts/` 下每条一个 UTF-8 文本文件，`backend/app/agent_runtime/prompts.py` 的注册表为每条记录 name、version（`PROMPT_VERSION=learning-package-v2.9`，定义在该文件、`learning_package` re-export）、内容 sha256（对换行归一后的文本计算，检出形态 CRLF/LF 不敏感）、owner、description 与 changelog；`list_prompts()` 可列出全部条目做追溯，`verify_registry()` 给出每条的文件状态（ok/missing/mismatch）。
+
+加载路径是"文件优先、内置回退"：文件存在且 sha256 与注册表一致才使用文件内容；文件缺失或被改动（哈希失配）时回退到与文件字节相同的内置默认，`render` 的返回值带 `source`（file/builtin）与 `version` 标识；未注册的 name 抛稳定错误 `prompt_not_registered`。QWEN-311 只是迁移、所有提示词文本字节不变，故 **未 bump `PROMPT_VERSION`**；后续修改任一提示词必须同步更新文件、内置默认、注册表哈希与 changelog，并按既有规则评估是否 bump。
+
 本批工作流版本为 `learning-workflows-v2.3`，提示词版本为 `learning-package-v2.9`（v2.9：重规划向 Planner 追加固定失效指令，属提示词变更；上一版 v2.8 是 QWEN-102 云端采集与本批契约评测所用版本）。旧版待审任务不自动迁移，恢复请求会要求重新发起，避免把旧图状态接入新图。
 
 ## 细粒度引用契约
