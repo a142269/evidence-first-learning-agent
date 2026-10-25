@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。311 已合并：全量 **2449/0/20**、CI 快清单 **47 文件 / 568/1**。下一小卡 **311b（Prompt 测试进 CI 48）**，随后 **312 Prompt 回归/AB**。
-- **Qwen 已完成**：Wave 0/1/2 + 301 + 311；全量 **2449/0/20**。
-- **Qwen 当前任务**：继续 `qwen/wave3-prompt` 做 **311b**（CI 47→48、预期 578/1）；随后在 `qwen/wave3-prompt-ab` 做 **312**（回归/AB harness）。
+- **项目阶段**：Wave 1/2 完成，进入 **Wave 3**。用户批准顺序：104c/104d → 201 → 201b → 202 → **211 → 221 → 231 → 301 → 311/312 → 321/322/324 → 341/343 → 401/402/403 → 404**；P2 后置。311b/312 已合并：全量 **2460/0/20**、CI 快清单 **48 文件 / 578/1**、registry CI 硬门已上。下一小卡 **312b（回归/AB 测试进 CI 50）**，随后 **321 权限矩阵统一**。
+- **Qwen 已完成**：Wave 0/1/2 + 301 + 311/311b + 312；全量 **2460/0/20**。
+- **Qwen 当前任务**：继续 `qwen/wave3-prompt-ab` 做 **312b**（CI 48→50、预期 589/1）；随后在 `qwen/wave3-security` 做 **321**（路由×角色×课程×Run×工具权限矩阵 + 启动/CI 自检）。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 311（10+ 测试、2449/0/20）；裁定哈希失配策略；派 311b/312；预建 prompt-ab 分支。
+- **Lead 当前动作**：验收并合并 311b/312（21 定向测试、2460/0/20）；裁定不做真实付费 A/B；派 312b/321；预建 security 分支。
 - **阻塞**：无。
-- **下一次检查**：2026-10-25 15:30 之后（观察 311b/312）。
+- **下一次检查**：2026-10-25 16:30 之后（观察 312b/321）。
 
 ## 1. 协作协议
 
@@ -78,8 +78,10 @@
 | QWEN-301 | Run 队列/Worker | **完成（已合并）** | Qwen | `8867031`+`60b5576`+`77605da`：`agent_runs.status=queued` 复用、原子领取、心跳/取消/超时、崩溃重领、`/enqueue`+`/cancel`；15 测试；Lead 复跑 45 passed/16.19s；全量 2439/0/20 |
 | QWEN-301b | 队列测试进 CI | **完成（已合并）** | Qwen | `66ab8b7`+`affdac8`+`9969588`：`ci.yml` 46→47，同形 **568/1**；产品零改动 |
 | QWEN-311 | Prompt 注册表 | **完成（已合并）** | Qwen | `d7e9ba9`+`628fdfe`+`b3c0007`+`3e153d0`：`prompts/` 10 条 + registry（hash/version/changelog）、字节不变迁移、文件优先/内置回退；Lead 复跑 26 passed/6.07s；全量 2449/0/20 |
-| QWEN-311b | Prompt 测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-prompt`：`ci.yml` 47→48，预期 **578/1**；零模型 |
-| QWEN-312 | Prompt 回归/AB harness | 未开始 | — | `qwen/wave3-prompt-ab`（Lead 预建）：固定样例行为断言、A/B 脚本预算门禁/dry-run、脱敏报告；回归进 CI；默认 dry-run |
+| QWEN-311b | Prompt 测试进 CI | **完成（已合并）** | Qwen | `8c0aaa1`+`6ef8272`+`03615be`：`ci.yml` 47→48，同形 **578/1**；产品零改动 |
+| QWEN-312 | Prompt 回归/AB harness | **完成（已合并）** | Qwen | `eee70b9`+`4d89d56`+`140a80a`+`65947a4`：回归样例、离线 AB dry-run/预算门禁/脱敏报告、回退 warning、`verify_registry()` CI 硬门；Lead 复跑 21 passed/2.40s；全量 2460/0/20 |
+| QWEN-312b | 回归/AB 测试进 CI | **待 Qwen 认领** | Qwen | 继续 `qwen/wave3-prompt-ab`：CI 48→50，预期 **589/1**；零模型 |
+| QWEN-321 | 权限矩阵统一 | 未开始 | — | `qwen/wave3-security`（Lead 预建）：路由×角色×课程×Run×工具；启动/CI 未声明即拒绝；矩阵测试；零模型 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -182,6 +184,9 @@
 88. **QWEN-311 验收通过**：`d7e9ba9`+`628fdfe`+`b3c0007`+`3e153d0` 已合并 main；Lead 复跑注册表/版本测试 **26 passed / 6.07s**；10 条 Prompt 字节不变迁移、name/version/hash/changelog/owner、文件优先+内置回退、`verify_registry()` 均接受；全量 **2449/0/20**；`PROMPT_VERSION` 保持 v2.9（字节未变，正确）。
 89. **哈希失配策略裁定**：运行时**保留静默回退**（内置默认字节相同，优先可用性），但必须在 **312** 补两件：① 回退/失配写一条 warning 审计（不打印 prompt 文本）；② `verify_registry()` 进 CI 作为硬门（失配即失败）。不做“失配即拒启动”的强模式，除非未来有独立配置面；当前靠 CI + 启动健康检查发现篡改。
 90. **QWEN-311b + 312 派发**：(a) 311b 继续 `qwen/wave3-prompt`，`test_prompt_registry.py` 进 CI 47→48，预期 **578/1**，更新计数，零模型；(b) 312 在 `qwen/wave3-prompt-ab`（Lead 预建）做回归/AB harness：固定样例行为断言、A/B 脚本预算门禁 + **默认 dry-run**、脱敏报告、回归测试进 CI；把 `verify_registry()` 纳入 CI 硬门；零模型/默认不发起付费调用；不碰 API/UI；完成后 `[DONE]`，之后 321。
+91. **QWEN-311b 验收通过**：`8c0aaa1`+`6ef8272`+`03615be` 已合并 main；CI 47→48 文件 **578/1**；产品零改动；接受。
+92. **QWEN-312 验收通过**：`eee70b9`+`4d89d56`+`140a80a`+`65947a4` 已合并 main；Lead 复跑 prompt 回归/AB/注册表 **21 passed / 2.40s**；回归 harness、离线 AB dry-run（预算门禁/脱敏/拒绝 live）、回退 warning、`verify_registry()` CI 硬门均接受；全量 **2460/0/20**。**真实付费 A/B 不做**，不另开卡；将来若有预算需求，单独裁定并加 `--allow-paid-calls` 与上限。
+93. **QWEN-312b + 321 派发**：(a) 312b 继续 `qwen/wave3-prompt-ab`，把 `test_prompt_regression.py`、`test_ab_prompts.py` 加入 CI 48→50，预期 **589/1**，更新计数，零模型；(b) 321 在 `qwen/wave3-security`（Lead 预建）做**统一权限矩阵**：路由×角色×课程×Run×工具；启动自检或 CI 检查「未声明路由/权限即拒绝」；矩阵测试无遗漏；不改变既有授权行为（未声明才拒绝）；零模型、不碰 UI；完成后 `[DONE]`，之后 322。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
 
@@ -2418,3 +2423,26 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 - 给 Lead 的问题：真实付费 A/B（live 模型对比）是否另开卡？若开，预算上限与脱敏边界需单独裁定
 
 — Qwen
+
+### [2026-10-25 15:35] Lead → Qwen | [DONE] 311b / 312 验收通过；派 312b 与 QWEN-321
+
+**QWEN-311b：验收通过。** CI 47→48 文件，同形 **578/1**；产品零改动。
+
+**QWEN-312：验收通过。**
+
+- 我复跑 prompt 回归/AB/注册表：**21 passed / 2.40s**；全量 **2460/0/20**。
+- 回归 harness、离线 AB dry-run（预算门禁/脱敏/拒绝 live）、回退 warning、`verify_registry()` CI 硬门均接受。
+- **真实付费 A/B 本轮不做**，不另开卡；将来若有预算需求，单独裁定并加 `--allow-paid-calls` 与上限。
+
+**QWEN-312b（继续 `qwen/wave3-prompt-ab`，零模型）**
+
+- 把 `tests/a/test_prompt_regression.py`、`tests/a/test_ab_prompts.py` 加入 `ci.yml` 快清单 48→50，预期 **589/1**；更新 README/矩阵；只改 CI/文档；完成后 `[DONE]`。
+
+**QWEN-321（312b 后，分支 `qwen/wave3-security` 已预建，零模型）**
+
+- 统一权限矩阵：路由 × 角色 × 课程 × Run × 工具；
+- 启动自检或 CI 检查「未声明路由/权限即拒绝」，矩阵测试无遗漏；
+- 不改变既有授权行为（只有未声明才拒绝）；不碰 UI；完成后 `[DONE]`，之后 322 注入红队。
+
+— Lead
+
