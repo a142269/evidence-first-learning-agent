@@ -1664,3 +1664,44 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
 - 未动 QWEN-324；完成 322b 即停（随后按派工切 `qwen/wave3-quota`）。
 - 证据等级：**offline**。
+
+## §41 QWEN-324 配额与速率限制（2026-10-25，分支 `qwen/wave3-quota`，零模型）
+
+### 41.0 交付与结构
+
+- `backend/app/services/quota.py`（新，零迁移、零新依赖）：**进程内滑动窗口** `QuotaStore`（线程安全，注入 clock 保证测试确定性），三个维度独立判定：
+  1. **请求数**：每用户每分钟（创建时计数）；
+  2. **token**：每用户×课程每小时（run 结算时从 `result.budget` 的 `actual_input_tokens + actual_output_tokens` 累计；provider 未返回的部分不存在，不补 0）；
+  3. **费用**：每用户每天 CNY（**只有 `cost.status=="estimated"` 且金额有限才累计**；unknown 记为 unknown run——窗口内含 unknown 时费用维度**不可判超限**（verdict `status="unknown"`），绝不把 unknown 当 0 也不当免费）。
+- **基线常量**（文档化、可 env 覆盖、不散落硬编码）：`QUOTA_REQUESTS_PER_MINUTE=60`、`QUOTA_TOKENS_PER_HOUR=500000`、`QUOTA_COST_CNY_PER_DAY=5.0`；**启用为 opt-in**：`QUOTA_ENABLED` 显式 truthy 才生效，默认所有面（demo 与认证面）行为零改变（`limits()` 每次检查时重读，部署可热调）。
+- **检查点（最小侵入）**：`learning_runs.py` 的 `_enforce_quota()`——`/stream` 与 `/enqueue` 在 `resolve_v2_principal` 之后、run 落库之前；既有错误面不变。
+- **429 语义**：稳定 `detail="quota_exceeded"` + `Retry-After`（窗口整长）；只挡**创建**（`resume`/`continue`/读面/管理面不受限）。
+- **结算挂点**：`run_lifecycle.finish()` 落库后 `quota.record_from_budget(...)`（budget 缺失/畸形→安全忽略，cost 非 estimated→unknown）。
+- **窗口重置**：滑动语义——条目过期即弹出，"重置"是连续的（测试用注入 clock 钉住）。
+- **计数可查**：`quota.snapshot()` 只读视图（全局/按用户/按用户×课程），无新外部端点（341 再接指标）。
+- `tests/a/test_quota.py`（新，**15 项**，含默认启用范围用例）。
+
+### 41.1 实测（offline，零计费模型调用）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 新文件单跑（最终 opt-in 版，15 项） | **15 passed / 0 failed / 3.51 s**，`NEW_FILE_EXIT=0` | 命令回显 |
+| 定向相关面（8 文件，第一轮） | **109 passed / 0 failed / 44.15 s**，`RELATED_EXIT=0` | `output/qwen324/related-tail.txt` |
+| 最终版 4 文件定向（quota + lifecycle + v2 + run_queue，lifecycle 即认证面 fixture） | **51 passed / 0 failed / 25.86 s**，`FIX_EXIT=0` | 命令回显 |
+| 全量 `pytest tests/`（最终 opt-in 版，full3.db 第三轮） | **2509 passed / 0 failed / 20 skipped / 22 warnings / 1339.90 s (0:22:19)**，`PYTEST_EXIT=0`，205 个测试文件 / **2529 项**（= 322 基线 2494/0/20 + 本卡 15 项；第一轮 28 failed / 第二轮 29 failed 均为启用范围迭代所误伤，已如实登记 §41.2 并以第三轮为最终口径；exit 1 的任务通知是沙箱对 npm-cache 日志目录的无关拦截，`PYTEST_EXIT=0` 与 summary 行为准） | `output/qwen324/full-suite3.txt` |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` | exit 0 / exit 0 |
+
+### 41.2 决策与登记
+
+- **启用范围两轮迭代（如实登记）**：① 首版默认 true → 离线 demo 测试面被 429 误伤（全量 28 failed，lifecycle 高频 create 一分钟 >60）；② 二版改"production/`V2_AUTH_REQUIRED` 面默认开"→ 仍误伤：`test_learning_runs_v2_lifecycle` 的 api fixture **本身就设 `V2_AUTH_REQUIRED=true`**（该测试面即认证面，全量 29 failed 同模式）——"按认证面默认开"不可行；③ **最终：opt-in**（与 321 运行时检查同一精神）：`QUOTA_ENABLED` 显式 truthy 才启用，默认任何面零改变；文档与 `.env` 模板说明由部署方决定开启（生产建议开启）。修正后 4 文件定向 51 passed（含 lifecycle 全文件同 fixture）；全量第三轮见 §41.1。
+- **存储选进程内滑动窗口**（派工卡允许"现有 DB/进程内结构"）：零迁移、跨方言一致、clock 可注入；**多进程部署（独立 worker/多 API 实例）下窗口为每进程口径**——跨进程一致性归 341 观测面/403 部署面，本卡不声称全局精确。
+- demo（未认证）principal 的 user_id 来自请求体，配额键可被随意声明——**demo 模式不是安全边界**（本地开发用），生产 database 模式 user_id 来自 session 不可伪造；文档登记。
+- 429 检查在幂等重放之前：被 429 拒绝的重复创建不消耗 Idempotency-Key 语义（窗口过了可以正常重放既有 run）。
+- 费用维度保守策略：unknown 不拒也不当 0 → 费用限额在混合 unknown 窗口下形同"暂缓判定"，运行侧靠 eval_cost_guard（Redis 预留门禁）兜底，两道闸互补。
+- 未扩 341（Prometheus 指标/告警）；`snapshot()` 是最小可查面。
+
+### 41.3 边界与未做
+
+- 未跑 GitHub `quality` 真实回执；未跑探针，不主张 `attempts=0` 探针值。
+- `test_quota.py` 未进 CI 快清单（沿用先例，可另开 324b）；未扩 341；完成 324 即停，hold 等验收。
+- 证据等级：**offline**。

@@ -114,6 +114,10 @@ QWEN-312 落地 Lead 的失配策略：**运行时回退保留，但每次回退
 
 这是**声明层而非新执行路径**：运行时鉴权（`resolve_v2_principal` / `authorize_run_owner` / `authorize_reviewer` / 工具 deny-by-default）行为不变，已声明路由保持既有语义。`verify_route_policies(app)` 从 OpenAPI schema 枚举实际服务的 V2 路由与矩阵对比——**未声明路由、幽灵声明、非法字段（未知角色/auth/归属/越目录工具）都算问题**；该检查在 CI `quality` job 作为硬门步骤 `V2 permission matrix coverage`（非空即失败），防止新路由未经权限评审就上线。不改变任何既有授权行为：只有"未声明"才会被 CI 拒绝。
 
+## 配额与速率限制（QWEN-324）
+
+`backend/app/services/quota.py` 为 `/stream` 与 `/enqueue` 的**新 Run 创建**提供三道滑动窗口：每用户每分钟请求数（默认 60）、每用户×课程每小时 token（默认 500000，结算时从 `result.budget` 累计）、每用户每天可计量费用 CNY（默认 5.0，只有 `cost.status=="estimated"` 的有限金额累计）。超限返回稳定 **429 `quota_exceeded`** 带 `Retry-After`；只挡创建——`/resume`、`/continue`、读面与管理面不受限，未超限用户行为零改变。基线常量可经 `QUOTA_*` 环境变量覆盖；**启用为 opt-in**（与权限矩阵运行时检查同一精神）：`QUOTA_ENABLED=true` 显式开启才生效，默认所有面行为零改变。窗口按条目过期连续滑动；provider 未返回的费用记为 unknown run——**unknown 不当 0 也不当免费**：窗口含 unknown 时费用维度暂缓判定（运行侧另有 eval_cost_guard 预留门禁兜底）。存储为进程内滑动窗口（线程安全、零迁移），多进程部署下为每进程口径，跨进程一致性归 341 观测面；`quota.snapshot()` 提供只读占用视图。demo（未认证）模式的配额键取自请求体，不构成安全边界。
+
 ## 细粒度引用契约
 
 检索前的确定性 Guard（`backend/app/services/safety/run_guard.py`）按短语类别拦截 prompt 注入、数据外泄、越权写入与危险操作，命中即走 `safe_decline` 安全降级（零模型/零工具调用）。QWEN-322 红队套件（`tests/a/test_prompt_injection_redteam.py`，25 项）覆盖用户输入/检索文档/工具参数/部分完成内容四类注入面，并推动一处最小加固：`decide` 归一化现在先做 NFKC 折叠（全角拉丁还原为半角）并剔除 Unicode 格式字符（零宽空格/连接符、BOM、软连字符——防止关键词被隐形字符切分绕过），prompt_injection 类 pattern 补"无视"同义词。注入式检索文档仍是数据：受 2000 字截断约束、只能被引用而不能新增工具或改写 `source_ids`（伪造引用 fail-closed）。

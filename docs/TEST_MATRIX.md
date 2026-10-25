@@ -17,7 +17,7 @@
 
 **为什么其余文件不进 fast**：fast 层刻意只保留"SQLite + 离线 + 确定性 + <20 分钟"的便携子集；其余文件或依赖 PostgreSQL/Redis/torch/本机媒体工具链，或运行慢（独立 Worker 进程测试），或属 V1/实验面（不阻断 V2 主线）。它们由 nightly 全量收集兜底；现存缺口在 §5 列出。
 
-## 2. Python 测试文件矩阵（204）
+## 2. Python 测试文件矩阵（205）
 
 图例：`F`=fast CI quality 清单；`E`=enterprise 合同清单；`M`=enterprise 内 MCP 可选步骤；`N` 列 `✓`=nightly 全量中实跑，`s`=nightly 收集但缺外部依赖（显式 PG / MCP SDK 等）时自动 skip。
 
@@ -119,6 +119,7 @@
 | tests/a/test_prompt_regression.py | F |  |  | ✓ | QWEN-312 回归 harness（5 项：聚合完整性门、固定样例结构断言、回退告警无文本泄露×2、override 钩子往返）；QWEN-312b 起进 fast/quality 快清单（48→50） |
 | tests/a/test_prompt_registry.py | F |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub）；QWEN-311b 起进 fast/quality 快清单（47→48） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
+| tests/a/test_quota.py |  |  |  | ✓ | QWEN-324 配额与速率限制（15 项：请求数超限+窗口重置、token 超/课程隔离/用户隔离、费用 estimated 超限、unknown 不当 0、snapshot 可查、disabled、**默认仅 auth-required 面启用**、env 覆盖、record_from_budget、429+Retry-After、enqueue 围栏、路由用户隔离、读不受限；未进 fast 清单） |
 | tests/a/test_question_bank_merged.py |  |  |  | ✓ |  |
 | tests/a/test_realdina_service.py |  |  |  | ✓ |  |
 | tests/a/test_reflection.py |  |  |  | ✓ |  |
@@ -798,3 +799,19 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。
+
+## 38. QWEN-324 配额与速率限制实测摘要（2026-10-25，分支 `qwen/wave3-quota`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| 配额服务 | `backend/app/services/quota.py`（新，零迁移零依赖） | 三维滑动窗口：请求数（用户/分钟）、token（用户×课程/小时，结算自 `result.budget`）、费用（用户/天，仅 `estimated` 有限金额；unknown 记 unknown run 不当 0 不当免费，窗口含 unknown 时费用维度暂缓判定）；基线 60/min、500k/h、5.0 CNY/天，`QUOTA_*` env 可覆盖；**启用 opt-in**（`QUOTA_ENABLED=true` 显式开，默认所有面零改变） |
+| 检查点/结算 | `learning_runs._enforce_quota`（stream+enqueue，principal 后、落库前）+ `run_lifecycle.finish()` 结算 | 超限稳定 429 `quota_exceeded` + `Retry-After`；只挡创建，读/resume/continue/管理面不受限 |
+| 新文件单跑 | `tests/a/test_quota.py`（15 项） | **15 passed / 0 failed / 3.51 s**，`NEW_FILE_EXIT=0` |
+| 定向相关面 | 第一轮 8 文件 109 passed；最终版 4 文件（含 lifecycle 认证面 fixture 全文件）**51 passed / 25.86 s**（`FIX_EXIT=0`） | `output/qwen324/related-tail.txt` |
+| **全量（第三轮，最终口径）** | `pytest tests/`（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none` + 全新 `sqlite:///./output/qwen324/full3.db`（先 `init_db()`）+ `--basetemp output/qwen324/base-full3`） | **2509 passed / 0 failed / 20 skipped / 22 warnings / 1339.90 s (0:22:19)**，`PYTEST_EXIT=0`，205 个测试文件 / **2529 项**（= 322 基线 2494/0/20 + 本卡 15 项）—— `output/qwen324/full-suite3.txt` |
+| **迭代登记** | 首轮默认启用 → **28 failed**（demo 面 429 误伤）；二版 auth-required 面默认开 → **29 failed**（lifecycle api fixture 自设 `V2_AUTH_REQUIRED=true`）；最终 opt-in 后第三轮 **0 failed** | 两轮误伤均如实登记于台账 §41.2 |
+| 快清单 | 未改 | 仍 52 文件（322b 口径 **623/1**）；配额测试未纳入（先例另卡） |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` | exit 0 / exit 0 |
+| 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；窗口为进程内口径（多进程一致性归 341）；`QUOTA_ENABLED` 需部署方显式开启（生产建议开启）。
