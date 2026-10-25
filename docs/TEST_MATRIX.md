@@ -858,3 +858,21 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
 
 外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，产品与测试逻辑零改动。
+
+## 42. QWEN-343 测试分层进 nightly + 孤儿测试处置实测摘要（2026-10-25，分支 `qwen/wave3-nightly`，零模型调用）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| nightly 分批 | `.github/workflows/nightly.yml`（只改此文件；`ci.yml` 一字未动，fast 门槛不变） | 原单条 `pytest tests/` 拆为同 job 4 个顺序批次（同隔离 DB、每批独立日志+耗时、单批失败 job 转红后续批继续）：batch a `tests/a`（**1747 项**收集，coverage 四模块仅此批产出、目标与原口径一致）+ batch b `tests/b`（42 文件/**344 项**）+ batch integration（9 文件/**97 项**）+ batch misc `tests/regression`+`tests/benchmarks`+根 5 文件（15 文件/**351 项**）；收集合计 2539（全量 2540 = 收集 + 1 条 `test_mcp_readonly_protocol.py:11` 运行期 importorskip，221b §28 同口径）；新增 batch-logs artifact；`linux-lockfile` job 原样 |
+| celery Linux 覆盖 | 新增独立步骤单跑 `tests/a/test_celery_worker_process.py -q -rs` | skipif 仅 `win32 且缺 pywin32` 生效 → Linux 恒假必执行，CI 回执直接出 **1 passed**；Windows 本机实测 **1 skipped / 0.15 s**（原因逐字：`kombu filesystem broker requires pywin32 on Windows...`） |
+| fast CI | 未改 `ci.yml` | quality portable pytest 同形 **445.43 s (7:25)**（341b §41 记录）；新增批次全在 nightly（60 min timeout，四批本地合计 1038.21 s） |
+| **batch b 实测** | 同形旗标 + 全新 `output/qwen343/batch.db`（先 `init_db()`） | **344 passed / 0 failed / 343.25 s**，`BATCH_B_EXIT=0` |
+| **batch integration 实测** | 同上（与 batch b 同库顺序，复刻 CI 口径） | **96 passed / 1 skipped / 0 failed / 606.39 s**，`BATCH_INT_EXIT=0`；唯一 skip 为 `test_graph_bkt_hover.py:62` 环境条件 `pytest.skip("No KG nodes in test DB")`（非失败） |
+| **batch misc 实测** | 同上 | **351 passed / 0 failed / 88.57 s**，`BATCH_MISC_EXIT=0` |
+| 三批合计 | 792 项 | **791 passed / 1 skipped / 0 failed / 1038.21 s** |
+| batch a | 本机未重跑（字节与 341 全量两轮一致） | 全量记录 **2520/0/20 / 2540 项**（§40，`PYTEST_EXIT=0`） |
+| 孤儿测试 | `frontend/tests/_orphaned/README.md` 追加正式处置结论 | **保留隔离（不删除、不恢复、不纳入 CI），17 个文件原样**；事实复核：`integrated-map-src` 仍 0 tracked、无 `.gitmodules`、`CockpitView.vue` 未提交；CI 排除机制有效（`ci.yml:34` 单层 glob，注释 `:31-32`） |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` + nightly.yml `yaml.safe_load` | 全 exit 0（`NIGHTLY_YAML_OK`） |
+| 未跑 | **GitHub nightly 真实回执（remote 未验证）**、Linux 实际时长 | 本机 Windows 数字仅供量级参考；`workflow_dispatch` 可手动触发验证 |
+
+外推限制：全部为**本机 offline** 复跑，零计费模型调用、未读 `.env`、未装依赖、未碰产品代码与前端源码；分批后 coverage.xml 仅由 batch a 产出（目标模块不变、无门槛依赖，仅上传）。

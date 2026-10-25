@@ -1779,3 +1779,33 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 
 - 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未动 QWEN-343；完成 341b 即停（随后按派工切 `qwen/wave3-nightly`）。
 - 证据等级：**offline**。
+
+## §45 QWEN-343 测试分层进 nightly + 孤儿测试处置（2026-10-25，分支 `qwen/wave3-nightly`，零模型）
+
+### 45.0 交付
+
+- **`.github/workflows/nightly.yml` 分批化**（只改该文件，`ci.yml` 一字未动）：原单条 `pytest tests/` 拆为同 job 内 4 个顺序批次（同一隔离 DB、一个 bash 步骤、每批独立日志+耗时、单批失败 job 转红但后续批继续跑）——batch a `tests/a`（含 `tests/a/benchmarks`，**1747 项**收集；coverage 仅此批产出，目标仍是 V2 四模块与原单跑口径一致）、batch b `tests/b`（42 文件 / **344 项**）、batch integration `tests/integration`（9 文件 / **97 项**）、batch misc `tests/regression`+`tests/benchmarks`+tests 根 5 个 demo 文件（15 文件 / **351 项**）；新增 **batch logs artifact**（`build/nightly-*.log`）。收集合计 2539 项（全量 2540 项 = 收集 + 1 条 `test_mcp_readonly_protocol.py:11` 运行期 importorskip 项，与 221b §28 记录同口径）；`linux-lockfile` job 原样保留。
+- **celery Linux 覆盖显式化**：新增独立步骤 `Celery worker contract runs on Linux` 单跑 `tests/a/test_celery_worker_process.py -q -rs`——该文件的 skipif 仅在 `sys.platform == "win32"` 且缺 pywin32 时生效，Linux 上条件恒假必执行；该步骤使 Linux 回执里直接出现 **1 passed**（若出现 1 skipped 即 guard 回归）。Windows 本机实测 **1 skipped / 0.15 s**（skip 原因逐字记录：`kombu filesystem broker requires pywin32 on Windows...`）。
+- **fast CI 保持 <20min**：341b 记录的 quality portable pytest 本地同形 **445.43 s (7:25)**，343 未改 `ci.yml` 的任何步骤/门槛/清单；新增批次全部在 nightly（job timeout 仍 60 min，四批本地合计 **1038.21 s**，远低于上限）。
+- **孤儿前端测试正式处置**（`frontend/tests/_orphaned/README.md` 追加结论节）：**保留隔离（不删除、不恢复、不纳入 CI），17 个文件保持原样**。复核事实：`git ls-files frontend/integrated-map-src` 仍 **0** 文件、无 `.gitmodules`、`frontend/src/views/CockpitView.vue` 仍未提交；CI 排除机制有效（`ci.yml:34` `node --test tests/*.test.mjs` 单层 glob 不递归 `_orphaned/`，注释在 `ci.yml:31-32`）。删除被否决（不可逆损失真实行为资产），假装恢复被否决（违背台账诚实原则）。
+- 只改 CI（nightly.yml）/文档；产品与既有测试字节零改动、零新依赖、零模型调用。
+
+### 45.1 实测（offline，Windows 本机同形复跑）
+
+| 批次 | 内容 | 收集项 | 实测 | 证据 |
+|---|---|---|---|---|
+| celery 单文件 | `tests/a/test_celery_worker_process.py`（Windows） | 1 | **1 skipped / 0.15 s**，skip 原因见 §45.0（Linux 上该条件恒假 → CI 步骤出 1 passed 回执） | 本轮终端回显 |
+| batch b | `tests/b`（42 文件） | 344 | **344 passed / 0 failed / 343.25 s**，`BATCH_B_EXIT=0` | `output/qwen343/batch-b.log` |
+| batch integration | `tests/integration`（9 文件） | 97 | **96 passed / 1 skipped / 0 failed / 606.39 s**，`BATCH_INT_EXIT=0`；唯一 skip 为 `test_graph_bkt_hover.py:62` 的环境条件 `pytest.skip("No KG nodes in test DB")`（非失败） | `output/qwen343/batch-integration.log` |
+| batch misc | regression 5 + benchmarks 5 + 根 5（15 文件） | 351 | **351 passed / 0 failed / 88.57 s**，`BATCH_MISC_EXIT=0` | `output/qwen343/batch-misc.log` |
+| 三批合计 | 共用全新 `output/qwen343/batch.db`（先 `init_db()`，复刻 CI 同库顺序口径） | 792 | **791 passed / 1 skipped / 0 failed / 1038.21 s** | 三份日志 |
+| batch a | 未在本机重跑（字节与 341 全量两轮完全一致） | 1747（收集） | 全量记录 **2520/0/20 / 2540 项**（§43.1，`PYTEST_EXIT=0`） | `output/qwen341/full_run2.log` |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check` + `yaml.safe_load` 解析 nightly.yml | 全 exit 0 | `NIGHTLY_YAML_OK` | 本轮终端回显 |
+
+### 45.2 边界与未做
+
+- **remote 未验证**：GitHub nightly 真实回执未跑（本卡不主张 remote 绿灯；`workflow_dispatch` 可由 Lead 手动触发验证）。
+- Linux 运行时长未知（本机 Windows 数字仅供量级参考；四批合计 17.3 min + 安装/收集开销，60 min timeout 内余量大）。
+- coverage 口径微缩：原单跑把 tests/b/integration/misc 的行也算进 4 个目标模块，分批后仅 batch a 产出 coverage.xml（目标模块不变；无任何 coverage 门槛依赖该 artifact，仅上传）。
+- celery 的 Linux "1 passed" 主张待 CI 回执确认（本卡只主张代码层条件恒假 + Windows 侧 skip 实测）。
+- 证据等级：**offline**。
