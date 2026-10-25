@@ -115,7 +115,7 @@
 | tests/a/test_profile_extractor.py |  |  |  | ✓ |  |
 | tests/a/test_profile_schema.py |  |  |  | ✓ |  |
 | tests/a/test_prompt_cache.py |  |  |  | ✓ |  |
-| tests/a/test_prompt_injection_redteam.py |  |  |  | ✓ | QWEN-322 注入红队套件（18 个用例函数/25 项：guard 四类参数化 10 + 正向；零宽/全角伪装；decline 零调用；文档注入保持数据+截断；非法工具/超长 query fail-closed；scope 不可覆盖；reviewer 注入；伪造引用 partial 丢弃；claim_support fail-closed；泄露金丝雀；正向对照。运行期发现 3 个 guard 绕过并最小修复 run_guard；未进 fast 清单） |
+| tests/a/test_prompt_injection_redteam.py | F |  |  | ✓ | QWEN-322 注入红队套件（18 个用例函数/25 项：guard 四类参数化 10 + 正向；零宽/全角伪装；decline 零调用；文档注入保持数据+截断；非法工具/超长 query fail-closed；scope 不可覆盖；reviewer 注入；伪造引用 partial 丢弃；claim_support fail-closed；泄露金丝雀；正向对照。运行期发现 3 个 guard 绕过并最小修复 run_guard）；QWEN-322b 起进 fast/quality 快清单（51→52） |
 | tests/a/test_prompt_regression.py | F |  |  | ✓ | QWEN-312 回归 harness（5 项：聚合完整性门、固定样例结构断言、回退告警无文本泄露×2、override 钩子往返）；QWEN-312b 起进 fast/quality 快清单（48→50） |
 | tests/a/test_prompt_registry.py | F |  |  | ✓ | QWEN-311 Prompt 注册表（10 项：注册/加载/哈希/字节不变/回退/未知 prompt 稳定错误/无散落/系统消息字节钉住；离线 stub）；QWEN-311b 起进 fast/quality 快清单（47→48） |
 | tests/a/test_question_bank.py |  |  |  | ✓ |  |
@@ -785,3 +785,16 @@ Lead §4 `[2026-10-24 12:25]`（提交 `49910eb`）派 211：「实现**有界�
 | 未跑 | GitHub `quality` 真实回执、PG `enterprise-contract` | 本卡零 PG 面改动 |
 
 外推限制：全部为**本机 offline** 复跑，零计费模型调用（`A3_OFFLINE_DEMO=true LLM_PROVIDER=none`）、未读 `.env`、未装依赖、未碰前端/UI；guard 为短语级确定性拦截，非语义级注入检测；`result.evidence` 检索审计回显为既有设计未改动（主张边界见台账 §39.2）。
+
+## 37. QWEN-322b 红队测试纳入 CI 快清单实测摘要（2026-10-25，分支 `qwen/wave3-security`，零模型调用、产品与测试逻辑零改动）
+
+| 项 | 口径 | 结果 |
+|---|---|---|
+| CI 清单 | `.github/workflows/ci.yml` `quality` job | **51 → 52 个文件**：在 `tests/a/test_permission_matrix.py` 后加 `tests/a/test_prompt_injection_redteam.py`（新行 `:261`，旗标行顺延 `:262`）；`enterprise-contract` 仍 **38**、两个硬门步骤不变 |
+| 清单机械重取 | 脚本用 `yaml.safe_load` 读 `ci.yml`（锚点 `test_v1_production_access.py` 步骤） | **52** 条、无重复、0 缺失、末位即本卡文件（`logs/portable-list.txt`） |
+| 前置 `init_db()` | exit 0（全新 `output/qwen322b/ci.db`） | `INITDB_EXIT=0` |
+| **CI 同形子集（52 文件）** | 同形旗标 `--no-cov --benchmark-disable -q -rs` + `--basetemp output/qwen322b/base` | **623 passed / 1 skipped / 0 failed / 4 warnings / 299.01 s (0:04:59)**，`CI52_EXIT=0`；= 321b 记录的 598/1 + 本卡文件 **25** 项，与 Lead 预计 **623/1** 逐数一致；唯一 skip 仍是 `test_auth_restart.py:18` —— `output/qwen322b/ci52.txt` |
+| 全量 | 未重跑 | 本卡 0 新增用例项、产品零改动，全量记录数仍为 322 的 **2494/0/20 / 2514 项**（§36） |
+| 未跑 | GitHub `quality` 真实回执 | 本地同形复跑属 offline 证据，remote 回执由 Lead 判读 |
+
+外推限制：全部为**本机 offline** 同形复跑，零计费模型调用、未读 `.env`；本卡只改 CI/文档，未跑探针故不主张 `attempts=0` 探针值。

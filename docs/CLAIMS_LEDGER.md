@@ -1641,3 +1641,26 @@ Lead §4（`[2026-10-25 14:35]`）派工逐字：「回归 harness：固定样�
 - 新套件未进 CI 快清单（322b 另开）；未扩 323/324；完成 322 即停，hold 等验收。
 - guard 是短语级确定性拦截，非语义级注入检测；更强的对抗样本（多跳转写、图像/文件通道）不在本卡。
 - 证据等级：**offline**。
+
+## §40 QWEN-322b 红队测试纳入 CI 快清单（2026-10-25，分支 `qwen/wave3-security`，零模型）
+
+### 40.0 交付
+
+- `.github/workflows/ci.yml` `quality` 快清单 **51 → 52 个文件**：`tests/a/test_permission_matrix.py` 之后新增 `tests/a/test_prompt_injection_redteam.py`（新行 `:261`，旗标行顺延 `:262`）；`enterprise-contract` 仍 38，prompt registry 与 permission matrix 两个硬门步骤不变。
+- 只改 CI/文档；产品与测试逻辑零改动；关闭 §39.3 登记的"新套件未进 CI 快清单"缺口。
+
+### 40.1 实测（offline）
+
+| 量 | 值 | 证据 |
+|---|---|---|
+| 清单机械重取 | `yaml.safe_load` 读 `ci.yml`（锚点 `test_v1_production_access.py` 步骤）：**52** 条、无重复、0 缺失、末位即本卡文件 | `logs/portable-list.txt` |
+| 前置 `init_db()` | exit 0（全新 `output/qwen322b/ci.db`） | 命令回显 `INITDB_EXIT=0` |
+| **CI 同形子集（52 文件）** | **623 passed / 1 skipped / 0 failed / 4 warnings / 299.01 s (0:04:59)**，`CI52_EXIT=0`；= 321b 记录的 598/1 + 本卡 25 项，与 Lead 预计 **623/1** 逐数一致；唯一 skip 仍 `test_auth_restart.py:18` | `output/qwen322b/ci52.txt` |
+| 全量 | 未重跑（0 新增用例项），记录数仍 322 的 **2494/0/20 / 2514 项** | — |
+| 门 | ruff `--select=F821,F823,E9` + `git diff --check`（提交前复核） | exit 0 / exit 0 |
+
+### 40.2 边界与未做
+
+- 未跑 GitHub `quality` 真实回执（remote 回执由 Lead 判读）；未跑探针，不主张 `attempts=0` 探针值。
+- 未动 QWEN-324；完成 322b 即停（随后按派工切 `qwen/wave3-quota`）。
+- 证据等级：**offline**。
