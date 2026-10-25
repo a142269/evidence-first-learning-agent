@@ -24,8 +24,17 @@ from backend.app.api.v2.run_lifecycle import (
     authorized_run, event, public_record, stream_result,
 )
 from backend.app.core.observability import learning_run_span
+from backend.app.services import quota
 
 router = APIRouter(prefix="/api/v2/learning-runs", tags=["learning-runs-v2"])
+
+
+def _enforce_quota(user_id: str, course_id: str) -> None:
+    """Stable 429 when the user/course quota window refuses a new run (QWEN-324)."""
+    decision = quota.check_run_creation(user_id, course_id)
+    if not decision.allowed:
+        raise HTTPException(status_code=429, detail=decision.error_code,
+                            headers={"Retry-After": str(max(1, decision.retry_after))})
 
 
 class LearningRuntime:
@@ -175,6 +184,7 @@ async def stream_learning_run(http_request: Request, request: LearningRunRequest
     graph = _package_graph if request.mode == "learning_package" else _graph
     if request.mode == "learning_package" and not graph._builder_available:
         raise HTTPException(status_code=503, detail="learning_package_unavailable")
+    _enforce_quota(principal.user_id, course_id)
     key = http_request.headers.get("Idempotency-Key", "").strip()
     if key and not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", key):
         raise HTTPException(status_code=422, detail="invalid_idempotency_key")
@@ -286,6 +296,7 @@ async def enqueue_learning_run(http_request: Request, request: LearningRunReques
     graph = _package_graph if request.mode == "learning_package" else _graph
     if request.mode == "learning_package" and not graph._builder_available:
         raise HTTPException(status_code=503, detail="learning_package_unavailable")
+    _enforce_quota(principal.user_id, course_id)
     run_id = str(uuid.uuid4())
     request = request.model_copy(update={"user_id": principal.user_id, "course_id": course_id,
                                           "session_id": request.session_id.strip() or run_id})

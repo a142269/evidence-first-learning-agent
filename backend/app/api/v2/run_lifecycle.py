@@ -24,6 +24,7 @@ from backend.app.api.v2.access import (
 )
 from backend.app.core.database import SessionLocal
 from backend.app.core.models import AgentRunRecord
+from backend.app.services import quota
 
 LOGGER = logging.getLogger(__name__)
 WORKFLOW_VERSION = "learning-workflows-v2.3"
@@ -120,12 +121,17 @@ def interrupt_payload(state: dict[str, Any]) -> dict[str, Any]:
 
 
 async def finish(record: RunRecord) -> int:
-    return await asyncio.to_thread(
+    written = await asyncio.to_thread(
         run_audit.finish_run, run_id=record.run_id, status=record.status,
         result={"request": record.request.model_dump(), "result": record.result},
         started_at=record.started_at,
         execution_id=record.execution_id,
     )
+    # QWEN-324: settle the run's usage into the quota windows (tokens and
+    # measurable cost from the budget already projected; unknown stays unknown).
+    quota.record_from_budget(record.request.user_id, record.request.course_id,
+                             record.result.get("budget"))
+    return written
 
 
 def apply_settled_state(record: RunRecord, state: dict[str, Any],
