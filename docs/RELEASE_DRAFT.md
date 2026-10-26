@@ -44,8 +44,8 @@
 - 生产安全边界：APP_ENV=production 下 V1 fail-closed、docs/OpenAPI 隐藏、/metrics 仅 teacher/admin、secrets 全部 ${VAR:?} 强制（docker-compose.production.yml）
 
 ### Known limitations（发布声明必带）
-- 公网/TLS/域名/备份未验证（QWEN-403）；独立复核（404）未执行，P0
-- 素材族 provenance 为 UNKNOWN（QWEN-401）；integrated-map bundle 无源码，不得对外分发
+- 公网/TLS/域名/备份未验证（QWEN-403）；**独立复核（404）用户豁免，未执行独立复核，不是“复核通过”**，仍为未关闭 P0
+- 素材族 provenance 为 UNKNOWN（QWEN-401）；integrated-map bundle 无源码，不得对外分发；机械清单见 `docs/ASSETS_MANIFEST.md`（121 个 tracked 媒体），人工来源表见 `docs/ASSETS_PROVENANCE.md`
 - 新版 Golden Set 在线质量验收未完成；离线契约测试不等价于模型质量评测
 ```
 
@@ -94,7 +94,7 @@
 
 ## 6. 发布前置（人工，未完成项汇总）
 
-1. 404 独立复核（P0，未参与开发者执行；在完成前不得宣称 rc 通过）；
+1. 404 独立复核（用户豁免、未执行；**不是通过**；仍为 P0，发布声明必须保留“未独立复核”）；
 2. 401 法务签署（NOTICE/GPL/LGPL/素材）；
 3. §3 视频录制与 §5 截图（人工）；
 4. 公网/TLS/域名演练（403 Runbook 的"未验证项"清零）；

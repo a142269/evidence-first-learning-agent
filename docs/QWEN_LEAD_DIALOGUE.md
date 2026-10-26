@@ -9,13 +9,13 @@
 
 ## 0. 当前状态（Lead 维护）
 
-- **项目阶段**：**Wave 1/2/3 完成，Wave 4 文档交付完成**。main 已合并 401/402/403：`DIST_NOTICE_DRAFT`（待法务）、`RELEASE_DRAFT`（视频/截图待人工）、`PRODUCTION_RUNBOOK`（本机演练、公网未验证）；全量 **2520/0/20**、CI 快清单 **54 文件 / 649/1**。**仅剩 404 独立复核（P0，需未参与开发者）**，以及法务/视频/截图/公网部署等人工项。**不得宣称 GA/已上线**。
-- **Qwen 已完成**：Wave 0/1/2/3 全部主线与补充卡 + Wave 4 的 401/402/403 文档；全量 **2520/0/20**。
-- **Qwen 当前任务**：无代码任务；401/402/403 已交付，404 等用户指定独立复核者。
+- **项目阶段**：**Wave 1–4 全部完成；发布工程收尾完成**。**404 由用户豁免、未独立复核（P0 未关闭，不是通过）**。已补 `CHANGELOG.md`、`docs/ASSETS_MANIFEST.md`（121 tracked 媒体 + SHA256）、`docs/ASSETS_PROVENANCE.md`（人工来源表模板）、`docs/RC_RELEASE_CHECKLIST.md`；全量 **2520/0/20**、CI **54 文件 / 649/1**。**release 只可称 `v1.0.0-rc1` 候选，不得称 GA/已上线/已验收**。
+- **Qwen 已完成**：Wave 0/1/2/3 全部主线 + Wave 4 的 401/402/403 文档 + Lead 发布收尾（CHANGELOG/素材清单/RC 检查表）。
+- **Qwen 当前任务**：无代码任务；发布材料已收口，等用户做人工项与 rc 决策。
 - **模型 API（已就绪）**：本地 `.env` 含 DeepSeek + **`qwen3.7-text-embedding-flash`**；`embedding_available=True`；不得提交/打印/上传。
-- **Lead 当前动作**：验收并合并 Wave 4 文档；确认所有“待人工/未验证”标注；把 404 与人工项交用户。
-- **阻塞**：404 独立复核；法务签署；视频/截图；公网/TLS/备份/监控真实部署。
-- **下一次检查**：不再自动催办；等用户安排 404/人工项。
+- **Lead 当前动作**：记录 404 用户豁免；补 CHANGELOG/素材清单/RC 检查表；修正素材计数 126/125→121。
+- **阻塞**：404 独立复核（已豁免，不是通过）；法务签署；素材 provenance；视频/截图；公网/TLS/备份/监控真实部署；tag 需用户批准。
+- **下一次检查**：不再自动催办；等用户决定是否打 `v1.0.0-rc1` tag 或安排人工项。
 
 ## 1. 协作协议
 
@@ -93,7 +93,8 @@
 | QWEN-401 | 许可/素材闭环 | **完成（文档草案）** | Qwen | `7c7e671`：`DIST_NOTICE_DRAFT.md`、`RELEASE_LICENSE_REVIEW.md`；法务 9 项待审；integrated-map 无源码、孤儿 17 保留；不称已合规 |
 | QWEN-402 | Release 材料 | **完成（草案）** | Qwen | `0dcb0fc`：`RELEASE_DRAFT.md`（v1.0.0-rc1 建议、CHANGELOG、7 镜头、8 截图清单）；视频/截图待人工 |
 | QWEN-403 | 生产 Runbook | **完成（模板+本机演练）** | Qwen | `5e585a8`：`PRODUCTION_RUNBOOK.md`；healthz 200、迁移 upgrade/downgrade 闭环；公网/TLS/备份/监控未验证 |
-| QWEN-404 | 独立复核 | **未完成（P0，外部）** | 用户指定 | 必须由未参与开发者按文档复跑关键证据；Lead/Qwen/Trae 自查不算 |
+| QWEN-404 | 独立复核 | **用户豁免（未复核，P0 未关闭）** | 用户 | 用户决定跳过；不是“复核通过”；`docs/INDEPENDENT_REVIEW_404.md` 已标豁免；release 不得称 GA |
+| 发布收尾 | CHANGELOG / 素材清单 / RC 检查表 | **完成（Lead）** | Lead | `CHANGELOG.md`、`docs/ASSETS_MANIFEST.md`（121 媒体）、`docs/ASSETS_PROVENANCE.md`、`docs/RC_RELEASE_CHECKLIST.md`；tag 未创建 |
 
 > 规则：Lead 只做评审/决策/验收，不抢 Qwen 的实现任务；Qwen 可以提出“建议 Lead 做的调研”。
 
@@ -219,6 +220,9 @@
 111. **Wave 4 文档验收通过**：`7c7e671`+`0dcb0fc`+`5e585a8` 已合并 main；NOTICE/许可复核、Release 草案、Runbook 模板均接受；法务结论、视频/截图、公网/TLS/备份/监控明确标注“待人工/未验证”，无伪造。
 112. **项目当前结论**：工程/文档主线到 Wave 4 出口完成；**release 只能称 `v1.0.0-rc1` 候选，不能称 GA/已上线**；404 与人工项未完成前不得对外宣称验收通过。
 113. **剩余人工清单（用户侧）**：① 独立 404 复核者；② 法务签署 9 项与素材 provenance；③ 演示视频 7 镜头/README 8 截图；④ 公网域名/TLS/备份/监控/PG 恢复演练。完成前保持“未验证”口径。
+114. **404 状态变更（用户决定，2026-10-26）**：用户明确“不用复核了”，因此 **404 记为“用户豁免、未执行独立复核”，不是 PASS、不是完成**；`docs/INDEPENDENT_REVIEW_404.md` 与 release 文档已同步该口径。**不得在对外材料写“独立复核通过”**；release 仍是 rc 候选。
+115. **发布工程收尾（Lead）**：新增 `CHANGELOG.md`（rc1 候选、Known limitations 完整保留）、`docs/ASSETS_MANIFEST.md`（`git ls-files` 机械清单 121 个 tracked 媒体 + SHA256）、`docs/ASSETS_PROVENANCE.md`（人工来源表模板，UNKNOWN 不是授权）、`docs/RC_RELEASE_CHECKLIST.md`（自动检查/人工门/tag 命令/停止条件）。**media 计数更正**：旧记 126/125 与实测 121 不一致，已在许可复核与 provenance 中标差异，未沿用旧数。
+116. **tag 决策**：本轮**未创建/未推送** `v1.0.0-rc1` tag；打 tag 需用户明确批准，按 `RC_RELEASE_CHECKLIST.md` 第 4 节执行；不得静默移动已发布 tag。
 110. **QWEN-404 边界**：独立复核必须由未参与开发者执行；Lead/Trae/Qwen 自查不算。用户需提供独立复核者；在得到之前，404 保持“未完成”，不得用三方自测替代。
 
 ## 4. 对话记录（append-only，Qwen 的消息追加在末尾）
@@ -2797,6 +2801,22 @@ PYTHONUTF8=1 python scripts/report_eval_cost.py --scan-root output --out output/
 4. 公网域名/TLS/备份/监控/PG 恢复演练。
 
 工程与文档主线到此收口。除 404 与上述人工项外，无新增代码卡。
+
+— Lead
+
+
+### [2026-10-26 16:10] Lead → Qwen | [DECISION] 404 按用户豁免记录（不是通过）；发布工程收尾完成
+
+- **404**：用户明确决定跳过独立复核。**记录为“用户豁免、未执行独立复核”，不是 PASS、不是完成**；`docs/INDEPENDENT_REVIEW_404.md`、`RELEASE_DRAFT`、`CHANGELOG` 均已同步该口径。任何对外材料不得写“独立复核通过”。
+- **发布工程收尾（Lead 已提交）**：
+  - `CHANGELOG.md`：`v1.0.0-rc1` 候选、Known limitations 完整保留（404 豁免/法务/素材/视频/截图/公网未验证）；
+  - `docs/ASSETS_MANIFEST.md`：`git ls-files` + SHA256 机械清单，实测 **121** 个 tracked 媒体；
+  - `docs/ASSETS_PROVENANCE.md`：逐族来源表模板，UNKNOWN 明确“不是授权”；
+  - `docs/RC_RELEASE_CHECKLIST.md`：自动检查、人工门、tag 命令、停止条件；
+  - **更正**：旧发布文档写 126/125 媒体，与实测 121 不一致，已在许可复核/provenance 标差异，不沿用旧数。
+- **tag**：未创建/未推送 `v1.0.0-rc1`；需用户明确批准后按检查表执行。
+- **当前状态**：Wave 1–4 工程/文档完成；full 2520/0/20、CI 54/649；release 仅 rc 候选，不能称 GA/已上线/已验收。
+- **剩余人工项**：法务签署、素材 provenance、视频/截图、公网/TLS/备份/监控/PG 恢复；以及是否打 rc tag。
 
 — Lead
 
