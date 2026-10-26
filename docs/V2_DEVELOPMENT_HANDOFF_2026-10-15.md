@@ -4,7 +4,7 @@
 
 ## 1. 项目目标与不可变边界
 
-- 仓库：`D:/xunfei/triple-U`；当前分支：`feat/enterprise-agent-rag-stack`。目标是面向 Agent / 大模型应用开发求职展示的**课程学习 Agent**，不是通用自治 Agent 或 EchoMind 客服系统。
+- 仓库：`D:/xunfei/triple-U`；当前分支：`feat/enterprise-agent-rag-stack`。目标是面向 Agent / 大模型应用开发工程展示的**课程学习 Agent**，不是通用自治 Agent 或 EchoMind 客服系统。
 - 参考图的十模块框架：LLM、短期/长期/外置记忆、规划、工具、执行、观察反馈、状态调度、提示词、安全权限、UI。EchoMind 仅供角色契约、工具白名单、请求级轨迹和评测回流参考，未照搬业务或技术栈。
 - 保留 DeepSeek 对话模型、用户自己的 RAG Embedding 密钥、PostgreSQL/pgvector、Redis、Celery、LangGraph、Vue。运行环境的 Embedding 模型已由过期的 `qwen3.7-text-embedding` 切换为 `qwen3.7-text-embedding-flash`，维度 1024；密钥值只从运行环境读取。
 - 学习包是固定 Tutor → Practice 两步依赖、Reviewer 至多一次返工，以及只允许 `search_course` / `finish`、最多三次搜索的**受限 ReAct-style 检索决策循环**。不得宣传为任意 DAG、并行多 Agent、开放式多工具 Agent、Tree-of-Thought。代码执行、文件写入、浏览器操作和任意外部 URL 均未加入学习 Agent。
@@ -82,7 +82,7 @@ V2 主入口是 `POST /api/v2/learning-runs/stream`，支持 `mode=answer`（证
 2. 用 Flash 对完整固定课程语料回填；`scripts/backfill_enterprise_corpus.py` 的 `indexed`、`embedded`、`embedding_failed` 分开核对，失败非零须中止/重试。对已审核教师文档先运行 `scripts/reembed_enterprise_vectors.py --dry-run`，确认范围，再在预算内运行付费重建。核查新版本查询只读当前 Embedding 模型且旧版本在失败时仍保留。
 3. 单例 DeepSeek + Flash + V2 API 冒烟后，先开发集，再在剩余额度内做新版 76 条及学习包可真实在线运行的标准用例。人工复核讲解/题目/引用；故障用例仍用受控环境。报告逐项标注语料版本、模型、样本数、失败、实际 token、估算成本与提供商账单核对状态。
 4. 在**同一完整语料和固定问题集**比较 `dense`、`hybrid`、`hybrid_diverse` 的召回、引用/拒答安全与端到端延迟；先确定可接受延迟门槛，只有质量改善且固定回归无安全退化、延迟未越门槛才考虑更换默认 `hybrid`。
-5. 更新 README、演示文档和求职表述，严格区分旧 66 历史基线、离线契约、隔离 PostgreSQL、部分云端诊断、正式新版在线结果与人工学习质量；无结果就写“待验收”。
+5. 更新 README、演示文档和展示表述，严格区分旧 66 历史基线、离线契约、隔离 PostgreSQL、部分云端诊断、正式新版在线结果与人工学习质量；无结果就写“待验收”。
 
 ## 7. 本地命令与资料索引
 

@@ -10,7 +10,7 @@
 - `scripts/` 中当前已修改或新增的 V2 回填、重建、评测、权限管理与离线检查脚本；`evals/` 中新版固定用例、阈值和说明。
 - `tests/a/` 中当前已修改或新增的权限、运行、检索、摄取、评测测试及 `tests/helpers/`；`.github/workflows/ci.yml`、`docker-compose.enterprise.yml`、`requirements-mcp.txt`、`README.md` 和本轮 V2/部署文档。
 
-此范围是路径候选，不表示这些目录以后新增的任意文件可自动进入提交。`docs/JOB_SEARCH_PACKAGE.md` 属于求职文案，建议与运行时代码分开审核。
+此范围是路径候选，不表示这些目录以后新增的任意文件可自动进入提交；文档类改动单独审核。
 
 ## 明确排除
 

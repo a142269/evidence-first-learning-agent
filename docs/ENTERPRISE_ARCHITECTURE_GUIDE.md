@@ -327,5 +327,4 @@ D:\Anaconda3\envs\dxtorch\python.exe scripts\evaluate_golden_set.py --base-url h
 - [升级工作记录](ENTERPRISE_AGENT_RAG_UPGRADE.md)
 - [架构决策记录（ADR）](adr/README.md)
 - [5 分钟演示脚本](DEMO_5_MINUTES.md)
-- [求职材料包](JOB_SEARCH_PACKAGE.md)
 - [Golden Set 说明](../evals/README.md)
