@@ -119,6 +119,20 @@ git diff --check
 - CI 快清单：**54 文件 / 649 passed / 1 skipped**
 - Linux/不同环境可能有时长与条件 skip 差异；以实际日志为准。
 
+## 测试临时文件清理（防止回收站堆积）
+
+全量测试会生成大量 SQLite 临时文件与 journal。**不要用资源管理器删除 `output/`**（Windows 会把每个文件送进回收站，几十万条后很难清空）。项目提供直接删除脚本：
+
+```bash
+# 先看会删什么（默认 dry-run）
+python scripts/clean_test_artifacts.py
+
+# 直接删除 output/ 下的旧 basetemp 与 *.db-journal（不走回收站）
+python scripts/clean_test_artifacts.py --apply
+```
+
+脚本只处理 `output/` 内、名为 `base*` / `basetemp*` / `pytest-*` 的目录和 `*.db-journal`，不碰评测结果、数据库、模型或源码。pytest 在复用 `--basetemp` 前也会直接清掉旧目录，避免跨轮次堆积。
+
 ## 目录结构
 
 ```

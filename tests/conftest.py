@@ -5,11 +5,40 @@ from __future__ import annotations
 
 import sys
 import os
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock
+
+
+def pytest_sessionstart(session) -> None:
+    """Remove a stale ``--basetemp`` tree before pytest reuses it.
+
+    Windows Explorer sends every deleted file to the Recycle Bin; a full-suite
+    basetemp can contain thousands of tiny SQLite journals.  Remove the old
+    tree directly here so repeated runs never accumulate recycle-bin entries.
+    Only paths strictly inside this repository's ``output/`` and named like a
+    pytest basetemp are touched.
+    """
+    raw = getattr(session.config.option, "basetemp", None)
+    if not raw:
+        return
+    try:
+        base = Path(str(raw)).expanduser().resolve()
+        root = Path(__file__).resolve().parents[1].resolve()
+        output = (root / "output").resolve()
+        if base == output or output not in base.parents:
+            return
+        if not base.name.startswith(("base", "basetemp", "pytest-")):
+            return
+        if base.exists() and not base.is_symlink():
+            shutil.rmtree(base)
+    except OSError:
+        # A failed pre-clean must not abort collection; pytest will create a
+        # fresh numbered directory and the explicit cleanup script remains.
+        pass
 
 
 # ================================================================
